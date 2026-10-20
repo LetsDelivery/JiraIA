@@ -24,7 +24,7 @@ type Deps = {
 }
 
 /**
- * Let’s Draw AI's spaces (ADR-0011, ADR-0012): organization admins and space managers create them, and
+ * LET’S Draw AI's spaces (ADR-0011, ADR-0012): organization admins and space managers create them, and
  * whoever creates one becomes its admin. The whole organization reads it; its members and admins edit it; its admins rename and
  * delete it and give roles in it.
  */

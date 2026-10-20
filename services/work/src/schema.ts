@@ -50,7 +50,7 @@ export const members = work.table(
     subject: text('subject').unique(),
     email: text('email'),
     name: text('name').notNull(),
-    /** What the person does at Let's ("Engenheira de software"), set by them on their profile. */
+    /** What the person does at LET'S ("Engenheira de software"), set by them on their profile. */
     jobTitle: text('job_title'),
     isOrgAdmin: boolean('is_org_admin').notNull().default(false),
     /** Creates JiraIA spaces without being an organization admin (ADR-0012). */
@@ -440,7 +440,7 @@ export const savedViews = work.table(
 )
 
 /**
- * A space of Let’s Draw AI (ADR-0011): where people keep pages and whiteboards, created as a team
+ * A space of LET’S Draw AI (ADR-0011): where people keep pages and whiteboards, created as a team
  * needs one — apart from JiraIA's spaces. Open to every member of the organization; whoever created it,
  * or an organization admin, changes and deletes it. `icon` is an emoji.
  */
@@ -462,7 +462,7 @@ export const drawSpaces = work.table(
   (table) => [index('draw_spaces_organization').on(table.organizationId)]
 )
 
-/** A member's star or follow on a Let’s Draw AI space — personal, so not audited, as a JiraIA star. */
+/** A member's star or follow on a LET’S Draw AI space — personal, so not audited, as a JiraIA star. */
 export const drawSpaceMarks = work.table(
   'draw_space_marks',
   {
@@ -480,7 +480,7 @@ export const drawSpaceMarks = work.table(
 )
 
 /**
- * The content of a Let’s Draw AI space (escopo-mvp 5.1, ADR-0011): a tree of folders, pages and
+ * The content of a LET’S Draw AI space (escopo-mvp 5.1, ADR-0011): a tree of folders, pages and
  * whiteboards, each under a parent or at the top, ordered among its siblings by `position`. A page or
  * a whiteboard keeps its merged Yjs state in `document` and the changes since in `content_updates`
  * (ADR-0009); `contentJson` and `contentText` are what its editor derives, for reading, search and
@@ -691,7 +691,7 @@ export const spaceGroupRoles = work.table(
   (table) => [primaryKey({ columns: [table.spaceId, table.groupId] })]
 )
 
-/** A role a member holds on a Let’s Draw AI space — given, or taken by creating it (ADR-0012). */
+/** A role a member holds on a LET’S Draw AI space — given, or taken by creating it (ADR-0012). */
 export const drawSpaceMembers = work.table(
   'draw_space_members',
   {
@@ -710,7 +710,7 @@ export const drawSpaceMembers = work.table(
   ]
 )
 
-/** A role a group holds on a Let’s Draw AI space (ADR-0012). */
+/** A role a group holds on a LET’S Draw AI space (ADR-0012). */
 export const drawSpaceGroupRoles = work.table(
   'draw_space_group_roles',
   {

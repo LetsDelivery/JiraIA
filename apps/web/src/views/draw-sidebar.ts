@@ -15,10 +15,10 @@ import { toast } from '@/ui/toast'
 
 import { canCreateSpaces, navItem, productLink } from './shell'
 
-/** Whether "Espaços" is open in Let’s Draw AI's sidebar — per viewer, on this browser. */
+/** Whether "Espaços" is open in LET’S Draw AI's sidebar — per viewer, on this browser. */
 const spacesOpen = persistedStore('jiraia.draw.spaces-open', true)
 
-/** The way back to cards, at the foot of every Let’s Draw AI sidebar (ADR-0010). */
+/** The way back to cards, at the foot of every LET’S Draw AI sidebar (ADR-0010). */
 const back = html`<hr class="nav-divider" />${productLink('/', 'JiraIA', 'kanban')}`
 
 /**

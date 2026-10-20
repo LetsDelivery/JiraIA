@@ -5,7 +5,7 @@ import { sendFile, unwrap } from './requests'
 import type { paths } from './schema'
 
 /**
- * Let’s Draw AI's side of the API (ADR-0010, ADR-0011): its spaces, the content tree, the documents
+ * LET’S Draw AI's side of the API (ADR-0010, ADR-0011): its spaces, the content tree, the documents
  * edited together, versions, comments, files and drafts from a prompt.
  */
 type Json<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] extends {

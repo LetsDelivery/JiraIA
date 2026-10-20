@@ -6,7 +6,7 @@ dono: Vinicius André
 # JiraIA: prompt de construção
 
 Prompt para entregar a quem vai codar o JiraIA (pessoa usando Claude Code ou outro agente de
-codificação) no repositório de código da Let's. Copie tudo entre as linhas `=====` e cole como
+codificação) no repositório de código da LET'S. Copie tudo entre as linhas `=====` e cole como
 primeira mensagem da sessão. Junto, copie para a pasta `docs/produto/` do repositório de
 código estes arquivos: `README.md`, `escopo-mvp.md`, `arquitetura.md` e `plano.md` desta pasta,
 mais `decisoes/2026-10-15-jiraia-referencia-funcional.md`.
@@ -14,13 +14,13 @@ mais `decisoes/2026-10-15-jiraia-referencia-funcional.md`.
 =====
 
 # Missão
-Você vai construir o **JiraIA**: a plataforma interna da Let's (empresa brasileira de
+Você vai construir o **JiraIA**: a plataforma interna da LET'S (empresa brasileira de
 tecnologia logística) para gestão de trabalho, que substitui o Jira, e de conhecimento, que
 substitui o Confluence. A plataforma é **nativa em IA**: agentes de IA são membros do time,
 ao lado das pessoas.
 
 - **Prazo do MVP em produção:** 30/11/2026.
-- **Condição de pronto:** as áreas da Let's conseguem largar o Jira e o Confluence sem perder o
+- **Condição de pronto:** as áreas da LET'S conseguem largar o Jira e o Confluence sem perder o
   que usam hoje.
 
 As specs de produto estão em `docs/produto/`. Leia todas antes de escrever código. A ordem de
@@ -37,7 +37,7 @@ pare para perguntar o que dá para decidir com bom senso.
 
 # Padrão da casa: LetsDelivery/uselets
 O JiraIA segue as ferramentas, os frameworks e as convenções do repositório
-`LetsDelivery/uselets` (outro produto nativo em IA da Let's, já validado pelo time de
+`LetsDelivery/uselets` (outro produto nativo em IA da LET'S, já validado pelo time de
 desenvolvimento). Antes de codar, leia o `AGENTS.md`, o `CONTEXT.md`, o `docs/STRUCTURE.md` e as
 ADRs de arquitetura do uselets (0001, 0002, 0003, 0004, 0005, 0006, 0010, 0027, 0038, 0102, 0107,
 0114). O que este prompt não definir segue o uselets. O JiraIA só se afasta dele onde a spec
@@ -49,16 +49,16 @@ exige algo que o uselets não tem, e cada desvio vira uma ADR.
   domínio em `CONTEXT.md`.
 - **Pacotes base:** copie do uselets `packages/http`, `packages/events`, `packages/logger`,
   `packages/authorization` e `packages/testing`, com uma nota de origem, e adapte ao domínio. É
-  código da própria Let's, então o clean room não se aplica a ele.
+  código da própria LET'S, então o clean room não se aplica a ele.
 
 # Regra inegociável: clean room
-O JiraIA é código 100% da Let's.
+O JiraIA é código 100% da LET'S.
 - **Nunca** abra, clone, leia, copie ou adapte código, componentes, ícones, ilustrações, textos
   de interface ou traduções do **Plane** (makeplane/plane, AGPL-3.0). O mesmo vale para
   qualquer outro projeto com licença copyleft (GPL, AGPL, SSPL).
 - Construa só a partir das specs em `docs/produto/`.
 - Dependências só com licença permissiva: MIT, ISC, BSD, Apache-2.0 ou PostgreSQL. Pacotes da
-  própria Let's (`@uselets/*`) são permitidos. O uselets não checa licença (o gate `audit` dele
+  própria LET'S (`@uselets/*`) são permitidos. O uselets não checa licença (o gate `audit` dele
   só olha vulnerabilidades), então o JiraIA acrescenta um gate `check:licenses` em
   `infra/ci/`, no mesmo estilo dos outros, que **falha** com copyleft.
 - Não use nomes, termos ou marcas de terceiros na interface. A interface fala de **cards,
@@ -119,7 +119,7 @@ Sem segredos no código. Config pelo SSM e `.env.sample` documentado para o ambi
 `bun run up` sobe o ambiente local completo (containers, schema, seed, API em `local:serve` e
 painel), com dados de exemplo.
 
-# Identidade visual (Max / Let's)
+# Identidade visual (Max / LET'S)
 - **Componentes, cores e tipografia:** tokens em `apps/web/src/styles/tokens.css` (vermelho do Max
   como único acento, Inter, grade de 4px), seguindo a skill `design-principles`. Vidro
   (glassmorfismo) só no que flutua: barra lateral, cabeçalho, diálogos, menus e toasts (ADR-0006).

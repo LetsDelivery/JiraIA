@@ -30,10 +30,10 @@ const refLine = (card: Ref, detail: Html): Html => html`
   </li>
 `
 
-/** Pages and whiteboards of Let’s Draw AI whose title or text holds the query (ADR-0011). */
+/** Pages and whiteboards of LET’S Draw AI whose title or text holds the query (ADR-0011). */
 const contentResults = (contents: SearchResult['contents']): Html =>
   contents.length
-    ? html`<p class="muted">${contents.length} no Let’s Draw AI</p>
+    ? html`<p class="muted">${contents.length} no LET’S Draw AI</p>
       <ul class="search-results">${contents.map(
         (
           item

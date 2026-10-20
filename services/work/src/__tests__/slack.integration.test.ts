@@ -46,7 +46,7 @@ const slack = setupServer(
           ok: true,
           access_token: 'xoxb-secret',
           bot_user_id: 'UBOT',
-          team: { id: 'T1', name: 'Let’s' }
+          team: { id: 'T1', name: 'LET’S' }
         })
       : HttpResponse.json({ ok: false, error: 'invalid_code' })
   }),
@@ -92,7 +92,7 @@ const setUp = async (config: typeof base) => {
   service = buildService(config, { db })
   await bootstrapOrganization(
     { db, clock: { now: () => new Date() }, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   await ok(admin({ method: 'POST', path: '/members', body: { email: 'ana@uselets.com', name: 'Ana' } }), 201)
   await ana({ method: 'GET', path: '/me' })
@@ -130,7 +130,7 @@ describe('connecting the workspace', () => {
     const status = await connect()
     expect(status).toMatchObject({
       configured: true,
-      workspace: { teamName: 'Let’s', installedBy: 'Admin' },
+      workspace: { teamName: 'LET’S', installedBy: 'Admin' },
       me: { found: true }
     })
     const stored = await db.select({ token: slackWorkspaces.botToken }).from(slackWorkspaces)

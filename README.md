@@ -1,6 +1,6 @@
 # JiraIA
 
-Let's internal platform for **work management** (replacing Jira) and **knowledge** (replacing
+LET'S internal platform for **work management** (replacing Jira) and **knowledge** (replacing
 Confluence), native in AI: people and AI agents are members of the same spaces and work on the same
 boards. The MVP goes to production by 2026-11-30.
 

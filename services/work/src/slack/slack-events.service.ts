@@ -120,7 +120,7 @@ export class SlackEventsService {
     }
   }
 
-  /** A card's preview, or nothing for a key no card has. Everyone at Let’s reads every card (ADR-0012). */
+  /** A card's preview, or nothing for a key no card has. Everyone at LET’S reads every card (ADR-0012). */
   private async preview(organizationId: string, key: string): Promise<Block[] | undefined> {
     const card = await this.deps.cards.findByKey(organizationId, key)
     if (!card) {

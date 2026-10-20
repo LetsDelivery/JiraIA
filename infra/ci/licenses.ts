@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Whether a package's license lets JiraIA stay 100% Let's code (decisão de clean room).
+ * Whether a package's license lets JiraIA stay 100% LET'S code (decisão de clean room).
  *
  * An **allow-list**, not a deny-list: a license nobody has looked at fails, rather than passing
  * because it was not on a list of bad ones. Copyleft (GPL, AGPL, LGPL, SSPL) is never on it — code
@@ -21,7 +21,7 @@ export const PERMISSIVE = new Set([
   'BlueOak-1.0.0'
 ])
 
-/** Packages Let's publishes itself. Their `UNLICENSED` means "ours", not "unknown". */
+/** Packages LET'S publishes itself. Their `UNLICENSED` means "ours", not "unknown". */
 const OWN_SCOPES = ['@uselets/', '@jiraia/']
 
 export const exceptionSchema = z.object({

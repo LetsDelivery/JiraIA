@@ -55,7 +55,7 @@ Não registre andamento diário de card (isso está no board) nem conteúdo de c
   serviço `identity` saem. O API Gateway valida o ID token do Google; o serviço confere o domínio
   (claim `hd`) e o e-mail verificado. Qualquer pessoa do domínio entra; quem entra pela primeira vez
   sem convite fica sem papel em nenhum espaço até ser incluída.
-- **Por quê:** todo usuário do JiraIA já tem conta Google da Let's; um segundo diretório de usuários
+- **Por quê:** todo usuário do JiraIA já tem conta Google da LET'S; um segundo diretório de usuários
   e um código por e-mail não acrescentam nada.
 - **Quem decidiu:** Stênio Lima.
 - **Links:** `docs/adr/0005-google-sign-in-for-the-workspace-domain.md` (repo de código)
@@ -78,7 +78,7 @@ Não registre andamento diário de card (isso está no board) nem conteúdo de c
 
 ## 2026-10-15: Stack TypeScript e prompt de construção
 - **Tipo:** decisão
-- **O quê:** a stack é TypeScript de ponta a ponta (React, Fastify, Postgres com pgvector, TipTap com Yjs). O código fica no repositório que a Let's já tem, construído por outra pessoa a partir de `prompt-construcao.md`.
+- **O quê:** a stack é TypeScript de ponta a ponta (React, Fastify, Postgres com pgvector, TipTap com Yjs). O código fica no repositório que a LET'S já tem, construído por outra pessoa a partir de `prompt-construcao.md`.
 - **Por quê:** velocidade com agentes de codificação e licenças permissivas.
 - **Quem decidiu:** Vinicius André. > TODO: validação final do Leandro Teves.
 - **Links:** `prompt-construcao.md`, `arquitetura.md`
@@ -87,7 +87,7 @@ Não registre andamento diário de card (isso está no board) nem conteúdo de c
 - **Tipo:** decisão (proposta)
 - **O quê:** o JiraIA é construído do zero. O Plane (AGPL-3.0), o Jira e o Confluence servem só
   como referência funcional, sem copiar código, componentes ou textos.
-- **Por quê:** ter um produto 100% Let's, sem obrigações de licença e livre para virar produto.
+- **Por quê:** ter um produto 100% LET'S, sem obrigações de licença e livre para virar produto.
 - **Quem decidiu:** Vinicius André (proposta). > TODO: validar com Jurídico e Tecnologia.
 - **Links:** `decisoes/2026-10-15-jiraia-referencia-funcional.md`
 

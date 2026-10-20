@@ -6,17 +6,17 @@ Date: 2026-10-16
 
 Accepted. Amends ADR-0004 (roles were held by people only, and a space was closed to anyone without
 one), ADR-0007 and ADR-0009 (the guest role, which saw only its own cards and no pages, is gone) and
-ADR-0011 (every member created and edited Let’s Draw AI spaces).
+ADR-0011 (every member created and edited LET’S Draw AI spaces).
 
 ## Context
 
 Roles were given one person and one space at a time. With the nine projects of the cut-over and every
 area's people, that is hundreds of grants by hand, repeated for each new hire — who, until then, saw
-nothing. Let’s Draw AI went the other way: everyone edited everything, with no way to keep a space's
+nothing. LET’S Draw AI went the other way: everyone edited everything, with no way to keep a space's
 pages to its team. And the stages ahead — forms, automations, notifications, agents — all need one
 answer to "who may do this here".
 
-Stênio decided (2026-10-16): every space of both products is visible to the whole of Let’s; editing
+Stênio decided (2026-10-16): every space of both products is visible to the whole of LET’S; editing
 needs a role, and whoever lacks one asks for it from inside the product. Only organization admins and
 space managers create spaces, in both products. There is no guest: a person signs in with their
 @uselets address and is given access and roles afterwards. Groups are kept by hand for now.
@@ -27,7 +27,7 @@ space managers create spaces, in both products. There is no guest: a person sign
 
 1. a role given to the member directly;
 2. the roles given to groups the member belongs to;
-3. **reader**, for every active member of the organization — the space is visible to all of Let’s.
+3. **reader**, for every active member of the organization — the space is visible to all of LET’S.
 
 Ranked admin > member > reader. An organization admin is admin everywhere. **The guest role is
 removed**: with reader as the floor it narrowed nothing, and the MVP admits only @uselets accounts.
@@ -36,7 +36,7 @@ Rows that held it are dropped by the migration, which leaves those people reader
 - **Groups** (`groups`, `group_members`) belong to the organization: an organization admin creates,
   renames and deletes them and names their owners; owners add and remove members. Kept by hand; a sync
   with Google Groups can come later behind the same tables.
-- **Grants to groups** sit beside the grants to people: `space_group_roles` for JiraIA, and for Let’s
+- **Grants to groups** sit beside the grants to people: `space_group_roles` for JiraIA, and for LET’S
   Draw AI `draw_space_members` and `draw_space_group_roles`. Whoever creates a Draw space becomes its
   admin, as in JiraIA.
 - **Space managers** (`members.is_space_manager`, set by an organization admin) create spaces of both
@@ -54,7 +54,7 @@ Every grant, every change to a group, every request and decision is an audit eve
 
 - A new person reads every space on their first sign-in, and asks for what they need to change.
 - Listings no longer filter spaces by role: every space of the organization is listed to every member.
-- Closing a space to part of Let’s (escopo-mvp 1.8, O2) becomes a per-space switch that removes the
+- Closing a space to part of LET’S (escopo-mvp 1.8, O2) becomes a per-space switch that removes the
   reader floor — the sources stay the same.
 - No permission schemes, per-field or per-transition rules, or per-card security: none is in the MVP,
   and the four roles plus groups cover what the areas run today.

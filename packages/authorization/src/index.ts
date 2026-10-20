@@ -14,7 +14,7 @@ export type Role = z.infer<typeof roleSchema>
 
 /**
  * `space:write` is working on the space's cards and pages. `space:manage` is the space itself: its
- * name, type, lead, roles and archiving. Everyone at Let’s signs in with their @uselets address and
+ * name, type, lead, roles and archiving. Everyone at LET’S signs in with their @uselets address and
  * reads; what they may change is given to them afterwards (ADR-0012).
  */
 export const actionValues = ['space:read', 'space:write', 'space:manage'] as const

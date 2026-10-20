@@ -9,7 +9,7 @@ Accepted. Supersedes the Cognito part of ADR-0001 and the `identity` service of 
 ## Context
 
 ADR-0001 inherited uselets' Cognito with emailed one-time codes. uselets needs a user pool: its users
-are merchants, partners and integrators from outside the company. JiraIA's users are only Let's
+are merchants, partners and integrators from outside the company. JiraIA's users are only LET'S
 people, who already hold a Google Workspace account at `uselets.com`. A pool would be a second
 directory to keep in step with the first, and an emailed code a worse login than the one they use
 every day.
@@ -41,5 +41,5 @@ token** and sends it as the bearer. There is no Cognito, no `identity` service a
   When it expires the API answers 401 and the panel returns to the sign-in screen, where One Tap
   (`auto_select`) signs a returning person back in, usually without a click.
 - Agents (Etapa 6) cannot hold Google tokens; they will need their own credential, decided then.
-- The OAuth client is created in Let's Google Cloud, with the panel's origins authorised
+- The OAuth client is created in LET'S Google Cloud, with the panel's origins authorised
   (`docs/pendencias-externas.md`).

@@ -50,7 +50,7 @@ export class SearchRepository {
       .limit(limit)
   }
 
-  /** Pages and whiteboards of the organization's Let’s Draw AI spaces holding `pattern` (ADR-0011). */
+  /** Pages and whiteboards of the organization's LET’S Draw AI spaces holding `pattern` (ADR-0011). */
   async contents(organizationId: string, pattern: string, limit: number) {
     return await this.db
       .select({

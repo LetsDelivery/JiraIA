@@ -37,7 +37,7 @@
   display: none;
 }
 
-/* Let’s Draw AI's spaces in its sidebar: the key, then the name. */
+/* LET’S Draw AI's spaces in its sidebar: the key, then the name. */
 .draw-space {
   display: flex;
   align-items: center;

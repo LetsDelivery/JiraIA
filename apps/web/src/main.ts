@@ -138,7 +138,7 @@ const renderApp = async (path: string, entering: boolean) => {
   ).value
   // A re-render from a change keeps the drawer as it was; a navigation closes it (`onNavigate`).
   setDrawer(drawerOpen)
-  document.title = `${match.route.title} · ${draw ? 'Let’s Draw AI' : 'JiraIA'}`
+  document.title = `${match.route.title} · ${draw ? 'LET’S Draw AI' : 'JiraIA'}`
   const view = app.querySelector<HTMLElement>('#view') as HTMLElement
   bindSelects(view)
   match.route.bind?.(view, match.params)

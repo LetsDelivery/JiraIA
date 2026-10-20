@@ -35,7 +35,7 @@ type Deps = {
 
 /**
  * Intake forms (escopo-mvp 4.1). A space's admins build them; anyone who reads the space — all of
- * Let’s — opens one by its link and sends it, and the answer arrives as a card with the form's labels.
+ * LET’S — opens one by its link and sends it, and the answer arrives as a card with the form's labels.
  * This is what replaces the REQ's Jira form (label `business-form`).
  */
 export class FormService {

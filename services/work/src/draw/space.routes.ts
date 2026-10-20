@@ -11,7 +11,7 @@ import {
 } from './draw-space.schemas.js'
 import type { DrawSpaceService } from './draw-space.service.js'
 
-/** Let’s Draw AI's spaces (ADR-0011): list, create, change, delete, star and follow. */
+/** LET’S Draw AI's spaces (ADR-0011): list, create, change, delete, star and follow. */
 export const drawSpaceRoutes = (spaces: DrawSpaceService, drafts: DraftService): Route[] => [
   defineRoute({
     method: 'POST',

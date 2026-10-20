@@ -59,7 +59,7 @@ const _shared = (grants: GrantService, product: Product): Route[] => [
   })
 ]
 
-/** People's roles on a Let’s Draw AI space; JiraIA's keep their routes under `/spaces/{id}/members`. */
+/** People's roles on a LET’S Draw AI space; JiraIA's keep their routes under `/spaces/{id}/members`. */
 const _drawPeople = (grants: GrantService): Route[] => [
   defineRoute({
     method: 'PUT',

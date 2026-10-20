@@ -73,7 +73,7 @@ beforeEach(async () => {
   service = buildService(config, { db, clock, files: new InMemoryFileStore() })
   await bootstrapOrganization(
     { db, clock, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   prd = await createSpace('PRD', 'product_discovery')
   tec = await createSpace('TEC', 'software')

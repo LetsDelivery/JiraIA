@@ -10,7 +10,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const ROLE_HINT: Record<Role, string> = {
   admin: 'Edita, gerencia o espaço e dá papéis',
   member: 'Lê e edita tudo no espaço',
-  reader: 'Lê tudo, sem editar — o que toda a Let’s já tem'
+  reader: 'Lê tudo, sem editar — o que toda a LET’S já tem'
 }
 
 /** The roles a person or a group is given on a space (ADR-0012). */

@@ -51,7 +51,7 @@ const connected = (status: SlackStatus & { workspace: NonNullable<SlackStatus['w
 /** Not connected: the admin connects; everyone else is told who can. */
 const notConnected = (status: SlackStatus): Html => {
   if (!status.configured) {
-    return html`<div class="slack-state"><p><strong>O app do Slack ainda não foi criado.</strong></p><p class="muted">A Tecnologia cria o app no workspace da Let’s; depois disso um administrador conecta aqui.</p></div>`
+    return html`<div class="slack-state"><p><strong>O app do Slack ainda não foi criado.</strong></p><p class="muted">A Tecnologia cria o app no workspace da LET’S; depois disso um administrador conecta aqui.</p></div>`
   }
   return status.canManage
     ? html`<div class="slack-state"><button type="button" class="button button-primary" data-slack-connect>${icon('slack', 16)}Conectar a um workspace do Slack</button><p class="muted">Você vai ao Slack autorizar o app e volta para cá.</p></div>`
@@ -65,7 +65,7 @@ export const slackView: View = {
     const status = await slackRead.status()
     return html`
       <header class="page-header"><div class="row">${icon('slack', 24)}<h1>Integração com o Slack</h1></div>
-        <p class="muted">O JiraIA no Slack da Let’s: avisos para você e prévias de cards para a equipe.</p></header>
+        <p class="muted">O JiraIA no Slack da LET’S: avisos para você e prévias de cards para a equipe.</p></header>
       ${features()}
       <section class="section">${status.workspace ? connected({ ...status, workspace: status.workspace }) : notConnected(status)}</section>
     `

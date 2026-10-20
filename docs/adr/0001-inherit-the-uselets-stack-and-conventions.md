@@ -9,8 +9,8 @@ React panel by plain JavaScript (ADR-0006)
 
 ## Context
 
-JiraIA replaces Jira and Confluence inside Let's by 2026-11-30. The first product spec proposed its
-own TypeScript stack (pnpm + Turborepo, Fastify, Redis + BullMQ, Hocuspocus, generic OIDC). Let's
+JiraIA replaces Jira and Confluence inside LET'S by 2026-11-30. The first product spec proposed its
+own TypeScript stack (pnpm + Turborepo, Fastify, Redis + BullMQ, Hocuspocus, generic OIDC). LET'S
 already runs another AI-native product, `LetsDelivery/uselets`, whose stack and conventions the
 development team has validated in production: 117 ADRs, a CI with its own gates, a deploy pipeline.
 
@@ -31,7 +31,7 @@ with `.unit`/`.integration` naming and a localhost-only guard, and the `test:ci`
 
 Copied, with a provenance note: `packages/core` (exceptions, clock, ids, env), `packages/logger`,
 `packages/http` (router, matching, responses), the CI gates, the build and the layer scripts. They are
-Let's own code, so the clean-room decision (`docs/produto/decisao-clean-room.md`) does not apply.
+LET'S own code, so the clean-room decision (`docs/produto/decisao-clean-room.md`) does not apply.
 
 Rewritten rather than copied: `Caller` and `packages/authorization`, because uselets' grants are
 about merchants and JiraIA's roles are about spaces and projects (ADR-0004).

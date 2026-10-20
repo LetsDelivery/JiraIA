@@ -10,7 +10,7 @@ import { z } from 'zod'
  * Workspace domain whose people may sign in (ADR-0005). `ATTACHMENTS_BUCKET` is the private S3 bucket
  * that holds the files on cards (escopo-mvp 2.9). `REALTIME_URL` is the WebSocket API pages are edited
  * through together (ADR-0009): the router hands it to browsers, the realtime Lambda posts back to it.
- * `ANTHROPIC_API_KEY` lets Let’s Draw AI draft from a prompt (pendência #8 until it exists).
+ * `ANTHROPIC_API_KEY` lets LET’S Draw AI draft from a prompt (pendência #8 until it exists).
  * `WEB_URL` is the panel's address, for links written into comments and Slack. `EVENT_BUS_NAME` is the
  * platform's EventBridge bus (ADR-0014); without it the dispatcher hands events to the consumers in
  * its own process, as the local harness does.

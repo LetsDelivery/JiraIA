@@ -21,7 +21,7 @@ const SERVER_INFO = { name: 'jiraia', title: 'JiraIA', version: '0.1.0' }
 
 /** What the model reads first: how JiraIA is organized and how it changes. Machine text: English. */
 const INSTRUCTIONS = [
-  'JiraIA is Let’s work platform: spaces (keyed, e.g. PRD) hold cards (keyed, e.g. PRD-12); Let’s Draw AI holds pages.',
+  'JiraIA is LET’S work platform: spaces (keyed, e.g. PRD) hold cards (keyed, e.g. PRD-12); LET’S Draw AI holds pages.',
   'Read with list_spaces, describe_space, search, query_cards, get_card and get_page.',
   'For a person, create_card, update_card, comment_on_card and link_cards write at once, as that person,',
   'with their permissions. For an autonomous agent, propose_changes creates a proposal a person decides;',

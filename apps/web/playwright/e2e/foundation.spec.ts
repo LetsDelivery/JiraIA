@@ -31,7 +31,7 @@ test('an admin creates a space with its key and gives a reader a role; the reade
 
   await expect(page).toHaveURL(/\/espacos\/JUR$/)
   await expect(page.getByRole('heading', { name: 'Jurídico', level: 1 })).toBeVisible()
-  await expect(page.getByText('Negócios · Líder: Admin Let’s')).toBeVisible()
+  await expect(page.getByText('Negócios · Líder: Admin LET’S')).toBeVisible()
   await expect(page.getByRole('region', { name: 'A fazer', exact: true })).toBeVisible()
 
   await page.getByRole('link', { name: 'Pessoas e papéis' }).click()
@@ -67,7 +67,7 @@ test('an address of another domain is refused on the sign-in screen, with a sent
   await expect(page).toHaveURL(/\/entrar$/)
 })
 
-// ADR-0012: everyone of Let’s reads every space, and asks to edit; a space admin approves.
+// ADR-0012: everyone of LET’S reads every space, and asks to edit; a space admin approves.
 test('a newcomer reads every space, asks to edit one, and edits it once an admin approves', async ({ page }) => {
   const email = `nova.${Date.now().toString(36)}@uselets.com`
   await signIn(page, email)

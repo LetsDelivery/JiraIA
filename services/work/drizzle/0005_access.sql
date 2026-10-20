@@ -69,8 +69,8 @@ CREATE UNIQUE INDEX "access_requests_open" ON "work"."access_requests" USING btr
 CREATE INDEX "draw_space_members_member" ON "work"."draw_space_members" USING btree ("member_id");--> statement-breakpoint
 CREATE INDEX "group_members_member" ON "work"."group_members" USING btree ("member_id");--> statement-breakpoint
 CREATE INDEX "groups_organization" ON "work"."groups" USING btree ("organization_id");--> statement-breakpoint
--- Whoever created a Let’s Draw AI space before ADR-0012 becomes its admin, as new spaces do.
+-- Whoever created a LET’S Draw AI space before ADR-0012 becomes its admin, as new spaces do.
 INSERT INTO "work"."draw_space_members" ("space_id", "member_id", "role", "created_at") SELECT "id", "created_by", 'admin', "created_at" FROM "work"."draw_spaces" ON CONFLICT DO NOTHING;
 --> statement-breakpoint
--- ADR-0012: the guest role is gone; whoever held it reads, as everyone at Let’s does.
+-- ADR-0012: the guest role is gone; whoever held it reads, as everyone at LET’S does.
 DELETE FROM "work"."space_members" WHERE "role" = 'guest';

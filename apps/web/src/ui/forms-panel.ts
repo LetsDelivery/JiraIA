@@ -8,7 +8,7 @@ import { openFormEditor } from './form-editor'
 import { icon } from './icons'
 import { toast } from './toast'
 
-/** A form's address: whoever has it — anyone at Let’s — opens it and sends a request. */
+/** A form's address: whoever has it — anyone at LET’S — opens it and sends a request. */
 export const formPath = (formId: string): string => `/formularios/${formId}`
 
 const formCard = (form: Form, manages: boolean): Html => html`
@@ -35,7 +35,7 @@ const formCard = (form: Form, manages: boolean): Html => html`
 `
 
 /**
- * The space's intake forms (escopo-mvp 4.1): each one has a link anyone at Let’s can open, and every
+ * The space's intake forms (escopo-mvp 4.1): each one has a link anyone at LET’S can open, and every
  * answer arrives here as a card. Its admins build them.
  */
 export const formsPanel = async (spaceId: string, manages: boolean): Promise<Html> => {

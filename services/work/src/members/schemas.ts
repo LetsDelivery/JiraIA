@@ -13,7 +13,7 @@ export const memberViewSchema = z.object({
   kind: memberKindSchema,
   email: z.string().nullable(),
   name: z.string(),
-  /** What the person does at Let's, beside their name — never inside it. */
+  /** What the person does at LET'S, beside their name — never inside it. */
   jobTitle: z.string().nullable(),
   isOrgAdmin: z.boolean(),
   /** Creates JiraIA spaces without being an organization admin (ADR-0012). */

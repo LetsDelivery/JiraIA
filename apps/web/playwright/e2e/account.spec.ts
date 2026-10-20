@@ -48,7 +48,7 @@ test('an admin connects Slack; a person is found there and routes a notice to it
     await route.fulfill({ status: 302, headers: { location: back.toString() } })
   })
   await page.getByRole('button', { name: 'Conectar a um workspace do Slack' }).click()
-  await expect(page.getByText('Conectado ao workspace Let’s (local)')).toBeVisible()
+  await expect(page.getByText('Conectado ao workspace LET’S (local)')).toBeVisible()
   await expect(page.getByText('Achamos você no Slack pelo seu e-mail.')).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('slack-after.png'), fullPage: true })
 

@@ -269,7 +269,7 @@ export const spaceDashboards = work.table('space_dashboards', {
 })
 
 /**
- * The last time a member opened a page or a whiteboard of Let’s Draw AI (Etapa 4d-c): what "Abertos por
+ * The last time a member opened a page or a whiteboard of LET’S Draw AI (Etapa 4d-c): what "Abertos por
  * você" lists. Personal, like a star, so not audited; one row per member and content.
  */
 export const contentVisits = work.table(

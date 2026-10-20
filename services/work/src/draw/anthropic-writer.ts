@@ -8,7 +8,7 @@ import { type DraftRequest, type DraftWriter, type ModelDraft, modelDraftSchema 
  * Drafts by Claude (ADR-0011). The system prompt is fixed — so it caches — and the kind asked for, when
  * the person chose one, goes in a system message after their last message.
  */
-const SYSTEM = `Você é o assistente de criação do Let’s Draw AI, onde as equipes da Let’s (empresa de logística e delivery) guardam processos, especificações, atas e decisões.
+const SYSTEM = `Você é o assistente de criação do LET’S Draw AI, onde as equipes da LET’S (empresa de logística e delivery) guardam processos, especificações, atas e decisões.
 
 A pessoa descreve o que quer criar e você devolve um rascunho completo, pronto para editar:
 - "kind": "page" para um documento; "whiteboard" para um quadro branco de ideias, mapas, fluxos ou brainstorms.

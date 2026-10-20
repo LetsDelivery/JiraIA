@@ -2,12 +2,12 @@ import type { Block, Installed, SlackApi } from '../../services/work/src/slack/s
 
 /**
  * Slack, locally (Etapa 5e): until the Slack app exists (pendência #10), connecting a workspace in
- * `bun run up` "installs" into Let’s (local), finds each person by e-mail, and prints the messages and
+ * `bun run up` "installs" into LET’S (local), finds each person by e-mail, and prints the messages and
  * previews instead of sending them. Nothing leaves the machine.
  */
 export class LocalSlackApi implements SlackApi {
   async exchange(): Promise<Installed> {
-    return { teamId: 'T-LOCAL', teamName: 'Let’s (local)', botUserId: 'U-JIRAIA', token: 'xoxb-local' }
+    return { teamId: 'T-LOCAL', teamName: 'LET’S (local)', botUserId: 'U-JIRAIA', token: 'xoxb-local' }
   }
 
   async userByEmail(_token: string, email: string): Promise<string | null> {

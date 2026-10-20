@@ -20,7 +20,7 @@ export const groupGrantSchema = z.object({
 export type GroupGrant = z.infer<typeof groupGrantSchema>
 
 /**
- * Who holds what on a space: the general access every member of Let’s has, then groups and people
+ * Who holds what on a space: the general access every member of LET’S has, then groups and people
  * (ADR-0012) — what "Pessoas e papéis" shows.
  */
 export const grantsViewSchema = z.object({

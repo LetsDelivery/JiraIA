@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 
 /**
- * ADR-0012 through the screens: groups everyone can see, and a Let’s Draw AI space that whoever has
+ * ADR-0012 through the screens: groups everyone can see, and a LET’S Draw AI space that whoever has
  * no role reads but cannot change — with the way to ask, and who holds which role, one menu away.
  */
 const signIn = async (page: Page, email: string) => {
@@ -38,7 +38,7 @@ test('the actions on a person sit behind ⋯ on Pessoas, which shows name, job t
   await expect(page.getByRole('menuitem', { name: 'Desativar' })).toBeVisible()
 })
 
-test('a reader of a Let’s Draw AI space sees no create controls, asks to edit, and sees why others edit', async ({
+test('a reader of a LET’S Draw AI space sees no create controls, asks to edit, and sees why others edit', async ({
   page
 }) => {
   await signIn(page, 'rui@uselets.com')
@@ -55,10 +55,10 @@ test('a reader of a Let’s Draw AI space sees no create controls, asks to edit,
 
   await sidebar(page).getByRole('button', { name: 'Mais ações do espaço' }).click()
   await page.getByRole('menuitem', { name: 'Pessoas e papéis' }).click()
-  await expect(page.getByText('Toda a Let’s')).toBeVisible()
+  await expect(page.getByText('Toda a LET’S')).toBeVisible()
   const group = page.getByRole('row').filter({ hasText: 'Produto' })
   await expect(group.getByRole('cell', { name: 'Membro' })).toBeVisible()
-  await page.getByRole('row').filter({ hasText: 'Admin Let’s' }).getByRole('button', { name: 'Por quê?' }).click()
+  await page.getByRole('row').filter({ hasText: 'Admin LET’S' }).getByRole('button', { name: 'Por quê?' }).click()
   await expect(page.getByRole('dialog').getByText('Papel dado à pessoa: Administrador.')).toBeVisible()
 })
 
@@ -76,7 +76,7 @@ test('"Criar" in the header makes a card in a space the person edits, and opens 
   await expect(page.getByRole('dialog', { name: /REQ-\d+ Pedido criado pelo atalho/ })).toBeVisible()
 })
 
-test('"Criar" tells someone who edits no space how to ask, and is not in Let’s Draw AI', async ({ page }) => {
+test('"Criar" tells someone who edits no space how to ask, and is not in LET’S Draw AI', async ({ page }) => {
   await signIn(page, 'rui@uselets.com')
   await page.getByRole('banner').getByRole('button', { name: 'Criar', exact: true }).click()
   await expect(page.getByText('Você ainda não edita nenhum espaço.')).toBeVisible()

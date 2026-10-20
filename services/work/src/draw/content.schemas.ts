@@ -19,7 +19,7 @@ export const contentPathSchema = z.object({ contentId: z.uuid() })
 export const versionPathSchema = z.object({ contentId: z.uuid(), number: z.coerce.number().int().min(1) })
 export const contentCommentPathSchema = z.object({ contentId: z.uuid(), commentId: z.uuid() })
 
-/** What a Let’s Draw AI space holds (ADR-0011): folders, and the pages and whiteboards in them. */
+/** What a LET’S Draw AI space holds (ADR-0011): folders, and the pages and whiteboards in them. */
 export const contentKindSchema = z.enum(['folder', 'page', 'whiteboard'])
 export type ContentKind = z.infer<typeof contentKindSchema>
 /** The kinds that are documents — edited together, versioned, commented. A folder only holds. */
@@ -60,7 +60,7 @@ export const contentNodeSchema = z.object({
 })
 export const contentTreeSchema = z.object({ items: z.array(contentNodeSchema) })
 
-/** The pages and whiteboards changed last, across spaces: Let’s Draw AI's home (ADR-0010). */
+/** The pages and whiteboards changed last, across spaces: LET’S Draw AI's home (ADR-0010). */
 export const recentContentsSchema = z.object({
   items: z.array(contentNodeSchema.extend({ spaceId: z.uuid(), spaceName: z.string(), spaceIcon: z.string() }))
 })
@@ -78,7 +78,7 @@ export const contentViewSchema = z.object({
   updatedBy: personSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
-  /** Every member edits Let’s Draw AI content (ADR-0011); kept so a read-only reason can return. */
+  /** Every member edits LET’S Draw AI content (ADR-0011); kept so a read-only reason can return. */
   canWrite: z.boolean()
 })
 export type ContentView = z.infer<typeof contentViewSchema>

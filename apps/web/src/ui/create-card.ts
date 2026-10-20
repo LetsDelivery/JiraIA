@@ -16,7 +16,7 @@ import { toast } from './toast'
  */
 const lastSpace = persistedStore<string | null>('jiraia.create.space', null)
 
-/** The spaces the caller edits — every space is read by all of Let’s, only some are written (ADR-0012). */
+/** The spaces the caller edits — every space is read by all of LET’S, only some are written (ADR-0012). */
 const writable = async (): Promise<Space[]> => {
   const spaces = (await read.spaces()).items
   const access = await Promise.all(spaces.map((space) => accessRead.mine('jiraia', space.id)))
