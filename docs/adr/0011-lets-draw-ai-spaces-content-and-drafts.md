@@ -1,15 +1,15 @@
-# 11. Let’s Draw AI has its own spaces, a tree of folders, pages and whiteboards, and drafts from a prompt
+# 11. LET’S Draw AI has its own spaces, a tree of folders, pages and whiteboards, and drafts from a prompt
 
 Date: 2026-10-16
 
 ## Status
 
-Accepted. Amends ADR-0009 (pages belonged to JiraIA spaces; guests saw none) and ADR-0010 (Let’s Draw
+Accepted. Amends ADR-0009 (pages belonged to JiraIA spaces; guests saw none) and ADR-0010 (LET’S Draw
 AI listed JiraIA's spaces).
 
 ## Context
 
-Stênio set Let’s Draw AI apart from JiraIA, as Confluence is from Jira: its spaces are created as a
+Stênio set LET’S Draw AI apart from JiraIA, as Confluence is from Jira: its spaces are created as a
 team needs one, not mirrored from the boards. Its sidebar follows Confluence's: the space and its menu,
 "Conteúdo" with create and filter, a search by title, the tree. And it holds more than pages: folders
 and subfolders, blank pages, whiteboards — and, first among them, something made from a prompt.

@@ -60,7 +60,7 @@ export class SearchService {
     }
   }
 
-  /** Let’s Draw AI is open to the whole organization, so every member finds every page in it. */
+  /** LET’S Draw AI is open to the whole organization, so every member finds every page in it. */
   private async _contents(actor: MemberRow, query: string, limit: number) {
     const rows = await this.deps.search.contents(actor.organizationId, likePattern(query), limit)
     return rows.map(({ text, kind, ...content }) => ({

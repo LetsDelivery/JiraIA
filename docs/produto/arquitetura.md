@@ -19,7 +19,7 @@ dono: Vinicius André
    API, com as mesmas permissões.
 4. **Configurável por área, sem código.** Fluxos, campos, formulários e automações são
    configuração do espaço. É isso que torna a plataforma compartilhada entre as áreas.
-5. **Código 100% Let's** (clean room) e só dependências com licença permissiva. Veja
+5. **Código 100% LET'S** (clean room) e só dependências com licença permissiva. Veja
    `decisoes/2026-10-15-jiraia-referencia-funcional.md`.
 6. **Identidade do Max:** tokens próprios em CSS (vermelho do Max, Inter), skill `design-principles`.
 
@@ -47,7 +47,7 @@ dono: Vinicius André
 
 ## Stack (padrão `LetsDelivery/uselets`, adotado em 2026-10-15)
 O JiraIA segue as ferramentas, os frameworks e as convenções do uselets, outro produto nativo em
-IA da Let's já validado pelo time de desenvolvimento. O detalhe camada a camada está em
+IA da LET'S já validado pelo time de desenvolvimento. O detalhe camada a camada está em
 `prompt-construcao.md`, seção "Stack". Resumo:
 
 | Camada | Escolha | Origem |
@@ -67,7 +67,7 @@ IA da Let's já validado pelo time de desenvolvimento. O detalhe camada a camada
 | Slack | Webhook de entrada | JiraIA |
 
 Regra de dependência: o gate `check:licenses` bloqueia pacote com licença copyleft (GPL, AGPL,
-LGPL sem análise, SSPL). Pacotes `@uselets/*` são da Let's e são permitidos.
+LGPL sem análise, SSPL). Pacotes `@uselets/*` são da LET'S e são permitidos.
 
 ## Modelo de domínio (conceitual)
 - **Organização** → **Espaço** (o "espaço" do Jira atual: REQ, PRD, TEC…), com chave, tipo, líder e
@@ -149,7 +149,7 @@ o JiraIA. As regras atuais continuam valendo: **ler e propor, não mover sem ped
 - O agente só lê o que o escopo dele permite. As chamadas ao modelo de IA não retêm dados para
   treino.
   > TODO: confirmar os termos de dados com o fornecedor de IA e com o Jurídico.
-- Cards e páginas seguem as regras de LGPD da Let's: sem dado de consumidor final além do
+- Cards e páginas seguem as regras de LGPD da LET'S: sem dado de consumidor final além do
   necessário.
 
 ## Migração (Jira e Confluence → JiraIA)

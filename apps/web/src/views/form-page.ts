@@ -85,7 +85,7 @@ const sent = (form: Form, card: { key: string; title: string }): Html => html`
 /** The card the last answer made, so a redraw after it shows the confirmation, not an empty form. */
 let lastSent: { formId: string; card: { key: string; title: string } } | undefined
 
-/** An intake form, by its link (escopo-mvp 4.1): anyone at Let’s fills it in; the answer becomes a card. */
+/** An intake form, by its link (escopo-mvp 4.1): anyone at LET’S fills it in; the answer becomes a card. */
 export const formPageView: View = {
   path: '/formularios/:formId',
   title: 'Formulário',

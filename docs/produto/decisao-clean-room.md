@@ -17,7 +17,7 @@ código:
 - disponibilizar o código-fonte a quem usa o sistema pela rede;
 - licenciar como AGPL tudo o que for construído por cima.
 
-Queremos um produto **da Let's**, com a identidade do Max, sem referência a terceiros e sem
+Queremos um produto **da LET'S**, com a identidade do Max, sem referência a terceiros e sem
 amarras de licença, inclusive se um dia ele virar produto para ECs ou OLs.
 
 ## Decisão
@@ -48,7 +48,7 @@ Na prática, o trabalho segue um processo de **clean room**:
   `projetos/jiraia/escopo-mvp.md`.
 - A equipe precisa de disciplina na separação entre quem estuda e quem implementa. O clone do
   Plane fica fora dos repositórios de código do JiraIA.
-- O código é 100% da Let's: sem obrigação de abrir fonte e livre para virar produto.
+- O código é 100% da LET'S: sem obrigação de abrir fonte e livre para virar produto.
 - > TODO: validar o entendimento sobre a licença com o Jurídico (Mariana Benjamin) antes do
   > início da construção.
 

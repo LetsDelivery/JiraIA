@@ -19,13 +19,13 @@ const values = (data: FormData) => ({
   description: String(data.get('description') ?? '').trim()
 })
 
-/** A new Let’s Draw AI space, made by whoever needs one (ADR-0011); it opens once made. */
+/** A new LET’S Draw AI space, made by whoever needs one (ADR-0011); it opens once made. */
 export const openCreateDrawSpace = (): void => {
   openFormDialog({
     title: 'Criar espaço',
     submit: 'Criar espaço',
     done: 'Espaço criado.',
-    fields: html`<p class="muted">Um espaço reúne as pastas, páginas e quadros de uma equipe ou assunto. Toda a Let’s pode ver e editar.</p>${fields()}`,
+    fields: html`<p class="muted">Um espaço reúne as pastas, páginas e quadros de uma equipe ou assunto. Toda a LET’S pode ver e editar.</p>${fields()}`,
     onSubmit: async (data) => {
       const space = await drawWrite.createSpace(values(data))
       navigate(drawSpacePath(space.id))

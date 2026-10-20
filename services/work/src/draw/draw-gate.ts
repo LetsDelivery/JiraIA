@@ -9,7 +9,7 @@ import { type ContentRow, isDocument } from './content.schemas.js'
 import type { DrawSpaceRepository } from './draw-space.repository.js'
 import type { DrawSpaceWithCreator } from './draw-space.schemas.js'
 
-/** Who is calling, the Let’s Draw AI space, and whether they may edit it and change the space itself. */
+/** Who is calling, the LET’S Draw AI space, and whether they may edit it and change the space itself. */
 export type DrawAccess = { actor: MemberRow; space: DrawSpaceWithCreator; canWrite: boolean; canManage: boolean }
 export type ContentAccess = { gate: DrawAccess; content: ContentRow }
 
@@ -20,7 +20,7 @@ const ACTION = { read: 'space:read', write: 'space:write', manage: 'space:manage
 const NEEDS = { read: 'a role', write: 'the member or admin role', manage: 'the admin role' } as const
 
 /**
- * "May this caller do this in this Let’s Draw AI space?" (ADR-0012). Every member of the organization
+ * "May this caller do this in this LET’S Draw AI space?" (ADR-0012). Every member of the organization
  * reads every space; editing needs a role given to them or to one of their groups. A space of another
  * organization, or deleted, is a 404.
  */

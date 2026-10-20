@@ -6,7 +6,7 @@ dono: Vinicius André
 # JiraIA: escopo funcional do MVP e matriz de paridade
 
 Este é o documento-base de **clean room**. Ele descreve **o que** o JiraIA faz, em palavras
-nossas, a partir de três referências: o uso atual do Jira e do Confluence na Let's e o
+nossas, a partir de três referências: o uso atual do Jira e do Confluence na LET'S e o
 inventário funcional de ferramentas abertas, como o Plane. Não contém código nem texto de
 interface de terceiros. Quem implementa trabalha a partir daqui
 (`decisoes/2026-10-15-jiraia-referencia-funcional.md`).
@@ -143,7 +143,7 @@ Os agentes iniciais reaproveitam as skills que já existem em `.claude/skills/`.
 |---|---|---|
 | 8.1 | Abrir board e página em menos de 2 s com o volume migrado | M |
 | 8.2 | Backup diário com restauração testada | M |
-| 8.3 | Identidade visual do Max (design system Let's), interface em pt-BR | M |
+| 8.3 | Identidade visual do Max (design system LET'S), interface em pt-BR | M |
 | 8.4 | Uso em navegador desktop. Mobile: só leitura responsiva | M |
 | 8.5 | Checagem de licença de dependências no CI (bloqueia copyleft) | M |
 | 8.6 | Monitoramento de erros e disponibilidade | M |

@@ -112,7 +112,7 @@ const cardTools = (deps: ReadDeps): Tool[] => [
     name: 'search',
     title: 'Search',
     description:
-      'Free text over cards (key, title, description, comments) and Let’s Draw AI pages and whiteboards. A card key finds that card.',
+      'Free text over cards (key, title, description, comments) and LET’S Draw AI pages and whiteboards. A card key finds that card.',
     input: z.object({ query: z.string().trim().min(1).max(200), limit: z.number().int().min(1).max(50).default(20) }),
     run: async ({ query, limit }, { caller }) => await deps.search.text(caller, query, limit)
   }),
@@ -150,7 +150,7 @@ const cardTools = (deps: ReadDeps): Tool[] => [
   defineTool({
     name: 'get_page',
     title: 'Get a page',
-    description: 'A Let’s Draw AI page or whiteboard as text, by the id search returned.',
+    description: 'A LET’S Draw AI page or whiteboard as text, by the id search returned.',
     input: z.object({ pageId: z.uuid() }),
     run: async ({ pageId }, { caller }) => await deps.contents.readText(caller, pageId)
   })

@@ -30,7 +30,7 @@ type Deps = {
 type Tree = { items: ReturnType<typeof toContentNode>[] }
 
 /**
- * A Let’s Draw AI space's content tree (escopo-mvp 5.1, ADR-0011): folders, pages and whiteboards —
+ * A LET’S Draw AI space's content tree (escopo-mvp 5.1, ADR-0011): folders, pages and whiteboards —
  * create, rename, move under a folder or a page or reorder, delete. A page or whiteboard's own content
  * is the document service's; this one never touches it, except to put a first draft in a new one.
  */

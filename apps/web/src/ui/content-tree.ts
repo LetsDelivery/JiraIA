@@ -71,7 +71,7 @@ const openIds = (context: TreeContext): Set<string> => {
   return open
 }
 
-/** A Let’s Draw AI space's content (escopo-mvp 5.1): folders, pages and whiteboards, as a tree. */
+/** A LET’S Draw AI space's content (escopo-mvp 5.1): folders, pages and whiteboards, as a tree. */
 export const contentTree = (context: TreeContext): Html =>
   context.shown.length
     ? html`<ul role="tree" aria-label="Conteúdo" class="content-tree">${buildTree(context.shown).map((item) => row(item, context, openIds(context)))}</ul>`

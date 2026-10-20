@@ -32,7 +32,7 @@ export const groupMemberViewSchema = z.object({
 export const groupGrantViewSchema = z.object({
   product: z.enum(['jiraia', 'draw']),
   spaceId: z.uuid(),
-  /** The space's key in JiraIA, its icon in Let’s Draw AI. */
+  /** The space's key in JiraIA, its icon in LET’S Draw AI. */
   label: z.string(),
   name: z.string(),
   role: roleSchema

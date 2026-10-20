@@ -87,7 +87,7 @@ export const textSearchResultSchema = z.object({
   /** The card the caller typed the key of, when `q` is one and they may open it. */
   exact: cardRefSchema.nullable(),
   items: z.array(z.object({ card: cardRefSchema, match: searchMatchSchema, excerpt: z.string() })),
-  /** Pages and whiteboards of Let’s Draw AI whose title or text holds `q` (ADR-0011). */
+  /** Pages and whiteboards of LET’S Draw AI whose title or text holds `q` (ADR-0011). */
   contents: z.array(
     z.object({
       id: z.uuid(),

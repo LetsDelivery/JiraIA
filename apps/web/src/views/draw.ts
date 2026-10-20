@@ -43,7 +43,7 @@ const spaceCard = (space: DrawSpace): Html => html`
   </a>
 `
 
-/** Let’s Draw AI's home (ADR-0010, ADR-0012): the spaces — admins and space managers create them — and what changed last. */
+/** LET’S Draw AI's home (ADR-0010, ADR-0012): the spaces — admins and space managers create them — and what changed last. */
 export const drawHomeView: View = {
   path: '/draw',
   title: 'Início',
@@ -58,9 +58,9 @@ export const drawHomeView: View = {
       drawRead.spaces()
     ])
     return html`
-      <header class="page-header"><div class="row"><h1>Let’s Draw AI</h1>
+      <header class="page-header"><div class="row"><h1>LET’S Draw AI</h1>
         ${canCreateSpaces(me) ? html`<button type="button" class="button button-primary" data-new-draw-space>${icon('plus', 16)}Criar espaço</button>` : ''}</div>
-        <p class="muted">Processos, specs, atas e quadros das equipes da Let’s.</p></header>
+        <p class="muted">Processos, specs, atas e quadros das equipes da LET’S.</p></header>
       <section class="section"><h2>Espaços</h2>
         ${spaces.items.length ? html`<div class="draw-space-grid">${spaces.items.map(spaceCard)}</div>` : html`<p class="empty muted">Nenhum espaço ainda.</p>`}
       </section>

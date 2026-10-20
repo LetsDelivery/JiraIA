@@ -16,7 +16,7 @@ Rules for anyone — person or coding agent — changing this repository. They f
 Never open, clone, read, copy or adapt code, components, icons, illustrations or UI text from
 **Plane** (makeplane/plane, AGPL-3.0) or any other copyleft project. Build only from the specs.
 Dependencies must be permissive; `bun run check:licenses` fails otherwise. `@uselets/*` and code
-copied from uselets are Let's own and allowed.
+copied from uselets are LET'S own and allowed.
 
 ## Language
 

@@ -10,7 +10,7 @@ import { InMemoryFileStore } from '../files/file-store.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
 
 /**
- * Let’s Draw AI (escopo-mvp 5.1–5.7, ADR-0009–0011): its own spaces, a tree of folders, pages and
+ * LET’S Draw AI (escopo-mvp 5.1–5.7, ADR-0009–0011): its own spaces, a tree of folders, pages and
  * whiteboards, documents two people edit at once, versions restored, comments, files and the relay.
  * Etapa 4 is done when two people edit the same page at the same time without losing anything, and an
  * old version is restored (prompt-construcao.md).
@@ -99,7 +99,7 @@ beforeEach(async () => {
   service = buildService(config, { db, clock, files, broadcaster })
   await bootstrapOrganization(
     { db, clock, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   produto = await createSpace('Produto')
 })
@@ -118,8 +118,8 @@ describe('spaces', () => {
     expect(seen.items.map((each) => each.name).sort()).toEqual(['Jurídico', 'Produto'])
     expect((await as('rui@uselets.com')({ method: 'PATCH', path, body: { name: 'X' } })).status).toBe(403)
     expect(
-      ((await ok(as('ana@uselets.com')({ method: 'PATCH', path, body: { name: 'Jurídico Let’s' } }))) as Space).name
-    ).toBe('Jurídico Let’s')
+      ((await ok(as('ana@uselets.com')({ method: 'PATCH', path, body: { name: 'Jurídico LET’S' } }))) as Space).name
+    ).toBe('Jurídico LET’S')
     expect(((await ok(admin({ method: 'GET', path }))) as Space).canManage).toBe(true)
   })
 

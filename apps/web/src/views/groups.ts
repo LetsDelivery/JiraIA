@@ -93,7 +93,7 @@ const accessColumn = (group: Group) => html`
     ${
       group.access.length
         ? html`<ul class="group-grants">${group.access.map(grantItem)}</ul>`
-        : html`<p class="muted">Sem papel em nenhum espaço — todos leem tudo, como toda a Let’s. O papel do grupo é dado em <strong>Pessoas e papéis</strong> de cada espaço.</p>`
+        : html`<p class="muted">Sem papel em nenhum espaço — todos leem tudo, como toda a LET’S. O papel do grupo é dado em <strong>Pessoas e papéis</strong> de cada espaço.</p>`
     }
   </div>
 `

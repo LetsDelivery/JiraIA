@@ -66,7 +66,7 @@ beforeEach(async () => {
   service = buildService(config, { db, mailer })
   await bootstrapOrganization(
     { db, clock: { now: () => new Date('2026-10-17T12:00:00Z') }, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   const space = (await ok(
     admin({ method: 'POST', path: '/spaces', body: { key: 'PRD', name: 'Discovery', type: 'business' } }),

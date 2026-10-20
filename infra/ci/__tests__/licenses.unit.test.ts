@@ -39,7 +39,7 @@ describe('declaredLicense', () => {
 })
 
 describe('refusal', () => {
-  it("accepts Let's own UNLICENSED packages", () => {
+  it("accepts LET'S own UNLICENSED packages", () => {
     expect(refusal('@uselets/ui', 'UNLICENSED', [])).toBeUndefined()
   })
 

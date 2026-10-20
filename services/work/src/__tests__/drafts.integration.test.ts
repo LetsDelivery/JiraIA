@@ -61,7 +61,7 @@ beforeEach(async () => {
   service = buildService(config, { db, files: new InMemoryFileStore(), writer })
   await bootstrapOrganization(
     { db, clock: { now: () => new Date('2026-10-16T12:00:00Z') }, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   spaceId = ((await admin({ method: 'POST', path: '/draw/spaces', body: { name: 'Produto' } })).body as { id: string })
     .id

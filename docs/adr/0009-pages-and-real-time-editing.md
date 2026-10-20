@@ -5,7 +5,7 @@ Date: 2026-10-16
 ## Status
 
 Accepted. Amends ADR-0003, which expected `pages` to be its own service. Amended by ADR-0011: pages
-belong to Let’s Draw AI's own spaces, beside folders and whiteboards, and every member edits them.
+belong to LET’S Draw AI's own spaces, beside folders and whiteboards, and every member edits them.
 
 ## Context
 

@@ -47,4 +47,4 @@ priority, labels (any of, none of), text, created / updated / due ranges, custom
   spaces' views and in `views.integration.test.ts`, each checked against matches it must find and
   decoys it must leave out.
 - `ILIKE` with a leading wildcard scans the cards of the caller's spaces. That is fine at the volume of
-  Let's spaces; a trigram index is the next step when it is not.
+  LET'S spaces; a trigram index is the next step when it is not.

@@ -1,6 +1,6 @@
 # JiraIA
 
-Let's internal platform for work management and knowledge, native in AI: people and agents work on
+LET'S internal platform for work management and knowledge, native in AI: people and agents work on
 the same board. It replaces Jira and Confluence. Product specs: `docs/produto/`.
 
 ## Language
@@ -18,7 +18,7 @@ A member who signs in with a one-time code to their corporate email.
 _Avoid_: human, user
 
 **Job title**:
-What a person does at Let's ("Gerente de produto"), shown beside their name — never inside it. The
+What a person does at LET'S ("Gerente de produto"), shown beside their name — never inside it. The
 person sets it on Meu perfil; an admin may give one when inviting. Screen word: "Cargo".
 _Avoid_: role (that is a space role), position, department
 
@@ -61,7 +61,7 @@ _Avoid_: permission, grant, access level
 **Reader**:
 A space role that reads everything in the space and writes nothing — what every member of the
 organization holds on every space, in both products (ADR-0012).
-_Avoid_: guest, viewer (there is no guest role: everyone at Let’s reads)
+_Avoid_: guest, viewer (there is no guest role: everyone at LET’S reads)
 
 **Effective role**:
 The strongest of a member's roles on a space: given to them, given to a group they are in, and the
@@ -75,7 +75,7 @@ of them. An organization admin creates it and names its owners; owners add and r
 _Avoid_: team (Jira's "Equipes"), squad, role
 
 **Space manager**:
-A member an organization admin allows to create spaces, in JiraIA and in Let’s Draw AI (ADR-0012).
+A member an organization admin allows to create spaces, in JiraIA and in LET’S Draw AI (ADR-0012).
 _Avoid_: project admin, creator
 
 **Access request**:
@@ -127,13 +127,13 @@ A page as it was at one moment — numbered, with its author — compared with t
 (Etapa 4, ADR-0009).
 _Avoid_: revision, snapshot, history (a card's history is its audit events)
 
-**Let’s Draw AI**:
+**LET’S Draw AI**:
 The product for pages and whiteboards — what Confluence is to Jira — under `/draw`, beside JiraIA's
 cards (ADR-0010).
 _Avoid_: wiki, Confluence, docs
 
 **Draw space**:
-A space of Let’s Draw AI, created as a team needs one — not a JiraIA space (ADR-0011). The whole
+A space of LET’S Draw AI, created as a team needs one — not a JiraIA space (ADR-0011). The whole
 organization reads it; its members and admins edit it. Organization admins and space managers create
 it, and its creator is its first admin (ADR-0012).
 _Avoid_: wiki space, workspace

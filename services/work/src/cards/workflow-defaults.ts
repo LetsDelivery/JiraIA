@@ -48,7 +48,7 @@ export const DEFAULT_WORKFLOWS: Record<SpaceType, WorkflowTemplate> = {
 }
 
 /**
- * The workflows Let's runs in Jira today (backlog/fluxo-jira.md, 2026-09-29), for the seed and,
+ * The workflows LET'S runs in Jira today (backlog/fluxo-jira.md, 2026-09-29), for the seed and,
  * later, for the migration's check that nothing was lost.
  */
 export const LETS_WORKFLOWS: Record<'REQ' | 'PRD' | 'TEC', WorkflowTemplate> = {

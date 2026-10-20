@@ -104,7 +104,7 @@ export const accessWrite = {
     )
     _cleared(product, spaceId)
   },
-  /** A person's role: JiraIA keeps its own route, Let’s Draw AI answers under its spaces. */
+  /** A person's role: JiraIA keeps its own route, LET’S Draw AI answers under its spaces. */
   putPersonRole: async (product: Product, spaceId: string, memberId: string, role: GrantRole) => {
     const call = { ...onMember(spaceId, memberId), body: { role } }
     if (product === 'jiraia') {

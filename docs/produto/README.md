@@ -10,7 +10,7 @@ fase: discovery
 # JiraIA
 
 ## Em uma frase
-O JiraIA é a plataforma interna da Let's para gestão de trabalho (o "nosso Jira") e
+O JiraIA é a plataforma interna da LET'S para gestão de trabalho (o "nosso Jira") e
 conhecimento (o "nosso Confluence"), nativa em IA. Pessoas e agentes trabalham no mesmo board.
 O MVP entra em produção até **30/11/2026** e substitui o Jira e o Confluence sem perda de
 funcionalidade no que usamos hoje.
@@ -112,7 +112,7 @@ O status de cada entrega está no Jira (e, depois do corte, no próprio JiraIA).
 | Áreas validadoras | Produto, Tecnologia, Jurídico, Marketing, Operações, CS, Performance & Ops | |
 
 ## Clientes envolvidos
-Uso interno. Os "clientes" são as áreas da Let's que usam Jira e Confluence hoje.
+Uso interno. Os "clientes" são as áreas da LET'S que usam Jira e Confluence hoje.
 
 ## Dependências e riscos
 | Risco | Mitigação |
@@ -122,7 +122,7 @@ Uso interno. Os "clientes" são as áreas da Let's que usam Jira e Confluence ho
 | Licenciamento (Plane é AGPL) | Clean room: `decisoes/2026-10-15-jiraia-referencia-funcional.md` |
 | Perda de dado ou de histórico na migração | Importação com ensaio e conferência de contagens por projeto antes do corte |
 | Rotinas e automações que dependem do Atlassian (este repo, Slack, n8n) | Servidor MCP e webhooks prontos antes do corte. Inventário em `plano.md` |
-| Segurança e LGPD (cards e páginas podem ter dados de cliente) | SSO, papéis, auditoria, backup diário e hospedagem na conta de nuvem da Let's |
+| Segurança e LGPD (cards e páginas podem ter dados de cliente) | SSO, papéis, auditoria, backup diário e hospedagem na conta de nuvem da LET'S |
 | Agente de IA alterar dado errado | Agentes só propõem. Pessoas aprovam. Tudo fica registrado e pode ser revertido |
 | Custo de IA crescer com o uso | Orçamento por agente e painel de consumo |
 

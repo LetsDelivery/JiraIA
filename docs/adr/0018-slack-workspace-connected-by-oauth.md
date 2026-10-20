@@ -10,7 +10,7 @@ stays as it is.
 ## Context
 
 Stênio asked for what Jira's Slack app gives its users: their notices in Slack, and a preview of a card
-when its link is shared. That needs a Slack app installed in the Let’s workspace, which an incoming
+when its link is shared. That needs a Slack app installed in the LET’S workspace, which an incoming
 webhook cannot be.
 
 ## Decision
@@ -22,7 +22,7 @@ webhook cannot be.
 - **The bot token is sealed at rest** with AES-256-GCM. The key (`SLACK_TOKEN_KEY`) also signs the
   OAuth state. It comes from Secrets Manager, beside the client secret and the signing secret.
 - **People are found by e-mail** (`users.lookupByEmail`), at most once a day, with no second sign-in.
-  Everyone at Let’s is in Slack with their @uselets.com address.
+  Everyone at LET’S is in Slack with their @uselets.com address.
 - **Notices:** "JiraIA e Slack" is one more channel in the notification preferences, per kind. The
   notifications consumer writes the notice as before and then sends it as a direct message. A failed
   message is logged and dropped: the notice is already in the panel.
@@ -31,11 +31,11 @@ webhook cannot be.
   JiraIA link to a card is unfurled; a card key written in a message gets the preview as a reply in its
   thread, at most three per message. Retries Slack sends are acknowledged without acting twice.
 - **Without the app** (pendência #10) everything is wired and inert: the page says the app does not
-  exist yet, connecting answers 503. Locally, a stand-in installs into "Let’s (local)" and prints.
+  exist yet, connecting answers 503. Locally, a stand-in installs into "LET’S (local)" and prints.
 
 ## Consequences
 
-- Previews show a card to everyone in the channel. Every member of Let’s reads every card (ADR-0012),
+- Previews show a card to everyone in the channel. Every member of LET’S reads every card (ADR-0012),
   so this shows nothing new to them; a channel shared with another company (Slack Connect) would see
   it too. Restricting previews to internal channels is later work if that becomes a concern.
 - A person with a different e-mail in Slack is not reached; the Slack page tells them.

@@ -33,7 +33,7 @@ if (existing) {
 
 const admin = await bootstrapOrganization(
   { db, clock: systemClock, ids: uuidGenerator },
-  { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin Let’s' } }
+  { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin LET’S' } }
 )
 const service = buildService(
   {
@@ -48,7 +48,7 @@ const service = buildService(
 // The admin's first request, as if they had signed in with Google: it binds the bootstrapped row.
 const caller = callerFromClaims(localClaims(admin.email ?? ''))
 
-// The three spaces of the product flow, with the keys, types and workflows Let's runs in Jira today.
+// The three spaces of the product flow, with the keys, types and workflows LET'S runs in Jira today.
 const requisicoes = await service.spaces.create(
   caller,
   { key: 'REQ', name: 'Requisições', description: 'Pedidos das áreas para Produto', type: 'business' },
@@ -209,7 +209,7 @@ for (const view of SAVED_VIEWS) {
   })
 }
 
-// Let’s Draw AI (ADR-0011): Produto's space, laid out as its Confluence space is, with the two pages
+// LET’S Draw AI (ADR-0011): Produto's space, laid out as its Confluence space is, with the two pages
 // fluxo-jira.md cites in "01. Processos".
 const paragraph = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] })
 const heading = (text: string) => ({ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text }] })
@@ -268,6 +268,6 @@ await seedIntake(service, caller, { req: requisicoes.id, prd: discovery.id, tec:
 await db.update(auditEvents).set({ dispatchedAt: new Date() })
 
 console.error(
-  `  seed: REQ, PRD (Discovery Board) and TEC with cards and saved views; the REQ form and the REQ → PRD and TEC → PRD rules; Let’s Draw AI's Produto space; groups Produto and Tecnologia; admin, ana (space manager), gil, rui (asked to edit PRD)${runner ? ` and ${runner} (admin)` : ''}`
+  `  seed: REQ, PRD (Discovery Board) and TEC with cards and saved views; the REQ form and the REQ → PRD and TEC → PRD rules; LET’S Draw AI's Produto space; groups Produto and Tecnologia; admin, ana (space manager), gil, rui (asked to edit PRD)${runner ? ` and ${runner} (admin)` : ''}`
 )
 process.exit(0)

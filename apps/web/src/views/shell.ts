@@ -110,7 +110,7 @@ export const productLink = (href: string, label: string, name: IconName) => html
 
 /**
  * A product's frame: a glass header across the top — the menu fold, the product grid, the brand and
- * the search — and a glass sidebar under it (ADR-0006). JiraIA and Let’s Draw AI each pass their brand
+ * the search — and a glass sidebar under it (ADR-0006). JiraIA and LET’S Draw AI each pass their brand
  * and navigation; the rest is the same.
  */
 export const frame = (options: {
@@ -120,7 +120,7 @@ export const frame = (options: {
   path: string
   content: Html
   product: string
-  /** Beside the search: JiraIA's "Criar"; Let’s Draw AI has none. */
+  /** Beside the search: JiraIA's "Criar"; LET’S Draw AI has none. */
   actions?: Html
   /** Unread notices, on the bell at the end of the header (escopo-mvp 4.6). */
   unread?: number
@@ -131,7 +131,7 @@ export const frame = (options: {
         <button type="button" class="button button-ghost button-icon" data-collapse aria-label="Mostrar ou esconder o menu" aria-expanded="false" title="Menu">
           ${icon('sidebar')}
         </button>
-        <button type="button" class="button button-ghost button-icon" data-apps aria-haspopup="menu" aria-expanded="false" aria-label="Trocar de produto" title="Produtos da Let’s">
+        <button type="button" class="button button-ghost button-icon" data-apps aria-haspopup="menu" aria-expanded="false" aria-label="Trocar de produto" title="Produtos da LET’S">
           ${icon('gridDots')}
         </button>
         ${options.brand}
@@ -162,12 +162,12 @@ export const bell = (unread: number) => html`
 export const appsMenu = (product: string) => html`
   <p class="draw-menu-title">Produtos</p>
   <a role="menuitem" href="/" ${product === 'jiraia' ? html`aria-current="page"` : ''}>${icon('kanban', 16)}JiraIA</a>
-  <a role="menuitem" href="/draw" ${product === 'draw' ? html`aria-current="page"` : ''}>${icon('notebook', 16)}Let’s Draw AI</a>
+  <a role="menuitem" href="/draw" ${product === 'draw' ? html`aria-current="page"` : ''}>${icon('notebook', 16)}LET’S Draw AI</a>
 `
 
 /**
  * JiraIA's frame. Spaces live in the sidebar — starred, recent and all of them, under "Espaços" — and
- * the pages are another product, Let’s Draw AI, one click away (ADR-0010).
+ * the pages are another product, LET’S Draw AI, one click away (ADR-0010).
  */
 export const shell = (
   me: Me,
@@ -195,7 +195,7 @@ export const shell = (
       ${me.isOrgAdmin ? navItem('/pessoas', 'Pessoas', 'users', path) : ''}
       ${navItem('/integracoes', 'Integrações', 'bolt', path)}
       <hr class="nav-divider" />
-      ${productLink('/draw', 'Let’s Draw AI', 'notebook')}
+      ${productLink('/draw', 'LET’S Draw AI', 'notebook')}
     `
   })
 

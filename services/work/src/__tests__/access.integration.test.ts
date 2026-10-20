@@ -7,7 +7,7 @@ import { buildService } from '../container.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
 
 /**
- * ADR-0012 end to end: all of Let’s reads every space; roles come from people and groups; space
+ * ADR-0012 end to end: all of LET’S reads every space; roles come from people and groups; space
  * managers create JiraIA spaces; whoever may only read asks to edit, and a space admin answers.
  */
 const db = await testDatabase('services/work/drizzle')
@@ -52,7 +52,7 @@ beforeEach(async () => {
   service = buildService(config, { db })
   await bootstrapOrganization(
     { db, clock: systemClock, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
 })
 
@@ -147,7 +147,7 @@ describe('roles through groups', () => {
     expect(refused.status).toBe(403)
   })
 
-  it('refuses guest: the role does not exist — everyone of Let’s signs in and reads', async () => {
+  it('refuses guest: the role does not exist — everyone of LET’S signs in and reads', async () => {
     const req = await createSpace('REQ')
     const group = await createGroup('Produto')
     const put = await admin({ method: 'PUT', path: `/spaces/${req}/groups/${group}`, body: { role: 'guest' } })
@@ -155,7 +155,7 @@ describe('roles through groups', () => {
   })
 })
 
-describe('Let’s Draw AI roles', () => {
+describe('LET’S Draw AI roles', () => {
   it('its creator holds it; a member without a role reads but does not edit until given one', async () => {
     const space = (await ok(
       as('admin@uselets.com')({ method: 'POST', path: '/draw/spaces', body: { name: 'Produto' } }),

@@ -9,7 +9,7 @@ import type { MemberRow } from './members/schemas.js'
 import { borrowedRole } from './proposals/delegation.js'
 import { drawSpaceGroupRoles, drawSpaceMembers, groupMembers, groups, spaceGroupRoles, spaceMembers } from './schema.js'
 
-/** Whose spaces: JiraIA's or Let’s Draw AI's — each keeps its grants in its own tables (ADR-0012). */
+/** Whose spaces: JiraIA's or LET’S Draw AI's — each keeps its grants in its own tables (ADR-0012). */
 export type Product = 'jiraia' | 'draw'
 
 /** Where a role comes from, as "why does this person have access" answers it (ADR-0012). */
@@ -44,7 +44,7 @@ export class AccessResolver {
 
   /**
    * The member's effective role on a space: the strongest of a direct role, their groups' roles, and the
-   * reader floor — every space is visible to all of Let’s (ADR-0012). While an approved proposal runs,
+   * reader floor — every space is visible to all of LET’S (ADR-0012). While an approved proposal runs,
    * its agent also holds the member role on the proposal's space (ADR-0019).
    */
   async forSpace(actor: MemberRow, spaceId: string, product: Product = 'jiraia'): Promise<Access> {

@@ -1,7 +1,7 @@
 import { type Browser, expect, type Page, test } from '@playwright/test'
 
 /**
- * Let’s Draw AI (ADR-0010, ADR-0011): its own spaces, folders, pages and whiteboards, made blank or
+ * LET’S Draw AI (ADR-0010, ADR-0011): its own spaces, folders, pages and whiteboards, made blank or
  * from a prompt. Etapa 4 is done when two people edit the same page at the same time without losing
  * anything, and an old version is restored (prompt-construcao.md).
  */
@@ -42,12 +42,12 @@ const create = async (page: Page, option: 'Página em branco' | 'Quadro branco',
   return page.url()
 }
 
-test('JiraIA’s sidebar opens Let’s Draw AI in another tab; its spaces are its own', async ({ page }) => {
+test('JiraIA’s sidebar opens LET’S Draw AI in another tab; its spaces are its own', async ({ page }) => {
   await signIn(page, 'admin@uselets.com')
-  const button = page.getByRole('link', { name: /Let’s Draw AI/ })
+  const button = page.getByRole('link', { name: /LET’S Draw AI/ })
   await expect(button).toHaveAttribute('target', '_blank')
   const [draw] = await Promise.all([page.waitForEvent('popup'), button.click()])
-  await expect(draw.getByRole('heading', { name: 'Let’s Draw AI' })).toBeVisible()
+  await expect(draw.getByRole('heading', { name: 'LET’S Draw AI' })).toBeVisible()
   await expect(sidebar(draw).getByRole('group', { name: 'Espaços' })).toContainText('Produto')
   await expect(sidebar(draw).getByRole('group', { name: 'Espaços' })).not.toContainText('Discovery Board')
   await expect(sidebar(draw).getByRole('link', { name: /JiraIA/ })).toHaveAttribute('href', '/')

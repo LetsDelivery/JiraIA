@@ -92,7 +92,7 @@ beforeEach(async () => {
   service = buildService(config, { db, clock, files: new InMemoryFileStore() })
   await bootstrapOrganization(
     { db, clock, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   req = await createSpace('REQ')
   prd = await createSpace('PRD')
@@ -205,7 +205,7 @@ describe('the JQLs of fluxo-jira.md, as saved views', () => {
 })
 
 describe('who sees and changes a view', () => {
-  it('a space view runs the same for every reader: all of Let’s reads the space (ADR-0012)', async () => {
+  it('a space view runs the same for every reader: all of LET’S reads the space (ADR-0012)', async () => {
     const gil = await giveRole('gil@uselets.com', 'reader', prd)
     await card(prd, 'Do Gil', 'Bloqueado', { assigneeId: gil })
     await card(prd, 'De outra pessoa', 'Bloqueado')

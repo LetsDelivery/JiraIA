@@ -1,5 +1,5 @@
 /**
- * A Let’s Draw AI space's content as a tree (escopo-mvp 5.1): the API answers a flat list, siblings in
+ * A LET’S Draw AI space's content as a tree (escopo-mvp 5.1): the API answers a flat list, siblings in
  * order; the panel nests it, filters it, and works out where a dragged item lands.
  */
 export type TreeNode = { id: string; parentId: string | null; title: string; position: number; kind?: string }

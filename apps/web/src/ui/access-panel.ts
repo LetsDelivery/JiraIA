@@ -18,7 +18,7 @@ import { selectField } from './select'
 import { toast } from './toast'
 
 /**
- * "Pessoas e papéis" of a space, in either product (ADR-0012): the access all of Let’s has, the
+ * "Pessoas e papéis" of a space, in either product (ADR-0012): the access all of LET’S has, the
  * requests waiting, the groups and the people given a role. Its admins change them; everyone sees them.
  */
 type Row = { id: string; name: string; detail: string; role: GrantRole; kind: 'group' | 'person' }
@@ -64,8 +64,8 @@ const grantTable = (title: string, rows: readonly Row[], manages: boolean, add: 
 const general = html`
   <section class="section access-general">
     <h2>Acesso geral</h2>
-    <p class="row">${icon('world', 18)}<strong>Toda a Let’s</strong><span class="badge">Leitor</span></p>
-    <p class="muted">Todo mundo da Let’s vê este espaço. Para editar, é preciso um papel — direto ou por um grupo.</p>
+    <p class="row">${icon('world', 18)}<strong>Toda a LET’S</strong><span class="badge">Leitor</span></p>
+    <p class="muted">Todo mundo da LET’S vê este espaço. Para editar, é preciso um papel — direto ou por um grupo.</p>
   </section>
 `
 
@@ -125,7 +125,7 @@ const SOURCE: Record<AccessSource['source'], (source: AccessSource) => string> =
   organization_admin: () => 'Administra a organização — é administrador em todo espaço.',
   direct: (source) => `Papel dado à pessoa: ${ROLE_LABEL[source.role]}.`,
   group: (source) => `Pelo grupo ${'groupName' in source ? source.groupName : ''}: ${ROLE_LABEL[source.role]}.`,
-  organization: () => 'Toda a Let’s: Leitor.'
+  organization: () => 'Toda a LET’S: Leitor.'
 }
 
 const explain = async (product: Product, spaceId: string, memberId: string, name: string) => {

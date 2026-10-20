@@ -92,7 +92,7 @@ beforeEach(async () => {
   })
   await bootstrapOrganization(
     { db, clock, ids: uuidGenerator },
-    { organizationName: "Let's", admin: { email: 'admin@uselets.com', name: 'Admin' } }
+    { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
   )
   spaceId = await space('PRD')
   otherSpaceId = await space('REQ')

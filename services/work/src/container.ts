@@ -315,7 +315,7 @@ type DrawDeps = {
 }
 
 /**
- * Let’s Draw AI (Etapa 4, ADR-0009–0011): its spaces, the content tree, the documents edited together,
+ * LET’S Draw AI (Etapa 4, ADR-0009–0011): its spaces, the content tree, the documents edited together,
  * comments, files and the realtime relay.
  */
 const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, files }: DrawDeps) => {

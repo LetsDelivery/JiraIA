@@ -1,4 +1,4 @@
-/* ---------- Let’s Draw AI sidebar (ADR-0011) ---------- */
+/* ---------- LET’S Draw AI sidebar (ADR-0011) ---------- */
 .draw-space-icon {
   display: inline-flex;
   flex: 0 0 auto;
@@ -435,7 +435,7 @@
   color: var(--accent);
 }
 
-/* Folded to icons, Let’s Draw AI keeps only what has an icon of its own. */
+/* Folded to icons, LET’S Draw AI keeps only what has an icon of its own. */
 .is-collapsed .draw-content-head,
 .is-collapsed .draw-search,
 .is-collapsed [data-tree-host] {

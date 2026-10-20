@@ -1,5 +1,5 @@
 /**
- * Let’s Draw AI's addresses (ADR-0010, ADR-0011): everything lives under `/draw`, apart from JiraIA's
+ * LET’S Draw AI's addresses (ADR-0010, ADR-0011): everything lives under `/draw`, apart from JiraIA's
  * cards. A Draw space is its own — not a JiraIA space — and is addressed by its id.
  *
  * @example contentPath('s1', 'c1')   // '/draw/s1/c1'
