@@ -1,0 +1,764 @@
+/*
+ * The card, opened over the board (escopo-mvp 2.5). A header with where the card lives, then two
+ * columns that scroll on their own. The reading column stacks the title and one bordered panel per
+ * section — description, squad, subtasks, linked cards, files, activity — so nothing floats loose;
+ * the side column holds the actions (the state first) and the fields as label │ value rows.
+ */
+
+.card-detail {
+  width: min(1120px, calc(100vw - var(--space-6) * 2));
+  height: calc(100vh - var(--space-6) * 2);
+  max-height: none;
+  overflow: hidden;
+  background: var(--glass-dense);
+}
+
+.card-detail:focus-visible {
+  outline: none;
+}
+
+.detail-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---------- Header ---------- */
+.detail-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.detail-crumb .key {
+  align-self: center;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ---------- Columns ---------- */
+.detail-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  min-height: 0;
+}
+
+.detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.detail-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+}
+
+/* ---------- Title and description: text until touched ---------- */
+.detail-title,
+.detail-description {
+  flex: none;
+  width: 100%;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-family: inherit;
+  color: var(--fg);
+  resize: none;
+  field-sizing: content;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.detail-title {
+  margin-bottom: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  width: calc(100% + var(--space-2));
+  overflow: hidden;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.detail-description {
+  min-height: 96px;
+  padding: var(--space-2) var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  width: calc(100% + var(--space-3) * 2);
+  line-height: 1.6;
+}
+
+.detail-title:not([readonly]):hover,
+.detail-description:not([readonly]):hover {
+  background: var(--surface-hover);
+}
+
+.detail-title:focus,
+.detail-description:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.detail-description::placeholder,
+.detail-title::placeholder {
+  color: var(--faint);
+}
+
+.description-actions {
+  display: none;
+}
+
+[data-description-block]:focus-within .description-actions,
+[data-description-block].is-dirty .description-actions {
+  display: flex;
+}
+
+/* ---------- Panels: every section of the card is its own block ---------- */
+.detail-panel {
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.detail-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.detail-panel-title label {
+  cursor: inherit;
+}
+
+.detail-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* Subtasks and links are two panels under one binding root. */
+.detail-group {
+  display: contents;
+}
+
+.detail-sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail-link-type {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Linked cards read as one list, not a pile of boxes. */
+.card-detail .refs {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.card-detail .ref {
+  min-height: 40px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.card-detail .ref:last-child {
+  border-bottom: 0;
+}
+
+.card-detail .ref:hover {
+  background: var(--surface-hover);
+}
+
+/* ---------- Side: actions, then label │ value ---------- */
+.detail-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+[data-transfer] {
+  margin-left: auto;
+}
+
+/* Jira's shortcut under the assignee: take the card without opening the list. */
+.detail-assign {
+  align-self: flex-start;
+  margin: -6px 0 var(--space-1) calc(104px + var(--space-2) * 2);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.detail-assign:hover {
+  text-decoration: underline;
+}
+
+.status-select .select-trigger,
+.status-pill {
+  --status: var(--state-idle);
+  min-width: 0;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--status) 40%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--status) 16%, var(--surface));
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-in_progress .select-trigger,
+.status-pill.status-in_progress {
+  --status: var(--state-progress);
+}
+
+.status-done .select-trigger,
+.status-pill.status-done {
+  --status: var(--state-done);
+}
+
+.status-select .select-trigger:hover {
+  background: color-mix(in srgb, var(--status) 26%, var(--surface));
+}
+
+.status-select .select-menu {
+  min-width: 200px;
+  text-transform: none;
+}
+
+.detail-props {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1);
+}
+
+.detail-props-custom {
+  display: contents;
+}
+
+.detail-props .field {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+}
+
+.detail-props .field > label,
+.detail-props .field > .label {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.detail-props .field > span:not(.label) {
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.detail-props .select-trigger,
+.detail-props .input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  background: transparent;
+  font-size: var(--text-sm);
+}
+
+.detail-props .select-trigger:hover:not(:disabled),
+.detail-props .input:hover:not([readonly]) {
+  background: var(--surface-hover);
+}
+
+.detail-props .select-trigger .icon {
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.detail-props .select-trigger:hover .icon,
+.detail-props .select-trigger[aria-expanded='true'] .icon {
+  opacity: 1;
+}
+
+.detail-props .select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-props .input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.detail-props .select-menu {
+  left: 112px;
+  min-width: calc(100% - 112px);
+}
+
+.detail-props .calendar {
+  left: auto;
+  right: 0;
+}
+
+.detail-props .field-hint,
+.detail-props .chips {
+  grid-column: 2;
+  padding: 0 var(--space-2);
+}
+
+.detail-props .chips {
+  padding: var(--space-1) var(--space-2);
+}
+
+.detail-meta {
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  color: var(--faint);
+}
+
+/* ---------- Activity ---------- */
+.activity-tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.activity-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 26px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.activity-tab:hover {
+  color: var(--fg);
+}
+
+.activity-tab[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+[data-activity='comments'] .activity-history,
+[data-activity='all'] .activity-comments {
+  display: none;
+}
+
+.comments-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card-detail .comments {
+  gap: var(--space-4);
+}
+
+.card-detail .comments li,
+.card-detail .history li {
+  gap: var(--space-3);
+}
+
+.card-detail .history li {
+  display: flex;
+  padding-left: 0;
+  border-left: 0;
+}
+
+.history-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-detail .composer {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.composer-box {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The composer is on top now: mentions open downward, over the comments. */
+.card-detail .mention-menu {
+  top: 64px;
+  bottom: auto;
+}
+
+/* ---------- Composers: add a subtask, link a card (Jira's inline forms) ---------- */
+[data-compose='closed'] .compose,
+[data-compose='open'] .compose-opener {
+  display: none;
+}
+
+.compose-opener,
+.compose-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.compose-opener:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.compose-link {
+  color: var(--accent);
+}
+
+.compose-link:hover {
+  background: var(--accent-soft);
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.compose-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.compose-row .select-trigger {
+  width: 100%;
+  min-width: 0;
+}
+
+/* One box holding the name, the type and Enter — as Jira draws it. */
+.compose-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 40px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-control);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--surface);
+}
+
+.compose-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--fg);
+  outline: none;
+}
+
+.compose-field .select-trigger {
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  background: var(--surface-hover);
+  font-size: var(--text-xs);
+  color: var(--fg-secondary);
+}
+
+.compose-field .select-menu {
+  left: auto;
+  right: 0;
+  min-width: 180px;
+}
+
+.compose-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.compose-spacer {
+  flex: 1;
+}
+
+.compose-foot [data-compose-cancel] {
+  margin-left: auto;
+}
+
+.compose-spacer ~ [data-compose-cancel] {
+  margin-left: 0;
+}
+
+.compose[data-mode='new'] [data-mode-pick],
+.compose[data-mode='new'] [data-mode-switch='new'],
+.compose[data-mode='pick'] [data-mode-new],
+.compose[data-mode='pick'] [data-mode-switch='pick'] {
+  display: none;
+}
+
+/* ---------- Card picker: suggestions under the box ---------- */
+.card-picker {
+  position: relative;
+}
+
+.card-picker .input {
+  width: 100%;
+}
+
+.card-picker-menu {
+  right: 0;
+  max-height: 300px;
+}
+
+.card-picker-menu [role='option'] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-picker-menu .card-key {
+  margin-right: var(--space-1);
+}
+
+/* ---------- Squad: the tag is the control ---------- */
+.squad-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.squad-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+
+.squad-trigger:hover,
+.squad-trigger[aria-expanded='true'] {
+  border-color: var(--border);
+  background: var(--surface-hover);
+}
+
+.squad-chip {
+  --tone: var(--squad-1);
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tone);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tone) 10%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.squad-tone-2 { --tone: var(--squad-2); }
+.squad-tone-3 { --tone: var(--squad-3); }
+.squad-tone-4 { --tone: var(--squad-4); }
+.squad-tone-5 { --tone: var(--squad-5); }
+.squad-tone-6 { --tone: var(--squad-6); }
+
+.squad-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 340px;
+  max-height: 360px;
+  padding: var(--space-2);
+}
+
+.squad-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.squad-option {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.squad-option:hover,
+.squad-option:focus-within {
+  background: var(--surface-hover);
+}
+
+.squad-menu .squad-option [role='option'] {
+  display: block;
+  flex: 1;
+  padding: var(--space-2);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* The row carries the hover, so the tag and its actions light up as one. */
+.squad-menu .squad-option [role='option']:hover,
+.squad-menu .squad-option [role='option']:focus {
+  background: transparent;
+}
+
+.squad-menu [aria-selected='true'] span.squad-chip {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.squad-option [aria-selected='true'] .squad-chip {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--tone);
+}
+
+.squad-actions {
+  display: flex;
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.squad-option:hover .squad-actions,
+.squad-option:focus-within .squad-actions {
+  opacity: 1;
+}
+
+.squad-actions .button-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.squad-empty {
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Narrow screens: one column, the whole dialog scrolls ---------- */
+@media (max-width: 760px) {
+  .card-detail {
+    width: calc(100vw - var(--space-4) * 2);
+    height: calc(100vh - var(--space-4) * 2);
+    overflow-y: auto;
+  }
+
+  .detail-root {
+    height: auto;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-main,
+  .detail-side {
+    overflow: visible;
+    padding: var(--space-4);
+  }
+
+  .detail-side {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

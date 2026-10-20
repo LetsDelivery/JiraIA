@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["esnext"],
+    "types": ["bun", "node", "aws-lambda"],
+
+    // tsc never emits here. It is the type gate only; the deployable JavaScript is produced by
+    // tsconfig.emit.json (ADR-0001, inherited from uselets ADR-0010).
+    "noEmit": true,
+
+    // Relative imports carry a `.js` extension even though the file on disk is `.ts`.
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    // bun does not create `node_modules/@jiraia/*` symlinks for workspace packages, so without
+    // these mappings tsc cannot find any shared package.
+    "paths": {
+      "@jiraia/core": ["./packages/core/src/index.ts"],
+      "@jiraia/logger": ["./packages/logger/src/index.ts"],
+      "@jiraia/http": ["./packages/http/src/index.ts"],
+      "@jiraia/authorization": ["./packages/authorization/src/index.ts"],
+      "@jiraia/db": ["./packages/db/src/index.ts"],
+      "@jiraia/testing": ["./packages/testing/src/index.ts"]
+    }
+  },
+  // `apps/` has its own tsconfig (bundler resolution, JSX, DOM) and is excluded here.
+  "include": ["packages/*/src/**/*.ts", "services/*/src/**/*.ts", "infra/**/*.ts"],
+  "exclude": ["node_modules", "**/node_modules", "apps"]
+}

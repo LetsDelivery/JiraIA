@@ -1,0 +1,702 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  JiraIA work: organization, members, spaces, roles, cards, pages and the audit trail.
+
+  One router Lambda behind its own HTTP API (uselets ADR-0001), its own Postgres schema `work` on the
+  shared Aurora cluster, reached through the Data API (ADR-0002, ADR-0003). A second Lambda behind a
+  WebSocket API relays the pages edited together (ADR-0009). A scheduled Lambda moves committed
+  events to the platform's bus, and each consumer reads its own queue behind it (ADR-0014).
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, prd]
+  DepsLayerArn:
+    Type: String
+    Description: The jiraia-deps layer version (infra/layers/build.ts publishes it).
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+  AllowedEmailDomain:
+    Type: String
+    Default: uselets.com
+    Description: The one Google Workspace domain whose people may sign in (ADR-0005).
+  WebUrl:
+    Type: String
+    Default: 'http://localhost:5280'
+    Description: The panel's address, for links in comments and Slack. > TODO the deployed origin.
+  MailFrom:
+    Type: String
+    Default: ''
+    Description: The verified SES sender of the daily summary, e.g. JiraIA <jiraia@uselets.com> (pendência #11). Empty holds the summaries.
+  SlackClientId:
+    Type: String
+    Default: ''
+    Description: The Slack app's client id (Etapa 5e, pendência #10). When set, the secret /jiraia/<env>/slack must hold client_secret, signing_secret and token_key. Empty leaves Slack unconfigured.
+  ApiUrl:
+    Type: String
+    Default: ''
+    Description: The API's public address, the OAuth issuer and MCP resource (ADR-0021). Empty reads it from the request's Host.
+  WebOrigins:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:5280'
+    Description: Where the panel is served from. > TODO the deployed origin, once infra/web exists.
+
+Conditions:
+  HasMailFrom: !Not [!Equals [!Ref MailFrom, '']]
+  HasSlack: !Not [!Equals [!Ref SlackClientId, '']]
+  HasApiUrl: !Not [!Equals [!Ref ApiUrl, '']]
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Architectures: [arm64]
+    MemorySize: 512
+    Timeout: 15
+    Layers: [!Ref DepsLayerArn]
+    Tracing: Active
+    Environment:
+      Variables:
+        NODE_ENV: production
+        TZ: UTC
+        POWERTOOLS_SERVICE_NAME: work
+        POWERTOOLS_METRICS_NAMESPACE: jiraia/work
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+        DB_CLUSTER_ARN: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+        DB_SECRET_ARN: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+        DB_NAME: jiraia
+        ALLOWED_EMAIL_DOMAIN: !Ref AllowedEmailDomain
+        ATTACHMENTS_BUCKET: !Ref AttachmentsBucket
+        WEB_URL: !Ref WebUrl
+        API_URL: !If [HasApiUrl, !Ref ApiUrl, !Ref AWS::NoValue]
+        EVENT_BUS_NAME: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/event-bus-name}}'
+        MAIL_FROM: !If [HasMailFrom, !Ref MailFrom, !Ref AWS::NoValue]
+        # The Slack app (ADR-0018): its id, and from Secrets Manager its secrets and the key that seals tokens.
+        SLACK_CLIENT_ID: !If [HasSlack, !Ref SlackClientId, !Ref AWS::NoValue]
+        SLACK_CLIENT_SECRET: !If [HasSlack, !Sub '{{resolve:secretsmanager:/jiraia/${Environment}/slack:SecretString:client_secret}}', !Ref AWS::NoValue]
+        SLACK_SIGNING_SECRET: !If [HasSlack, !Sub '{{resolve:secretsmanager:/jiraia/${Environment}/slack:SecretString:signing_secret}}', !Ref AWS::NoValue]
+        SLACK_TOKEN_KEY: !If [HasSlack, !Sub '{{resolve:secretsmanager:/jiraia/${Environment}/slack:SecretString:token_key}}', !Ref AWS::NoValue]
+
+Resources:
+  # The files on cards (escopo-mvp 2.9). Private: the browser reaches an object only by a URL the
+  # router pre-signs for a few minutes. Versioned, so a removed or overwritten file can be restored
+  # (escopo-mvp 8.2); retained if the stack goes, because it holds people's work.
+  AttachmentsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub jiraia-attachments-${Environment}-${AWS::AccountId}
+      VersioningConfiguration: {Status: Enabled}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !Ref WebOrigins
+            AllowedMethods: [PUT, GET]
+            AllowedHeaders: [content-type]
+            MaxAge: 600
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-unfinished-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+          - Id: expire-old-versions
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 90}
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+      # The authorizer verifies the Google ID token — signature against Google's published keys,
+      # issuer, audience (our OAuth client id) and expiry — and stops there (ADR-0005). Whether the
+      # account is of our Workspace domain, and which space or project it may touch, is decided inside
+      # the router, where a localhost test runs every denial (ADR-0004, as uselets ADR-0006).
+      Auth:
+        DefaultAuthorizer: GoogleJwt
+        Authorizers:
+          GoogleJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: https://accounts.google.com
+              audience:
+                - !Sub '{{resolve:ssm:/jiraia/${Environment}/google/client-id}}'
+      CorsConfiguration:
+        AllowOrigins: !Ref WebOrigins
+        AllowHeaders: [authorization, content-type]
+        AllowMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+        AllowCredentials: false
+        MaxAge: 600
+
+  RouterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-router-${Environment}
+      CodeUri: app.zip
+      Handler: router.handler
+      # A draft from a prompt (ADR-0011) waits on Claude; the HTTP API itself stops at 30 seconds.
+      Timeout: 29
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+            # Signing a URL needs the permission the URL grants: put, get (and head) and delete.
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: !Sub '${AttachmentsBucket.Arn}/*'
+      Events:
+        Any:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api}
+        # The JWT authorizer would refuse a preflight for carrying no token; the router answers it 204.
+        Preflight:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/{proxy+}', Method: OPTIONS, Auth: {Authorizer: NONE}}
+        Health:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /health, Method: GET, Auth: {Authorizer: NONE}}
+        # API tokens (ADR-0015): the same routes under /v1, past no Google authorizer — the router
+        # admits a request there only with a token the service verifies.
+        Tokens:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/v1/{proxy+}', Method: ANY, Auth: {Authorizer: NONE}}
+        # OAuth for MCP clients (ADR-0021): discovery, self-registration and the token endpoint are
+        # called by applications with no Google token. Consent stays behind the authorizer.
+        OAuthDiscovery:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/.well-known/{proxy+}', Method: GET, Auth: {Authorizer: NONE}}
+        OAuthRegister:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /oauth/register, Method: POST, Auth: {Authorizer: NONE}}
+        OAuthToken:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /oauth/token, Method: POST, Auth: {Authorizer: NONE}}
+
+  # Pages edited together (ADR-0009). Browsers cannot send an Authorization header on a WebSocket, so
+  # there is no authorizer here: `$connect` takes a one-use ticket the HTTP API issued behind Google.
+  RealtimeApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub jiraia-work-realtime-${Environment}
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: $request.body.action
+
+  RealtimeIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RealtimeApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RealtimeFunction.Arn}/invocations'
+
+  RealtimeConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      Target: !Sub integrations/${RealtimeIntegration}
+
+  RealtimeDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $disconnect
+      Target: !Sub integrations/${RealtimeIntegration}
+
+  RealtimeDefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $default
+      Target: !Sub integrations/${RealtimeIntegration}
+
+  RealtimeStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref RealtimeApi
+      StageName: !Ref Environment
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+        ThrottlingRateLimit: 100
+
+  RealtimeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-realtime-${Environment}
+      CodeUri: app.zip
+      Handler: realtime.handler
+      Timeout: 10
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+            # Relaying a change is posting it to the page's other connections.
+            - Effect: Allow
+              Action: execute-api:ManageConnections
+              Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RealtimeApi}/${Environment}/POST/@connections/*'
+
+  # What Slack sends (Etapa 5e, ADR-0018): links shared and messages with card keys. Slack cannot carry a
+  # Google token, so the route has no authorizer; the function checks Slack's signature on every request.
+  SlackEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-slack-events-${Environment}
+      CodeUri: app.zip
+      Handler: slack-events.handler
+      Timeout: 10
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        SlackEvents:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /slack/events, Method: POST, Auth: {Authorizer: NONE}}
+
+  SlackEventsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-slack-events-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  RealtimeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RealtimeFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RealtimeApi}/*'
+
+  RealtimeLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-realtime-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  # Applies the migrations shipped in this package. Invoked by the deploy, never by a request.
+  MigrateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-migrate-${Environment}
+      CodeUri: app.zip
+      Handler: migrate.handler
+      Timeout: 300
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+
+  # Etapa 5 (ADR-0014): every minute, what committed leaves the audit trail for the bus. One run at a
+  # time, so two passes never publish the same batch.
+  DispatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-dispatch-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/dispatch.handler
+      Timeout: 60
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+            - Effect: Allow
+              Action: events:PutEvents
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/event-bus-arn}}'
+      Events:
+        EveryMinute:
+          Type: Schedule
+          Properties: {Schedule: rate(1 minute)}
+
+  # The automation consumer (escopo-mvp 4.2): its own queue and dead-letter queue (ADR-0001). A message
+  # tried five times goes to the DLQ, and the DLQ holding anything is an alarm.
+  AutomationDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-automation-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+
+  AutomationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-automation-${Environment}
+      # Six times the consumer's timeout, as Lambda asks of a queue it reads.
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AutomationDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  AutomationRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/event-bus-name}}'
+      EventPattern:
+        source: [jiraia.work]
+        detail-type: [card.created, card.updated, card.moved]
+      Targets:
+        - Id: automation-queue
+          Arn: !GetAtt AutomationQueue.Arn
+
+  AutomationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref AutomationQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: events.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt AutomationQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt AutomationRule.Arn}
+
+  AutomationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-automation-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/automation.handler
+      Timeout: 30
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        Queue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AutomationQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+  AutomationDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub jiraia-work-automation-dlq-${Environment}
+      AlarmDescription: Card events the automation consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt AutomationDeadLetterQueue.QueueName}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Sub '{{resolve:ssm:/jiraia/${Environment}/platform/critical-alarm-topic-arn}}']
+
+  NotificationsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-notifications-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+
+  NotificationsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-notifications-${Environment}
+      # Six times the consumer's timeout, as Lambda asks of a queue it reads.
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt NotificationsDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  NotificationsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/event-bus-name}}'
+      EventPattern:
+        source: [jiraia.work]
+        detail-type: [card.created, card.updated, card.moved, card.commented, access_request.requested, access_request.approved, access_request.declined]
+      Targets:
+        - Id: notifications-queue
+          Arn: !GetAtt NotificationsQueue.Arn
+
+  NotificationsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref NotificationsQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: events.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt NotificationsQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt NotificationsRule.Arn}
+
+  NotificationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-notifications-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/notifications.handler
+      Timeout: 30
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        Queue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt NotificationsQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+  NotificationsDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub jiraia-work-notifications-dlq-${Environment}
+      AlarmDescription: Events the notifications consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt NotificationsDeadLetterQueue.QueueName}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Sub '{{resolve:ssm:/jiraia/${Environment}/platform/critical-alarm-topic-arn}}']
+
+  # The daily summary (escopo-mvp 4.6): 11:00 UTC is 08:00 in São Paulo.
+  DigestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-digest-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/digest.handler
+      Timeout: 300
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: '*'
+      Events:
+        EveryMorning:
+          Type: Schedule
+          Properties: {Schedule: cron(0 11 * * ? *)}
+
+  NotificationsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-notifications-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  DigestLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-digest-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  WebhooksDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-webhooks-dlq-${Environment}
+      MessageRetentionPeriod: 1209600
+
+  WebhooksQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub jiraia-work-webhooks-${Environment}
+      # Six times the consumer's timeout, as Lambda asks of a queue it reads.
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WebhooksDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  WebhooksRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/event-bus-name}}'
+      EventPattern:
+        source: [jiraia.work]
+        detail-type: [card.created, card.updated, card.moved, card.commented]
+      Targets:
+        - Id: webhooks-queue
+          Arn: !GetAtt WebhooksQueue.Arn
+
+  WebhooksQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref WebhooksQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: events.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt WebhooksQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt WebhooksRule.Arn}
+
+  WebhooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-webhooks-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/webhooks.handler
+      Timeout: 30
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        Queue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt WebhooksQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+  WebhooksDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub jiraia-work-webhooks-dlq-${Environment}
+      AlarmDescription: Card events the webhooks consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt WebhooksDeadLetterQueue.QueueName}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Sub '{{resolve:ssm:/jiraia/${Environment}/platform/critical-alarm-topic-arn}}']
+
+  # The webhook retry sweep (escopo-mvp 4.7): pending deliveries whose next try is due. One at a time.
+  WebhookRetryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-webhook-retry-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/webhook-retry.handler
+      Timeout: 60
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        EveryMinute:
+          Type: Schedule
+          Properties: {Schedule: rate(1 minute)}
+
+  WebhooksLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-webhooks-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  WebhookRetryLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-webhook-retry-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  DispatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-dispatch-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  AutomationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-automation-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  RouterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-router-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+Outputs:
+  ApiUrl:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+  RealtimeUrl:
+    Value: !Sub wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}

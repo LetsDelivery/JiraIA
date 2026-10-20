@@ -1,0 +1,183 @@
+/*
+ * JiraIA design tokens (ADR-0006, design-principles skill).
+ *
+ * Direction: warmth and utility — a collaborative tool every area of the company lives in. Warm,
+ * slightly brand-tinted neutrals; one accent, the Max red, used only for action and state; Inter;
+ * soft radii (8 / 12); a 4px grid. Content surfaces are solid with a 1px border (the Max guidance);
+ * only what floats — sidebar, header, dialogs, menus, toasts — is glass.
+ */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-control: 8px;
+  --radius-surface: 12px;
+
+  --font: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --fast: 150ms;
+  --slow: 220ms;
+
+  /* Light — four levels of contrast: fg → secondary → muted → faint. */
+  --bg: #faf8f7;
+  --surface: #ffffff;
+  --surface-hover: #f6f2f1;
+  --border: rgb(60 30 30 / 0.1);
+  --border-strong: rgb(60 30 30 / 0.18);
+  --fg: #1d1817;
+  --fg-secondary: #4b4240;
+  --muted: #776d6a;
+  --faint: #a69c99;
+
+  --accent: #f93846;
+  --accent-hover: #e42e3c;
+  --accent-soft: rgb(249 56 70 / 0.1);
+  --on-accent: #ffffff;
+
+  /* State colours: status is one of the few things colour may say (design-principles). */
+  --state-done: #1f8f55;
+  --state-progress: #2f6fdb;
+  /* Something to look at before acting: a card that moved on since a proposal (ADR-0019). */
+  --state-warn: #a8620a;
+  --state-warn-soft: rgb(232 150 30 / 0.12);
+  --state-idle: #a69c99;
+
+  --glass: rgb(255 255 255 / 0.62);
+  /* Menus and toasts sit over text: they keep the blur but must stay legible. */
+  --glass-dense: rgb(255 255 255 / 0.9);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-edge: rgb(60 30 30 / 0.08);
+  --glass-shadow: 0 1px 2px rgb(40 20 20 / 0.04), 0 8px 24px rgb(40 20 20 / 0.06);
+  --glass-blur: blur(18px) saturate(160%);
+
+  /* The soft brand light behind the glass. Without something behind it, glass reads as grey. */
+  --wash-1: rgb(249 56 70 / 0.1);
+  --wash-2: rgb(255 92 53 / 0.08);
+  --backdrop: rgb(20 10 10 / 0.24);
+
+  /* Squad tags: six hues that name teams, picked from the group's id (lib/squad.ts). */
+  --squad-1: #d9480f;
+  --squad-2: #c92a2a;
+  --squad-3: #0c8599;
+  --squad-4: #7048e8;
+  --squad-5: #2f9e44;
+  --squad-6: #1971c2;
+  /* Chart series (dataviz skill, validated on --surface): fixed order, never cycled; past eight, "Outros". */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --series-other: #a69c99;
+  --chart-grid: rgb(60 30 30 / 0.08);
+  --chart-axis: rgb(60 30 30 / 0.2);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #121011;
+    --surface: #1a1718;
+    --surface-hover: #231f20;
+    --border: rgb(255 255 255 / 0.09);
+    --border-strong: rgb(255 255 255 / 0.16);
+    --fg: #f4efed;
+    --fg-secondary: #cfc6c3;
+    --muted: #9b918e;
+    --faint: #6e6563;
+    --accent: #ff4b57;
+    --accent-hover: #ff6670;
+    --accent-soft: rgb(255 75 87 / 0.14);
+    --glass: rgb(30 26 28 / 0.55);
+    --glass-dense: rgb(30 26 28 / 0.92);
+    --state-progress: #6b9cf0;
+    --state-done: #3fb27a;
+    --state-warn: #e6a84a;
+    --state-warn-soft: rgb(230 168 74 / 0.14);
+    --glass-border: rgb(255 255 255 / 0.08);
+    --glass-edge: rgb(255 255 255 / 0.04);
+    --glass-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+    --wash-1: rgb(249 56 70 / 0.08);
+    --wash-2: rgb(255 92 53 / 0.05);
+    --squad-1: #ff922b;
+    --squad-2: #ff6b6b;
+    --squad-3: #3bc9db;
+    --squad-4: #9775fa;
+    --squad-5: #51cf66;
+    --squad-6: #4dabf7;
+    --backdrop: rgb(0 0 0 / 0.5);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-other: #6e6563;
+    --chart-grid: rgb(255 255 255 / 0.07);
+    --chart-axis: rgb(255 255 255 / 0.18);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #121011;
+  --surface: #1a1718;
+  --surface-hover: #231f20;
+  --border: rgb(255 255 255 / 0.09);
+  --border-strong: rgb(255 255 255 / 0.16);
+  --fg: #f4efed;
+  --fg-secondary: #cfc6c3;
+  --muted: #9b918e;
+  --faint: #6e6563;
+  --accent: #ff4b57;
+  --accent-hover: #ff6670;
+  --accent-soft: rgb(255 75 87 / 0.14);
+  --glass: rgb(30 26 28 / 0.55);
+  --glass-dense: rgb(30 26 28 / 0.92);
+  --state-progress: #6b9cf0;
+  --state-done: #3fb27a;
+  --state-warn: #e6a84a;
+  --state-warn-soft: rgb(230 168 74 / 0.14);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --glass-edge: rgb(255 255 255 / 0.04);
+  --glass-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+  --wash-1: rgb(249 56 70 / 0.08);
+  --wash-2: rgb(255 92 53 / 0.05);
+  --squad-1: #ff922b;
+  --squad-2: #ff6b6b;
+  --squad-3: #3bc9db;
+  --squad-4: #9775fa;
+  --squad-5: #51cf66;
+  --squad-6: #4dabf7;
+  --backdrop: rgb(0 0 0 / 0.5);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --series-other: #6e6563;
+  --chart-grid: rgb(255 255 255 / 0.07);
+  --chart-axis: rgb(255 255 255 / 0.18);
+  color-scheme: dark;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@jiraia/http",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jiraia/core": "workspace:*",
+    "@jiraia/logger": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@jiraia/testing": "workspace:*"
+  }
+}

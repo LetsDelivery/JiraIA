@@ -1,0 +1,422 @@
+/*
+ * The Relatórios tab (Etapa 5d, ADR-0016). Widgets are content: solid surfaces with a 1px border.
+ * Only the tooltip and the dialogs float, so only they are glass. Chart marks follow the dataviz
+ * skill: thin, hairline grid, 2px surface gaps, series hues from tokens.css.
+ */
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.widget {
+  grid-column: span 12;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.widget-quarter {
+  grid-column: span 3;
+}
+
+.widget-third {
+  grid-column: span 4;
+}
+
+.widget-half {
+  grid-column: span 6;
+}
+
+.widget-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+
+.widget-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  color: var(--fg-secondary);
+}
+
+.widget-grip {
+  color: var(--faint);
+  cursor: grab;
+}
+
+.widget-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.widget-tools .widget-grip {
+  flex: 1;
+  padding-left: var(--space-2);
+}
+
+.widget-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.widget-loading {
+  height: 72px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, var(--surface-hover), var(--bg), var(--surface-hover));
+  background-size: 200% 100%;
+  animation: widget-shimmer 1.2s var(--ease) infinite;
+}
+
+@keyframes widget-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-loading {
+    animation: none;
+  }
+}
+
+.widget-number {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.widget-caption,
+.widget-empty {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.widget-empty {
+  padding: var(--space-6) 0;
+  text-align: center;
+}
+
+.widget-empty.error {
+  color: var(--accent);
+}
+
+.widget-count .widget-body {
+  gap: 0;
+}
+
+.widget-scroll {
+  overflow-x: auto;
+}
+
+.table-compact th,
+.table-compact td {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.table-compact .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-compact .strong {
+  font-weight: 600;
+}
+
+.table-compact .nowrap {
+  white-space: nowrap;
+}
+
+.widget-title-cell {
+  min-width: 220px;
+}
+
+.widget-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+/* Editing: every widget can be picked up; the one under the pointer says so. */
+.widget-grid.is-editing .widget {
+  border-style: dashed;
+  border-color: var(--border-strong);
+}
+
+.widget-grid.is-editing .widget[draggable='true']:hover {
+  border-color: var(--accent);
+}
+
+/* ---------- Charts ---------- */
+.chart-donut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.chart-donut svg {
+  flex: none;
+}
+
+.chart-segment {
+  stroke: var(--surface);
+  stroke-width: 2px;
+}
+
+.chart-donut-total {
+  fill: var(--fg);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.chart-donut-caption {
+  fill: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.chart-legend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 160px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chart-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.chart-legend-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.chart-bars li {
+  display: grid;
+  grid-template-columns: minmax(80px, 34%) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.chart-bar-label {
+  overflow: hidden;
+  color: var(--fg-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-bar-track {
+  height: 16px;
+}
+
+.chart-bar {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--series-1);
+}
+
+.chart-bar-value {
+  min-width: 2ch;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-plot {
+  display: block;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1px;
+}
+
+.chart-baseline {
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-column {
+  fill: var(--series-1);
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--series-1);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-dot {
+  fill: var(--series-1);
+  stroke: var(--surface);
+  stroke-width: 2px;
+}
+
+.chart-hit {
+  fill: transparent;
+}
+
+.chart-hit:hover {
+  fill: var(--chart-grid);
+}
+
+.chart-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  max-width: 280px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-control);
+  background: var(--glass-dense);
+  box-shadow: var(--glass-shadow);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+/* ---------- The catalog ---------- */
+.catalog-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.catalog-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 56vh;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.catalog-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease);
+}
+
+.catalog-entry:hover,
+.catalog-entry:focus-visible {
+  border-color: var(--accent);
+}
+
+.catalog-entry small {
+  display: block;
+  margin-top: 2px;
+}
+
+.catalog-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .widget-quarter {
+    grid-column: span 6;
+  }
+
+  .widget-third,
+  .widget-half {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 640px) {
+  .widget-quarter {
+    grid-column: span 12;
+  }
+}

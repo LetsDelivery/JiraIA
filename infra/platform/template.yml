@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  JiraIA platform: the database cluster and the event bus, deliberately near-immutable.
+
+  Holds what every service shares and nothing that changes when a feature ships. Services read these
+  by SSM parameter rather than by CloudFormation export, as in uselets: an exported value cannot
+  change while any stack imports it.
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, prd]
+  AlarmEmail:
+    Type: String
+    Description: Where CRITICAL alarms are delivered.
+  MinCapacity:
+    Type: Number
+    Default: 0
+    Description: >
+      Aurora capacity units at rest. Zero lets dev pause when nobody is using it; prd should hold at
+      least 0.5 so the first request of the morning does not wait for a resume.
+  MaxCapacity:
+    Type: Number
+    Default: 4
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, prd]
+
+Resources:
+  # Aurora PostgreSQL Serverless v2 with the Data API (ADR-0002). The Lambdas reach it over HTTPS
+  # with IAM — no VPC attachment, no connection pool — which keeps uselets' "no VPC on day one"
+  # true for every function. The cluster itself still lives in the account's default VPC subnets;
+  # nothing but the Data API endpoint talks to it.
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub jiraia/${Environment}/database/master
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "jiraia"}'
+        GenerateStringKey: password
+        PasswordLength: 40
+        ExcludePunctuation: true
+
+  DatabaseCluster:
+    Type: AWS::RDS::DBCluster
+    # Every card and page the company has. A replaced stack must not take them with it.
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBClusterIdentifier: !Sub jiraia-${Environment}
+      Engine: aurora-postgresql
+      # The same major version as the local pgvector image (docker-compose.yml). pgvector ships with it.
+      EngineVersion: '16.15'
+      DatabaseName: jiraia
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
+      EnableHttpEndpoint: true
+      StorageEncrypted: true
+      DeletionProtection: !If [IsProduction, true, false]
+      # Daily snapshots kept for two weeks (escopo-mvp 8.2); restore is rehearsed before the cut.
+      BackupRetentionPeriod: 14
+      PreferredBackupWindow: '06:00-07:00'
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: !Ref MinCapacity
+        MaxCapacity: !Ref MaxCapacity
+
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref DatabaseCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub jiraia-${Environment}
+
+  # Replay is a first-class operation, as in uselets (ADR-0004 there).
+  EventArchive:
+    Type: AWS::Events::Archive
+    Properties:
+      ArchiveName: !Sub jiraia-${Environment}-archive
+      SourceArn: !GetAtt EventBus.Arn
+      RetentionDays: 30
+
+  CriticalAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub jiraia-${Environment}-critical
+
+  CriticalAlarmSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CriticalAlarmTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmail
+
+  ClusterArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /jiraia/${Environment}/platform/db-cluster-arn
+      Type: String
+      Value: !GetAtt DatabaseCluster.DBClusterArn
+
+  SecretArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /jiraia/${Environment}/platform/db-secret-arn
+      Type: String
+      Value: !Ref DatabaseSecret
+
+  BusNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /jiraia/${Environment}/platform/event-bus-name
+      Type: String
+      Value: !Ref EventBus
+
+  BusArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /jiraia/${Environment}/platform/event-bus-arn
+      Type: String
+      Value: !GetAtt EventBus.Arn
+
+  CriticalTopicParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /jiraia/${Environment}/platform/critical-alarm-topic-arn
+      Type: String
+      Value: !Ref CriticalAlarmTopic
+
+Outputs:
+  DatabaseClusterArn:
+    Description: Read by services through SSM, not by importing this output.
+    Value: !GetAtt DatabaseCluster.DBClusterArn

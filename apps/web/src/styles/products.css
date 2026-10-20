@@ -1,0 +1,49 @@
+/* ---------- Two products, one panel (ADR-0010) ---------- */
+.nav-divider {
+  width: 100%;
+  margin: var(--space-2) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* The way to the other product, as Jira shows its apps: a tile, the name, an arrow out. */
+.nav-product .nav-product-tile {
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--surface-hover);
+  color: var(--fg-secondary);
+}
+
+.nav-product .nav-label {
+  flex: 1 1 auto;
+}
+
+.nav-product-out {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.nav-product:hover .nav-product-tile {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.is-collapsed .nav-product-out {
+  display: none;
+}
+
+/* Let’s Draw AI's spaces in its sidebar: the key, then the name. */
+.draw-space {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.draw-space .key {
+  flex: 0 0 auto;
+}

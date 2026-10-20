@@ -1,0 +1,23 @@
+node_modules/
+.aws-sam/
+dist/
+coverage/
+*.zip
+.env
+.env.*
+!.env.sample
+.DS_Store
+infra/layers/build/
+.emit/
+test-results/
+playwright-report/
+**/settings.local.json
+
+# The packaged Lambda trees `bun run build` writes beside each service.
+app/
+
+# Attachments the local harness keeps in place of S3 (infra/local/files.ts).
+.local-files/
+
+# The local harness's e-mails (infra/local/bus.ts)
+.local-mail/

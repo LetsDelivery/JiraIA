@@ -1,0 +1,8 @@
+# gitleaks: the default rule set. Copied from LetsDelivery/uselets.
+#
+# Every exception added here must be a *shape*, never a value: an allow-list naming a string is one
+# that silently covers the day that string becomes real. A single finding that is noise in one
+# commit goes in `.gitleaksignore` by fingerprint instead.
+
+[extend]
+useDefault = true

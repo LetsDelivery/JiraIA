@@ -1,0 +1,228 @@
+/* ---------- Access (ADR-0012): who reads, who edits, groups, requests ---------- */
+
+/* The line a reader sees on a space they may not edit — solid, not glass: it sits in the page. */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--fg-secondary);
+  font-size: var(--text-sm);
+}
+
+.notice p {
+  flex: 1;
+  margin: 0;
+}
+
+.access-general .row {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.request-list,
+.group-members,
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.request-row p {
+  margin: var(--space-1) 0 0;
+}
+
+.group-card {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  gap: var(--space-3);
+}
+
+.group-card h2 {
+  margin: 0;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.group-head-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.groups-intro {
+  margin: 0 0 var(--space-6);
+}
+
+.group-member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.group-member-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.group-member-who .muted {
+  font-size: var(--text-sm);
+}
+
+/* People on the left, where the group can do what on the right; one column when narrow. */
+.group-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+@media (max-width: 760px) {
+  .group-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.group-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group-column + .group-column {
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--border);
+}
+
+@media (max-width: 760px) {
+  .group-column + .group-column {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.group-column-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.group-description {
+  margin: 0;
+}
+
+.group-grants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Product, space and role on one line; what the role allows under it. */
+.group-grant {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.group-grant + .group-grant {
+  border-top: 1px solid var(--border);
+}
+
+.group-grant-product {
+  color: var(--faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  min-width: 44px;
+}
+
+.group-grant-space {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--fg);
+}
+
+.group-grant-space:hover span:last-child {
+  text-decoration: underline;
+}
+
+.group-grant-hint {
+  grid-column: 2 / -1;
+  font-size: var(--text-sm);
+}
+
+.source-list li {
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--border-strong);
+}
+
+.section-title {
+  margin: 0 0 var(--space-4);
+}
+
+/* ---------- Menus behind ⋯ and the product grid ---------- */
+.draw-menu-title:first-child {
+  margin-top: 0;
+  padding-top: var(--space-1);
+  border-top: 0;
+}
+
+.draw-menu [role='menuitem'][aria-current='page'] {
+  background: var(--surface-hover);
+  font-weight: 600;
+}
+
+.draw-menu [role='menuitem'].is-danger {
+  color: var(--accent);
+}
+
+.person-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.people-table td.actions {
+  width: 48px;
+  text-align: right;
+}
+
+/* A role picker in a table row stays the size of its longest role, however wide the table gets. */
+.table [data-select][data-group-role],
+.table [data-select][data-person-role] {
+  max-width: 240px;
+}

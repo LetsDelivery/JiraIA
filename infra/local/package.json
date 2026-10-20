@@ -1,0 +1,14 @@
+{
+  "name": "@jiraia/local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@jiraia/core": "workspace:*",
+    "@jiraia/db": "workspace:*",
+    "@jiraia/http": "workspace:*",
+    "@jiraia/logger": "workspace:*",
+    "@jiraia/work": "workspace:*",
+    "drizzle-orm": "0.45.4"
+  }
+}

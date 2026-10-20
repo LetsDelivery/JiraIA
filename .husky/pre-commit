@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+bunx biome check --write --no-errors-on-unmatched --staged
+bunx tsc --noEmit

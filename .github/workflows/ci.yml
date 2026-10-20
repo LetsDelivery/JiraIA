@@ -1,0 +1,185 @@
+# CI, in the shape of LetsDelivery/uselets' workflow: one job per concern, and `ci-ok` as the single
+# required check on `master`.
+#
+# Runs on GitHub-hosted runners for now. uselets runs on its own CodeBuild runner (ADR-0107 there);
+# JiraIA moves to one when its AWS account exists (docs/pendencias-externas.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'packages/**'
+              - 'services/**'
+              - 'infra/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.tool-versions'
+              - 'bunfig.toml'
+              - 'tsconfig*.json'
+              - 'biome.json'
+              - 'docker-compose.yml'
+              - '.github/**'
+            web:
+              - 'apps/web/**'
+              - 'infra/contracts/openapi.json'
+              - 'package.json'
+              - 'bun.lock'
+              - '.tool-versions'
+              - 'biome.json'
+              - '.github/**'
+
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - run: bunx commitlint --from origin/${{ github.base_ref }} --to HEAD
+      # Squash merge makes the PR title the commit on master, so it is held to the same rules.
+      - name: The title becomes the commit on master
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$TITLE" | bunx commitlint
+
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - run: bun run check:audit
+      # Clean room (escopo-mvp 8.5): no copyleft dependency, anywhere in the tree.
+      - run: bun run check:licenses
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Scan the new commits
+        env:
+          RANGE: ${{ github.event_name == 'pull_request' && format('origin/{0}..HEAD', github.base_ref) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: .github/scripts/gitleaks.sh "$RANGE"
+
+  backend-quality:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - name: Lint and format
+        run: bunx biome check
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+  backend-test:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The same image and port as `postgres-test` in docker-compose.yml; the test guard asserts both.
+    services:
+      postgres-test:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jiraia
+          POSTGRES_PASSWORD: jiraia
+          POSTGRES_DB: jiraia_test
+        ports: ['8210:5432']
+        options: >-
+          --health-cmd "pg_isready -U jiraia -d jiraia_test"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - name: Run all backend tests
+        run: bun run test
+      - name: Build every service package
+        run: bun run build
+      - name: Gates the build cannot see
+        run: |
+          bun run check:handlers
+          bun run check:config
+          bun run check:timezone
+          bun run check:zod
+          bun run check:http
+          bun run check:prose
+          bun run check:contracts
+
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - name: Test the panel
+        run: bun run web:test
+      - name: Build the panel
+        run: bun run web:build
+
+  ci-ok:
+    if: always()
+    needs: [changes, commits, dependencies, secrets, backend-quality, backend-test, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Every job passed or was not needed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for result in $RESULTS; do
+            if [[ "$result" == failure || "$result" == cancelled ]]; then exit 1; fi
+          done

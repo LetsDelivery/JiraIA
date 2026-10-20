@@ -1,0 +1,49 @@
+{
+  "name": "@jiraia/web",
+  "description": "Painel do JiraIA — espaços, projetos, cards, páginas e agentes. JavaScript puro, sem framework (ADR-0006).",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "api:types": "bun run scripts/api-types.ts",
+    "build": "bun run api:types && bunx tsc --noEmit && bun run vite build",
+    "dev": "bun run api:types && bun run vite",
+    "e2e": "playwright test",
+    "test": "bun run api:types && vitest run",
+    "type-check": "bun run api:types && bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "1.8.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource/caveat": "5.2.8",
+    "@tabler/icons": "3.48.0",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-bubble-menu": "3.31.4",
+    "@tiptap/extension-collaboration": "3.31.4",
+    "@tiptap/extension-collaboration-caret": "3.31.4",
+    "@tiptap/extension-highlight": "3.31.4",
+    "@tiptap/extension-image": "3.31.4",
+    "@tiptap/extension-list": "3.31.4",
+    "@tiptap/extension-mention": "3.31.4",
+    "@tiptap/extension-table": "3.31.4",
+    "@tiptap/extensions": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "@tiptap/suggestion": "3.31.4",
+    "@tiptap/y-tiptap": "3.0.9",
+    "openapi-fetch": "0.14.0",
+    "roughjs": "4.6.6",
+    "y-indexeddb": "9.0.12",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/bun": "1.4.3",
+    "@types/node": "24.19.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.1",
+    "vitest": "4.1.11"
+  }
+}

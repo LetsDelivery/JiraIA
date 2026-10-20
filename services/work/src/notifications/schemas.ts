@@ -1,0 +1,102 @@
+import { toIso } from '@jiraia/core'
+import { z } from 'zod'
+
+import type { notifications } from '../schema-intake.js'
+
+/** What a notice is about (escopo-mvp 4.6). The screen words each kind; the API names it. */
+export const notificationKindValues = [
+  'mentioned',
+  'assigned',
+  'commented',
+  'state_changed',
+  'access_requested',
+  'access_decided',
+  'proposal_received'
+] as const
+export const notificationKindSchema = z.enum(notificationKindValues)
+export type NotificationKind = z.infer<typeof notificationKindSchema>
+
+/** `in_app` only in the panel; `email` also in the daily summary; `none` not at all. */
+/** Where a kind of notice goes: the panel only, plus the daily e-mail, plus a Slack message (Etapa 5e), or nowhere. */
+export const channelSchema = z.enum(['in_app', 'email', 'slack', 'none'])
+export type Channel = z.infer<typeof channelSchema>
+
+/** What a person gets before choosing: by e-mail what asks something of them, in the panel the rest. */
+export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
+  mentioned: 'email',
+  assigned: 'email',
+  commented: 'in_app',
+  state_changed: 'in_app',
+  access_requested: 'email',
+  access_decided: 'email',
+  proposal_received: 'email'
+}
+
+/** What the notice says, captured when it happened — a card renamed later keeps its old notice. */
+export const notificationDataSchema = z.object({
+  cardKey: z.string().optional(),
+  cardTitle: z.string().optional(),
+  stateName: z.string().optional(),
+  excerpt: z.string().optional(),
+  product: z.enum(['jiraia', 'draw']).optional(),
+  spaceName: z.string().optional(),
+  spaceKey: z.string().optional(),
+  status: z.string().optional(),
+  /** The proposal a `proposal_received` notice opens (ADR-0019). */
+  proposalId: z.string().optional()
+})
+export type NotificationData = z.infer<typeof notificationDataSchema>
+
+export const boxSchema = z.enum(['inbox', 'snoozed', 'archived'])
+export type Box = z.infer<typeof boxSchema>
+
+export const notificationViewSchema = z.object({
+  id: z.uuid(),
+  kind: notificationKindSchema,
+  actor: z.object({ id: z.uuid(), name: z.string() }),
+  cardId: z.uuid().nullable(),
+  spaceId: z.uuid().nullable(),
+  data: notificationDataSchema,
+  createdAt: z.iso.datetime(),
+  readAt: z.iso.datetime().nullable(),
+  snoozedUntil: z.iso.datetime().nullable(),
+  archivedAt: z.iso.datetime().nullable()
+})
+export type NotificationView = z.infer<typeof notificationViewSchema>
+export const notificationListSchema = z.object({ items: z.array(notificationViewSchema), unread: z.number().int() })
+export const unreadCountSchema = z.object({ unread: z.number().int() })
+
+export const listQuerySchema = z.object({ box: boxSchema.default('inbox') })
+export const notificationPathSchema = z.object({ notificationId: z.uuid() })
+
+/** One notice's state, as its member changes it. `snoozedUntil: null` brings it back now. */
+export const updateNotificationSchema = z
+  .object({
+    read: z.boolean().optional(),
+    archived: z.boolean().optional(),
+    snoozedUntil: z.iso.datetime().nullable().optional()
+  })
+  .refine((input) => Object.values(input).some((value) => value !== undefined), { message: 'Send a change' })
+export type UpdateNotification = z.infer<typeof updateNotificationSchema>
+
+export const preferencesSchema = z.object({
+  items: z.array(z.object({ kind: notificationKindSchema, channel: channelSchema }))
+})
+export const preferenceInputSchema = z.object({ kind: notificationKindSchema, channel: channelSchema })
+
+export type NotificationRow = typeof notifications.$inferSelect
+
+const iso = (date: Date | null): string | null => (date ? toIso(date) : null)
+
+export const toNotificationView = (row: NotificationRow, actorName: string): NotificationView => ({
+  id: row.id,
+  kind: notificationKindSchema.parse(row.kind),
+  actor: { id: row.actorId, name: actorName },
+  cardId: row.cardId,
+  spaceId: row.spaceId,
+  data: notificationDataSchema.parse(row.data),
+  createdAt: toIso(row.createdAt),
+  readAt: iso(row.readAt),
+  snoozedUntil: iso(row.snoozedUntil),
+  archivedAt: iso(row.archivedAt)
+})

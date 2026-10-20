@@ -1,0 +1,216 @@
+/*
+ * The account menu and the Slack page (Etapa 5e). The avatar sits at the right end of the glass
+ * header; its menu floats, so it is glass too.
+ */
+.account-button {
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.account-button:hover .account-avatar,
+.account-button.is-open .account-avatar {
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 3px var(--accent);
+}
+
+.account-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.account-avatar-small {
+  width: 30px;
+  height: 30px;
+  font-size: var(--text-xs);
+}
+
+.account-avatar-large {
+  width: 44px;
+  height: 44px;
+  font-size: var(--text-md);
+}
+
+.account-menu {
+  min-width: 260px;
+  /* The list of a select scrolls; this menu is short and is read whole. */
+  max-height: none;
+  padding: var(--space-2);
+}
+
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--space-2);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.account-head div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-head span {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu a,
+.account-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu a:hover,
+.account-menu button:hover,
+.account-menu a:focus-visible,
+.account-menu button:focus-visible {
+  background: var(--surface-hover);
+}
+
+.account-group {
+  padding: var(--space-1) 0;
+}
+
+.account-group-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--fg);
+  font-size: var(--text-sm);
+}
+
+.account-group button {
+  padding-left: calc(var(--space-3) + 16px + var(--space-2));
+  color: var(--fg-secondary);
+}
+
+.account-group button[aria-checked='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.account-rule {
+  margin: var(--space-2) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Slack ---------- */
+.slack-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.slack-feature h2 {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.slack-sample {
+  display: flex;
+  gap: var(--space-3);
+  min-height: 132px;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.slack-sample p {
+  margin: 0 0 var(--space-1);
+}
+
+.slack-sample a {
+  color: #1264a3;
+  font-weight: 500;
+}
+
+.slack-sample-app {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.slack-sample-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.slack-sample-tag {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-hover);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.slack-sample-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-3);
+  border-left: 4px solid #1264a3;
+}
+
+.slack-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.slack-state p {
+  margin: 0;
+}
+
+.slack-state.is-on {
+  border-color: var(--state-done);
+}
+
+.settings-slack {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false,
+
+    // One pass over the whole monorepo, rooted here, so `.emit` mirrors the repository:
+    // `.emit/services/<svc>/src/**` and `.emit/packages/<name>/src/**`. Emitting a service on its
+    // own is what produces TS6059 — its imports resolve through the workspace symlinks into
+    // `packages/`, which is outside a per-service rootDir, and tsc refuses to place the output.
+    "rootDir": ".",
+    "outDir": ".emit"
+  },
+  "include": ["packages/*/src/**/*.ts", "services/*/src/**/*.ts"],
+  "exclude": ["**/node_modules", "**/__tests__/**", "**/*.test.ts", "packages/testing/**"]
+}

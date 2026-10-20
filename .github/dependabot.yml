@@ -1,0 +1,65 @@
+# Dependency updates, weekly and grouped, never merged by the bot.
+#
+# **The cooldown is the security control, not a convenience.** A hijacked package is typically
+# published, noticed and pulled within hours; a version nobody adopts until it has been public for
+# a week is one the registry has already had a week to retract. Security updates are not subject to
+# it — Dependabot opens those as soon as the advisory is out, one pull request each, outside the
+# groups — so waiting costs nothing on the one kind of update that is urgent. Do not shorten it to
+# receive bumps faster; that is the whole point of it. (Same policy as LetsDelivery/uselets.)
+#
+# `github-actions` also keeps the SHAs the workflows pin to current: a tag is mutable, a SHA is not,
+# and the comment beside each SHA is what this bot reads to know which version it is.
+version: 2
+
+updates:
+  # One lockfile for every workspace: `bun.lock` at the root covers packages/, services/ and apps/.
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      bun:
+        applies-to: version-updates
+        patterns: ['*']
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 5
+
+  # `semver-major-days` is for package ecosystems only; Dependabot refuses it here and for
+  # docker-compose, so these two wait the same seven days for every update.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns: ['*']
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # The containers the suite runs against. The same image is repeated as a `services:` entry in
+  # ci.yml, which this ecosystem does not read: bump both together.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      containers:
+        applies-to: version-updates
+        patterns: ['*']
+    commit-message:
+      prefix: chore
+      include: scope

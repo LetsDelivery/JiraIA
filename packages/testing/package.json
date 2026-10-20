@@ -1,0 +1,13 @@
+{
+  "name": "@jiraia/testing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jiraia/db": "workspace:*",
+    "drizzle-orm": "0.45.4"
+  }
+}

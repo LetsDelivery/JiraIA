@@ -1,0 +1,1267 @@
+/* ---------- Glass: only what floats over the page ---------- */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 0 1px var(--glass-edge), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.select-menu.glass,
+.toast.glass {
+  background: var(--glass-dense);
+}
+
+/* Without blur, or when the person asked for less transparency, glass becomes a plain surface. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+
+/* ---------- Frame ---------- */
+/*
+ * Mobile first. On a phone the header runs across the top and the sidebar is a drawer the menu button
+ * slides over the page; the search opens over the header. From 761px the sidebar sits beside the page
+ * and may fold to its icons, and the search is always there.
+ */
+.shell {
+  --topbar-height: 56px;
+  display: grid;
+  grid-template-areas:
+    'top'
+    'main';
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--topbar-height) 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.sidebar {
+  position: fixed;
+  z-index: 30;
+  top: var(--topbar-height);
+  bottom: 0;
+  left: 0;
+  width: min(300px, 85vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3);
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  overflow: hidden auto;
+  background: var(--glass-dense);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform var(--slow) var(--ease),
+    visibility 0s linear var(--slow);
+}
+
+.shell.is-drawer-open .sidebar {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--slow) var(--ease);
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  z-index: 29;
+  inset: var(--topbar-height) 0 0;
+  border: 0;
+  background: var(--backdrop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--slow) var(--ease);
+}
+
+.shell.is-drawer-open .sidebar-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/*
+ * The menu, the product grid and the brand at the start; on a phone, search and "Criar" as icons. From
+ * 1101px the search sits centred and wide, as Jira's.
+ */
+.topbar {
+  grid-area: top;
+  position: sticky;
+  top: 0;
+  z-index: 31;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-width: 0 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.topbar .global-search,
+.topbar.is-searching .kbd {
+  display: none;
+}
+
+.topbar.is-searching .global-search {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+}
+
+.topbar-search-close {
+  flex: none;
+}
+
+.topbar-center {
+  justify-content: flex-end;
+}
+
+.topbar-create {
+  width: 36px;
+  padding: 0;
+}
+
+.topbar-create-label,
+.topbar-end .bell {
+  display: none;
+}
+
+@media (min-width: 761px) {
+  .shell {
+    grid-template-areas:
+      'top top'
+      'side main';
+    grid-template-columns: 240px minmax(0, 1fr);
+    transition: grid-template-columns var(--slow) var(--ease);
+  }
+
+  .shell.is-collapsed {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    grid-area: side;
+    position: sticky;
+    z-index: auto;
+    bottom: auto;
+    width: auto;
+    height: calc(100vh - var(--topbar-height));
+    background: var(--glass);
+    transform: none;
+    visibility: visible;
+    transition: none;
+  }
+
+  .sidebar-backdrop,
+  .topbar .topbar-search-open,
+  .topbar .topbar-search-close {
+    display: none;
+  }
+
+  .topbar {
+    gap: var(--space-4);
+    padding: 0 var(--space-3);
+  }
+
+  .topbar .global-search {
+    display: flex;
+  }
+
+  .topbar-center {
+    justify-content: flex-start;
+  }
+
+  .topbar-create {
+    width: auto;
+    padding: 0 var(--space-3);
+  }
+
+  .topbar-create-label {
+    display: inline;
+  }
+
+  .topbar-end .bell {
+    display: inline-flex;
+  }
+
+  .is-collapsed .nav-label,
+  .is-collapsed .nav-title,
+  .is-collapsed .nav-sub,
+  .is-collapsed .nav-toggle,
+  .is-collapsed .nav-group-actions,
+  .is-collapsed .nav-tree,
+  .is-collapsed .who {
+    display: none;
+  }
+
+  .is-collapsed .nav-item,
+  .is-collapsed .nav-group-label {
+    justify-content: center;
+  }
+
+  .is-collapsed .nav-group-head {
+    padding-right: 0;
+  }
+}
+
+
+
+
+.brand {
+  padding: var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.brand span {
+  color: var(--accent);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-title {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--faint);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  color: var(--fg-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.nav-item.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nav-group-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: var(--space-1);
+  border-radius: var(--radius-control);
+  color: var(--fg-secondary);
+  transition: background var(--fast) var(--ease);
+}
+
+.nav-group-head:hover {
+  background: var(--surface-hover);
+}
+
+.nav-group-head.is-active {
+  color: var(--accent);
+}
+
+.nav-toggle,
+.nav-group-label,
+.nav-action {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.nav-toggle {
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+/* Like the actions on the right, the arrow shows only while the row is pointed at or focused. */
+.nav-group-head:hover .nav-toggle,
+.nav-group-head:focus-within .nav-toggle {
+  opacity: 1;
+}
+
+.nav-toggle .icon {
+  transition: transform var(--fast) var(--ease);
+}
+
+.nav-toggle[aria-expanded='true'] .icon {
+  transform: rotate(90deg);
+}
+
+.nav-group-label {
+  flex: 1;
+  gap: var(--space-2);
+  min-width: 0;
+  /* The same inset as a plain entry, so its icon lines up with "Para você" and "Pessoas". */
+  padding: var(--space-2);
+  font-weight: 500;
+}
+
+.nav-group-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* The actions belong to the row: hidden until the row is pointed at, or reached by keyboard. */
+.nav-action {
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.nav-group-head:hover .nav-action,
+.nav-group-head:focus-within .nav-action {
+  opacity: 1;
+}
+
+.nav-action:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nav-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-sub-empty {
+  padding: 0 var(--space-2) var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--faint);
+}
+
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 var(--space-1) var(--space-4);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--border);
+}
+
+.nav-sub-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.nav-sub-title .icon {
+  color: var(--accent);
+}
+
+.nav-sub-item {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-sub-item:hover,
+.nav-sub-item.is-active {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.who {
+  flex: 1 0 100%;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+
+/* The fold, the product grid and the brand at the start; the search centred and wide, as Jira's. */
+
+.topbar-center {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.topbar-create {
+  flex-shrink: 0;
+  height: 36px;
+}
+
+.topbar-start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.topbar-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+
+.view {
+  grid-area: main;
+  min-width: 0;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+@media (min-width: 761px) {
+  .view {
+    padding: var(--space-6);
+  }
+}
+
+@media (min-width: 1101px) {
+  .view {
+    padding: var(--space-8);
+  }
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-8);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.page-header.row {
+  flex-direction: row;
+}
+
+.page-header .row {
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stack-tight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.link {
+  font-weight: 500;
+}
+
+.link:hover {
+  color: var(--accent);
+}
+
+.data {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Buttons ---------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-size: var(--text-base);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.button-primary:hover {
+  background: var(--accent-hover);
+}
+
+.button-secondary {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.button-secondary:hover {
+  border-color: var(--border-strong);
+}
+
+.button-ghost {
+  color: var(--fg-secondary);
+}
+
+.button-ghost:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.button-icon {
+  width: 32px;
+  padding: 0;
+}
+
+.star.is-starred {
+  color: var(--accent);
+}
+
+/* ---------- Fields ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label,
+.field .label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+
+.input {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.field-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* ---------- Select (custom; the skill rules out native selects) ---------- */
+.select {
+  position: relative;
+}
+
+.select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 160px;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+td .select-trigger {
+  height: 32px;
+}
+
+.select-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.select-value.is-placeholder {
+  color: var(--faint);
+}
+
+.select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  min-width: 100%;
+  max-height: 280px;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--radius-control);
+}
+
+.select-menu [role='option'] {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.select-menu [role='option'] small {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.select-menu [role='option']:hover,
+.select-menu [role='option']:focus {
+  outline: none;
+  background: var(--accent-soft);
+}
+
+.select-menu [aria-selected='true'] span {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ---------- Cards (solid: they hold content) ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.card-link {
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.card-link:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.card-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.card-text {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.key {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* ---------- Table ---------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table .actions {
+  text-align: right;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.search {
+  flex: 1 1 240px;
+}
+
+.search .input {
+  width: 100%;
+}
+
+.toolbar .select-trigger {
+  min-width: 180px;
+}
+
+.spaces-table td {
+  vertical-align: middle;
+}
+
+.url {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.url:hover {
+  color: var(--accent);
+}
+
+/* ---------- Tabs and empty states ---------- */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--fg);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.empty-title {
+  font-weight: 600;
+}
+
+/* ---------- Dialog (glass) ---------- */
+.dialog {
+  width: min(440px, calc(100vw - var(--space-8)));
+  /* A select's menu opens past the dialog's edge; the dialog must not clip it or scroll to it. */
+  overflow: visible;
+  padding: 0;
+  border-radius: var(--radius-surface);
+  color: var(--fg);
+}
+
+.dialog::backdrop {
+  background: var(--backdrop);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-header,
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+}
+
+.dialog-footer {
+  justify-content: flex-end;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+}
+
+/* A notice has no footer: the body keeps the bottom edge itself. */
+.dialog-body:last-child {
+  padding-bottom: var(--space-6);
+}
+
+/* ---------- Toasts (glass) ---------- */
+.toasts {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.toast {
+  max-width: 360px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  font-weight: 500;
+}
+
+.toast-error {
+  border-left: 3px solid var(--accent);
+}
+
+/* ---------- Sign-in ---------- */
+.sign-in {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-6);
+}
+
+.sign-in-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(380px, 100%);
+  padding: var(--space-8);
+  border-radius: var(--radius-surface);
+}
+
+.sign-in-card .brand {
+  padding: 0;
+  font-size: var(--text-xl);
+}
+
+.google-button {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.page-header .row .key {
+  align-self: center;
+}
+
+/* ---------- Tabs as links (space sections) ---------- */
+a.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+a.tab[aria-current='page'] {
+  border-bottom-color: var(--accent);
+  color: var(--fg);
+}
+
+nav.tabs {
+  margin-bottom: var(--space-6);
+}
+
+/* ---------- Board (solid: it holds the work) ---------- */
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+}
+
+.view:has(.board) {
+  max-width: none;
+}
+
+/* A space is a workspace, not a page to read: every tab of it takes the whole width the shell gives. */
+.view:has(.space-tabs) {
+  max-width: none;
+}
+
+/* Nine tabs on a space: each keeps its label on one line, and the row scrolls before it wraps. */
+.space-tabs {
+  overflow-x: auto;
+}
+
+.space-tabs .tab {
+  flex: none;
+  white-space: nowrap;
+}
+
+.column {
+  display: flex;
+  flex: 0 0 272px;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: calc(100vh - 260px);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface-hover);
+}
+
+.column-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.column-head h3 {
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.group-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--state-idle);
+}
+
+.group-in_progress {
+  background: var(--state-progress);
+}
+
+.group-done {
+  background: var(--state-done);
+}
+
+.group-cancelled {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--state-idle);
+}
+
+.column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.card-tile {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), opacity var(--fast) var(--ease);
+}
+
+.card-tile[draggable='true'] {
+  cursor: grab;
+}
+
+.card-tile:hover {
+  border-color: var(--border-strong);
+}
+
+.card-tile.is-dragging {
+  opacity: 0.4;
+}
+
+.card-open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: inherit;
+}
+
+.card-tile-title {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.card-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.card-key {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.priority {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.priority-highest,
+.priority-high {
+  color: var(--accent);
+}
+
+.avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+}
+
+.drop-marker {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.quick-add-input {
+  width: 100%;
+  height: 32px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.quick-add-input:focus {
+  background: var(--surface);
+}
+
+.textarea {
+  height: auto;
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.align-start {
+  align-self: flex-start;
+}
+
+.detail-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.comments,
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comments li {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.comment-body {
+  white-space: pre-wrap;
+}
+
+.history li {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Workflow editor ---------- */
+.workflow-dialog {
+  width: min(640px, calc(100vw - var(--space-8)));
+}
+
+.states {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.state-row,
+.state-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.state-row .input,
+.state-add .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.state-row .select-trigger,
+.state-add .select-trigger {
+  min-width: 150px;
+}
+
+.state-add {
+  padding: var(--space-4) 0;
+}
+
+@media (min-width: 1101px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);
+  }
+}

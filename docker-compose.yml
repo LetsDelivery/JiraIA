@@ -1,0 +1,64 @@
+# Local dependencies. Two of each, on purpose (same reasoning as LetsDelivery/uselets).
+#
+# The `dev` database holds whatever you are working on. The `test` database is disposable: the
+# integration suite truncates it on every run. They are separate containers on separate ports
+# because loopback alone would not protect the dev data — the port does.
+#
+# Neither is the Postgres default port, so nothing else on this machine can be mistaken for one of
+# them. The test guard (`packages/testing/src/guard.ts`) asserts these exact numbers.
+#
+# The image is Postgres 16 with pgvector, the same major version Aurora runs (ADR-0002).
+services:
+  postgres-dev:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: jiraia
+      POSTGRES_PASSWORD: jiraia
+      POSTGRES_DB: jiraia
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    ports:
+      - '8200:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jiraia -d jiraia']
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # tmpfs: nothing here should survive a container restart and be mistaken for a fixture.
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: jiraia
+      POSTGRES_PASSWORD: jiraia
+      POSTGRES_DB: jiraia_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    ports:
+      - '8210:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jiraia -d jiraia_test']
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # The end-to-end suite's own database, so a run never leaves spaces in the one you work in.
+  # Wiped and seeded by `infra/local/e2e.ts` at the start of every run.
+  postgres-e2e:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: jiraia
+      POSTGRES_PASSWORD: jiraia
+      POSTGRES_DB: jiraia_e2e
+    tmpfs:
+      - /var/lib/postgresql/data
+    ports:
+      - '8220:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jiraia -d jiraia_e2e']
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+volumes:
+  postgres-dev-data:

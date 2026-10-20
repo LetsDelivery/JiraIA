@@ -1,0 +1,2 @@
+ALTER TABLE "work"."cards" ADD COLUMN "group_id" uuid;--> statement-breakpoint
+ALTER TABLE "work"."cards" ADD CONSTRAINT "cards_group_id_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "work"."groups"("id") ON DELETE no action ON UPDATE no action;

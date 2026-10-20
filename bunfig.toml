@@ -1,0 +1,15 @@
+[install]
+# Reproducible installs: an exact version in package.json is the contract (as in LetsDelivery/uselets).
+exact = true
+registry = "https://registry.npmjs.org"
+
+[test]
+# `apps/web` runs on vitest, not on this runner: it needs a DOM. Every script that runs `bun test`
+# names the directories it owns, and `bun run test:all` runs both halves.
+#
+# Loaded before every test file. It has to be a preload, not an import: the localhost guard must
+# run before any module that opens a connection is evaluated.
+preload = ["./packages/testing/src/preload.ts"]
+coverageSkipTestFiles = true
+coverageReporter = ["lcov"]
+coverageDir = "coverage"

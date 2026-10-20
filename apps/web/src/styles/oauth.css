@@ -1,0 +1,73 @@
+/*
+ * Etapa 6c (ADR-0021): the consent page an application sends a person to. One solid card, centred —
+ * it is read once and answered, so nothing on it floats.
+ */
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 520px;
+  margin: var(--space-8) auto;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.consent h1 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.consent-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.consent-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.consent-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.consent-list svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.consent-note {
+  font-size: var(--text-sm);
+}
+
+.consent-actions {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* "via Laís" after a change an application made as the person (ADR-0022). */
+.history-via {
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-secondary);
+}

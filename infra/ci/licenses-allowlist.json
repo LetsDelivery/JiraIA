@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "package": "lightningcss",
+      "license": "MPL-2.0",
+      "because": "Build-time CSS compiler used by Tailwind 4, run unmodified and never shipped to the browser. MPL-2.0 is file-level: obligations arise only if its own files are modified. Pending Jurídico confirmation (docs/pendencias-externas.md)."
+    },
+    {
+      "package": "lightningcss-*",
+      "license": "MPL-2.0",
+      "because": "The per-platform binaries of lightningcss (darwin, linux gnu and musl, windows…), one of which each machine installs. Same review as lightningcss."
+    },
+    {
+      "package": "argparse",
+      "license": "Python-2.0",
+      "because": "The PSF license is permissive (no copyleft); reaches us through js-yaml in dev tooling."
+    },
+    {
+      "package": "@fontsource-variable/inter",
+      "license": "OFL-1.1",
+      "because": "Inter is the design system's typeface. The SIL Open Font License permits embedding and bundling; it only restricts selling the font itself."
+    },
+    {
+      "package": "@fontsource/caveat",
+      "license": "OFL-1.1",
+      "because": "The handwritten typeface of the whiteboard (Etapa 4d). Same licence and review as Inter: embedding and bundling are permitted; only selling the font itself is not."
+    }
+  ]
+}

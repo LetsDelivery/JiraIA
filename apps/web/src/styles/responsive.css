@@ -1,0 +1,152 @@
+/*
+ * What the screens need on a phone and a tablet, beside their own styles. The frame — drawer, header,
+ * page padding — is mobile first in `components.css`; these are the places where a desktop layout
+ * would not fit 360px: headers with actions, tables, dialogs, the board's columns.
+ */
+
+/* A page or section header keeps its action beside the title while there is room, and below it after. */
+.page-header.row,
+.section-head {
+  flex-wrap: wrap;
+  row-gap: var(--space-3);
+}
+
+/* A dialog may take the whole width of a phone, less the gutter. */
+.dialog {
+  max-height: calc(100dvh - var(--space-8));
+}
+
+/* Up to a tablet, a table keeps its columns and scrolls sideways inside its frame, never the page. */
+@media (max-width: 1100px) {
+  .table {
+    /* Positioned, so a hidden label inside a header cell scrolls with the table instead of past it. */
+    position: relative;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 760px) {
+  h1 {
+    font-size: var(--text-xl);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-6);
+  }
+
+  .section {
+    margin-bottom: var(--space-6);
+  }
+
+  .table th,
+  .table td {
+    white-space: nowrap;
+  }
+
+  .dialog {
+    width: calc(100vw - var(--space-4) * 2);
+  }
+
+  /* One column of the board fills most of the screen, and the next one peeks in to say it is there. */
+  .board {
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 var(--space-4);
+  }
+
+  .board .column {
+    flex-basis: min(300px, 82vw);
+    max-height: none;
+    scroll-snap-align: start;
+  }
+
+  /* Buttons and fields a thumb can hit (44px is the touch target the platforms ask for). */
+  .button,
+  .input {
+    min-height: 40px;
+  }
+
+  .button-icon {
+    min-width: 40px;
+  }
+}
+
+/* Tabs keep each label on one line; when they do not fit, the row scrolls sideways. */
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs .tab {
+  flex: none;
+  white-space: nowrap;
+}
+
+.key {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  /* The card's detail takes the whole phone: no margin around a dialog that is the whole task. */
+  .card-detail {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .detail-header {
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  }
+
+  .detail-crumb {
+    overflow: hidden;
+  }
+
+  /* A backlog line keeps the key, the title, the priority and who has it; the rest is in the card. */
+  .backlog-position,
+  .backlog-row .state-chip {
+    display: none;
+  }
+
+  .group-head,
+  .request-row {
+    flex-wrap: wrap;
+  }
+
+  .group-head-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Each preference stacks: the kind and its explanation, then where it goes. */
+  .preference-table {
+    display: block;
+  }
+
+  .preference-table tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .preference-table td,
+  .preference-table td:last-child {
+    width: auto;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  /* The card's path keeps the space and the key; its type is in the details below. */
+  .detail-crumb > span:nth-child(3),
+  .detail-crumb > span:nth-child(4) {
+    display: none;
+  }
+}
