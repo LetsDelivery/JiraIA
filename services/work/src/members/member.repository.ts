@@ -69,6 +69,10 @@ export class MemberRepository {
     await tx.update(members).set({ isSpaceManager }).where(eq(members.id, id))
   }
 
+  async setAccessAuditor(tx: Database, id: string, isAccessAuditor: boolean): Promise<void> {
+    await tx.update(members).set({ isAccessAuditor }).where(eq(members.id, id))
+  }
+
   async deactivate(tx: Database, id: string, at: Date): Promise<void> {
     await tx.update(members).set({ status: 'inactive', deactivatedAt: at }).where(eq(members.id, id))
   }

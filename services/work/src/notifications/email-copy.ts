@@ -13,26 +13,47 @@ const SENTENCE: Record<NotificationKind, (row: NotificationWithActor, data: Reco
   access_requested: (row, data) => `${row.actorName} pediu para editar ${data.spaceName}`,
   access_decided: (_, data) =>
     `Seu pedido para editar ${data.spaceName} foi ${data.status === 'approved' ? 'aprovado' : 'recusado'}`,
-  proposal_received: (row, data) => `${row.actorName} propôs mudanças em ${data.spaceName}`
+  proposal_received: (row, data) => `${row.actorName} propôs mudanças em ${data.spaceName}`,
+  entitlement_waiting: (_, data) =>
+    `Pedido de acesso esperando você: ${data.systemName} · ${data.profileName} para ${data.personName}`,
+  entitlement_decided: (_, data) =>
+    `Pedido de acesso ${OUTCOME[data.status ?? ''] ?? 'atualizado'}: ${data.systemName} · ${data.profileName}`,
+  access_review_opened: (_, data) => `Revisão de acessos aberta: ${data.systemName}`,
+  entitlement_overdue: (_, data) =>
+    `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`
 }
+
+/** What became of an entitlement request, in the summary's words. */
+const OUTCOME: Record<string, string> = { approved: 'aprovado', declined: 'recusado', done: 'concluído' }
 
 const escapeHtml = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 export type SummaryLine = { sentence: string; detail: string; url: string }
 
+/** Where a notice opens: its card, its proposal, the access queue or result, or the inbox. */
+const _path = (kind: string, data: Record<string, string>): string => {
+  if (data.cardKey) {
+    return `/espacos/${data.cardKey.split('-')[0]}?card=${data.cardKey}`
+  }
+  if (data.proposalId) {
+    return `/propostas?proposta=${data.proposalId}`
+  }
+  if (data.reviewId) {
+    return '/acessos/revisoes'
+  }
+  if (data.requestId) {
+    return kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila'
+  }
+  return '/notificacoes'
+}
+
 export const summaryLine = (row: NotificationWithActor, webUrl: string): SummaryLine => {
   const data = row.data as Record<string, string>
-  const key = data.cardKey ?? ''
-  const url = key
-    ? `${webUrl}/espacos/${key.split('-')[0]}?card=${key}`
-    : data.proposalId
-      ? `${webUrl}/propostas?proposta=${data.proposalId}`
-      : `${webUrl}/notificacoes`
   return {
     sentence: SENTENCE[row.kind as NotificationKind]?.(row, data) ?? row.kind,
     detail: data.cardTitle ?? data.excerpt ?? '',
-    url
+    url: `${webUrl}${_path(row.kind, data)}`
   }
 }
 

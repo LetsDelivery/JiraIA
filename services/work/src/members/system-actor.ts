@@ -53,6 +53,7 @@ export class SystemActors {
       jobTitle: null,
       isOrgAdmin: true,
       isSpaceManager: false,
+      isAccessAuditor: false,
       status: 'active',
       createdAt: this.deps.clock.now(),
       deactivatedAt: null

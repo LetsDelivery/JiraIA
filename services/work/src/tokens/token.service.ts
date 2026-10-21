@@ -109,6 +109,7 @@ export class TokenService implements TokenVerifier {
       jobTitle: null,
       isOrgAdmin: false,
       isSpaceManager: false,
+      isAccessAuditor: false,
       status: 'active',
       createdAt: this.deps.clock.now(),
       deactivatedAt: null

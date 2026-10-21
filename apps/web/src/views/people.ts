@@ -1,4 +1,5 @@
 import { accessWrite } from '@/api/access'
+import { governanceWrite } from '@/api/governance'
 import { type Me, type Member, read, write } from '@/api/requests'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
@@ -24,12 +25,15 @@ const actionsMenu = (member: Member): Html => html`
       : html`<button type="button" role="menuitem" data-action="manager" title="Gestores criam espaços no JiraIA">
           ${icon('layoutGrid', 16)}${member.isSpaceManager ? 'Remover gestor de espaços' : 'Tornar gestor de espaços'}</button>`
   }
+  <button type="button" role="menuitem" data-action="auditor" title="Auditores leem e exportam tudo em Acessos">
+    ${icon('eye', 16)}${member.isAccessAuditor ? 'Remover auditor de acessos' : 'Tornar auditor de acessos'}</button>
   <button type="button" role="menuitem" class="is-danger" data-action="deactivate">${icon('x', 16)}Desativar</button>
 `
 
 const badges = (member: Member): Html => html`
   ${member.isOrgAdmin ? html`<span class="badge">admin</span>` : ''}
   ${member.isSpaceManager && !member.isOrgAdmin ? html`<span class="badge" title="Cria espaços no JiraIA">gestor</span>` : ''}
+  ${member.isAccessAuditor ? html`<span class="badge" title="Lê e exporta tudo em Acessos">auditor</span>` : ''}
 `
 
 const memberRow = (me: Me, member: Member): Html => html`
@@ -48,6 +52,7 @@ const memberRow = (me: Me, member: Member): Html => html`
 const ACTIONS: Record<string, (member: Member) => Promise<unknown>> = {
   admin: (member) => write.setOrgAdmin(member.id, !member.isOrgAdmin),
   manager: (member) => accessWrite.setSpaceManager(member.id, !member.isSpaceManager),
+  auditor: (member) => governanceWrite.setAuditor(member.id, !member.isAccessAuditor),
   deactivate: async (member) => {
     if (confirm(`Desativar ${member.name}? A pessoa deixa de entrar, e o histórico fica.`)) {
       await write.deactivate(member.id)

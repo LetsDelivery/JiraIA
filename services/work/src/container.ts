@@ -50,6 +50,18 @@ import type { EventPublisher } from './events/event.js'
 import type { FileStore } from './files/file-store.js'
 import { S3FileStore } from './files/s3-file-store.js'
 import { formRoutes } from './forms/routes.js'
+import { AccessClock } from './governance/access-clock.js'
+import { CatalogRepository } from './governance/catalog.repository.js'
+import { CatalogService } from './governance/catalog.service.js'
+import { HolidayRepository, HolidayService, SlaClock } from './governance/holidays.js'
+import { InventoryImport } from './governance/inventory.js'
+import { Removals } from './governance/removals.js'
+import { AccessReport } from './governance/report.js'
+import { EntitlementRequestRepository } from './governance/request.repository.js'
+import { EntitlementRequestService } from './governance/request.service.js'
+import { ReviewRepository } from './governance/review.repository.js'
+import { ReviewService } from './governance/review.service.js'
+import { auditRoutes, catalogRoutes, entitlementRoutes, holidayRoutes, reviewRoutes } from './governance/routes.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GrantService } from './grants/grant.service.js'
 import { grantRoutes } from './grants/routes.js'
@@ -63,6 +75,7 @@ import { mcpRoutes } from './mcp/routes.js'
 import { MemberAdmission } from './members/admission.js'
 import { MemberRepository } from './members/member.repository.js'
 import { MemberService } from './members/member.service.js'
+import { SystemActors } from './members/system-actor.js'
 import type { Mailer } from './notifications/mailer.js'
 import { notificationRoutes } from './notifications/routes.js'
 import { buildOAuth } from './oauth/build.js'
@@ -155,7 +168,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const comments = new CommentService({ ...onCards, comments: new CommentRepository(db), watchers, members })
 
   const services = {
-    members: new MemberService({ ...shared, members, allowedDomain }),
+    members: new MemberService({ ...shared, members, allowedDomain, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
     fields: new FieldService({ db, clock, ids, audit, gate, fields, workflows }),
@@ -238,6 +251,11 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...groupRoutes(services.groups),
     ...grantRoutes(services.grants),
     ...accessRequestRoutes(services.accessRequests),
+    ...catalogRoutes(services.catalog),
+    ...entitlementRoutes(services.entitlementRequests),
+    ...holidayRoutes(services.holidays),
+    ...reviewRoutes(services.reviews),
+    ...auditRoutes(services.accessReport, services.inventory),
     ...drawSpaceRoutes(services.drawSpaces, services.drafts),
     ...contentRoutes(services.contents),
     ...documentRoutes(services.documents, services.realtime),
@@ -289,16 +307,56 @@ type AccessDeps = {
   members: MemberRepository
 }
 
-/** Groups, the roles given to people and groups on a space, and access requests (ADR-0012). */
+/**
+ * Groups, the roles given to people and groups on a space, and access requests (ADR-0012); the
+ * governance of access to LET’S systems (ADR-0024).
+ */
 const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => {
   const groupRows = new GroupRepository(db)
+  const catalog = new CatalogRepository(db)
+  const holidays = new HolidayRepository(db)
+  const sla = new SlaClock(holidays)
+  const entitlementRows = new EntitlementRequestRepository(db)
+  const system = new SystemActors({ db, clock, ids, audit, members })
+  const removals = new Removals({ ids, audit, requests: entitlementRows })
   const grantRows = new GrantRepository(db)
   const grants = new GrantService({ db, clock, audit, access, grants: grantRows, groups: groupRows, members })
   const requests = new AccessRequestRepository(db)
   return {
     groups: new GroupService({ db, clock, ids, audit, access, groups: groupRows, members }),
     grants,
-    accessRequests: new AccessRequestService({ db, clock, ids, audit, access, grants, grantRows, requests })
+    accessRequests: new AccessRequestService({ db, clock, ids, audit, access, grants, grantRows, requests }),
+    catalog: new CatalogService({ db, clock, ids, audit, access, catalog, members }),
+    entitlementRequests: new EntitlementRequestService({
+      db,
+      clock,
+      ids,
+      audit,
+      access,
+      catalog,
+      requests: entitlementRows,
+      groups: groupRows,
+      members,
+      sla
+    }),
+    holidays: new HolidayService({ db, clock, audit, access, holidays }),
+    accessClock: new AccessClock({ db, clock, catalog, requests: entitlementRows, sla, system, removals }),
+    accessReport: new AccessReport({ db, clock, access, catalog }),
+    inventory: new InventoryImport({ db, clock, ids, audit, access, catalog, requests: entitlementRows, members }),
+    reviews: new ReviewService({
+      db,
+      clock,
+      ids,
+      audit,
+      access,
+      catalog,
+      requests: entitlementRows,
+      reviews: new ReviewRepository(db),
+      holidays,
+      sla,
+      removals,
+      system
+    })
   }
 }
 

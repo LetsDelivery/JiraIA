@@ -12,6 +12,7 @@ import './styles/page-tools.css'
 import './styles/products.css'
 import './styles/draw.css'
 import './styles/access.css'
+import './styles/governance.css'
 import './styles/reports.css'
 import './styles/whiteboard.css'
 import './styles/account.css'
@@ -37,6 +38,14 @@ import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { bindSelects, closeSelectsOnOutsideClick } from '@/ui/select'
 import { openCreateSpace } from '@/ui/space-dialogs'
 import { bindStars } from '@/ui/star'
+import {
+  accessQueueView,
+  accessReportView,
+  accessReviewsView,
+  accessSystemsView,
+  heldAccessView,
+  myAccessView
+} from '@/views/access'
 import { drawContentView, drawHomeView, drawSpaceView } from '@/views/draw'
 import { drawShell } from '@/views/draw-shell'
 import { forYouView } from '@/views/for-you'
@@ -67,6 +76,12 @@ const ROUTES: readonly View[] = [
   spaceView,
   peopleView,
   groupsView,
+  myAccessView,
+  accessQueueView,
+  heldAccessView,
+  accessSystemsView,
+  accessReviewsView,
+  accessReportView,
   integrationsView,
   notificationsView,
   proposalsView,

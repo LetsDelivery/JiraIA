@@ -55,6 +55,8 @@ export const members = work.table(
     isOrgAdmin: boolean('is_org_admin').notNull().default(false),
     /** Creates JiraIA spaces without being an organization admin (ADR-0012). */
     isSpaceManager: boolean('is_space_manager').notNull().default(false),
+    /** Reads and exports everything in access governance; never approves nor carries out (ADR-0024). */
+    isAccessAuditor: boolean('is_access_auditor').notNull().default(false),
     status: text('status').notNull(),
     createdAt: createdAt(),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true, mode: 'date' })

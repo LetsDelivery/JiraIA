@@ -5,6 +5,7 @@ import type { CommentRepository } from '../cards/comment.repository.js'
 import type { WatcherRepository } from '../cards/watcher.repository.js'
 import type { WorkflowRepository } from '../cards/workflow.repository.js'
 import type { Consumer, DomainEvent } from '../events/event.js'
+import { ENTITLEMENT_ACTIONS } from '../governance/notices.js'
 import type { GrantRepository } from '../grants/grant.repository.js'
 import type { GroupRepository } from '../groups/group.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
@@ -28,12 +29,14 @@ type Deps = {
   groups: GroupRepository
   spaces: SpaceRepository
   proposals: ProposalRepository
+  /** Who hears about an entitlement request (ADR-0024). */
+  entitlements?: { notices(event: DomainEvent): Promise<Notice[]> }
   /** Sends the notices a person asked to get in Slack (Etapa 5e). */
   slack?: { deliver(organizationId: string, notices: readonly NotificationWithActor[]): Promise<void> }
 }
 
 /** Who should hear about it, why, and what the notice says. */
-type Notice = {
+export type Notice = {
   memberId: string
   kind: NotificationKind
   cardId: string | null
@@ -61,7 +64,9 @@ export class NotificationFanout implements Consumer {
     return (
       (event.entityType === 'card' && CARD_ACTIONS.has(event.action)) ||
       (event.entityType === 'access_request' && REQUEST_ACTIONS.has(event.action)) ||
-      (event.entityType === 'proposal' && event.action === 'proposed')
+      (event.entityType === 'proposal' && event.action === 'proposed') ||
+      (event.entityType === 'entitlement_request' && ENTITLEMENT_ACTIONS.has(event.action)) ||
+      (event.entityType === 'access_review' && event.action === 'opened')
     )
   }
 
@@ -72,6 +77,9 @@ export class NotificationFanout implements Consumer {
   private async _notices(event: DomainEvent): Promise<Notice[]> {
     if (event.entityType === 'card') {
       return await this._card(event)
+    }
+    if (event.entityType === 'entitlement_request' || event.entityType === 'access_review') {
+      return (await this.deps.entitlements?.notices(event)) ?? []
     }
     return event.entityType === 'proposal' ? await this._proposal(event) : await this._request(event)
   }

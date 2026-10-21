@@ -6,7 +6,8 @@ export default defineConfig({
   schema: [
     './services/work/src/schema.ts',
     './services/work/src/schema-intake.ts',
-    './services/work/src/schema-agents.ts'
+    './services/work/src/schema-agents.ts',
+    './services/work/src/schema-governance.ts'
   ],
   out: './services/work/drizzle',
   schemaFilter: ['work']

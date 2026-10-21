@@ -11,7 +11,11 @@ export const notificationKindValues = [
   'state_changed',
   'access_requested',
   'access_decided',
-  'proposal_received'
+  'proposal_received',
+  'entitlement_waiting',
+  'entitlement_decided',
+  'entitlement_overdue',
+  'access_review_opened'
 ] as const
 export const notificationKindSchema = z.enum(notificationKindValues)
 export type NotificationKind = z.infer<typeof notificationKindSchema>
@@ -29,7 +33,11 @@ export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
   state_changed: 'in_app',
   access_requested: 'email',
   access_decided: 'email',
-  proposal_received: 'email'
+  proposal_received: 'email',
+  entitlement_waiting: 'email',
+  entitlement_decided: 'email',
+  entitlement_overdue: 'email',
+  access_review_opened: 'email'
 }
 
 /** What the notice says, captured when it happened — a card renamed later keeps its old notice. */
@@ -43,7 +51,16 @@ export const notificationDataSchema = z.object({
   spaceKey: z.string().optional(),
   status: z.string().optional(),
   /** The proposal a `proposal_received` notice opens (ADR-0019). */
-  proposalId: z.string().optional()
+  proposalId: z.string().optional(),
+  /** An entitlement request's notice (ADR-0024): which, for whom, of what. */
+  requestId: z.string().optional(),
+  requestKind: z.string().optional(),
+  systemName: z.string().optional(),
+  profileName: z.string().optional(),
+  personName: z.string().optional(),
+  /** The access review an `access_review_opened` notice opens. */
+  reviewId: z.string().optional(),
+  itemCount: z.number().int().optional()
 })
 export type NotificationData = z.infer<typeof notificationDataSchema>
 

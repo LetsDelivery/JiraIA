@@ -1,0 +1,214 @@
+/* ---------- Access governance (ADR-0024): requests, entitlements, the catalog ----------
+   Solid, not glass: everything here sits in the page. Mobile first (ADR-0023): one column, which
+   widens into two only where there is room. */
+
+.access-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.access-tabs .tab {
+  white-space: nowrap;
+}
+
+.access-tabs .nav-count {
+  margin-left: var(--space-2);
+}
+
+.access-intro {
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.access-list,
+.profile-list,
+.staff-list,
+.trail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.access-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.access-row.is-closed,
+.profile-item.is-closed,
+.system-card.is-closed {
+  opacity: 0.72;
+}
+
+.access-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.access-row-head strong {
+  overflow-wrap: anywhere;
+}
+
+.access-row p {
+  margin: 0;
+}
+
+.access-row-who {
+  font-size: var(--text-sm);
+  color: var(--fg-secondary);
+}
+
+.access-reason {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.access-status {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Color only where it says something: what waits, and what was refused. */
+.access-status.status-requested,
+.access-status.status-approved {
+  color: var(--state-warn);
+}
+
+.access-status.status-done {
+  color: var(--state-done);
+}
+
+.badge-warn {
+  border-color: var(--state-warn);
+  color: var(--state-warn);
+}
+
+.trail {
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.trail time {
+  font-variant-numeric: tabular-nums;
+}
+
+.request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.request-actions:empty {
+  display: none;
+}
+
+.system-card {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  gap: var(--space-3);
+}
+
+.system-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.system-head h2 {
+  margin: 0;
+}
+
+.system-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.system-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.profile-item,
+.staff-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.profile-name {
+  font-weight: 500;
+}
+
+.profile-description {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+}
+
+.profile-item .button,
+.staff-item .button {
+  margin-left: auto;
+}
+
+@media (min-width: 761px) {
+  .system-columns {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+.access-due {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.access-due.is-late {
+  color: var(--accent);
+}
+
+.badge-danger {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.holiday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.holiday-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}

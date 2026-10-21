@@ -11,6 +11,8 @@ import { currentApplication } from './via.js'
 export type FieldChange = { before: unknown; after: unknown }
 export type Changes = Record<string, FieldChange>
 
+export type AuditEntityType = AuditInput['entityType']
+
 export type AuditInput = {
   organizationId: string
   spaceId: string | null
@@ -41,6 +43,12 @@ export type AuditInput = {
     | 'proposal'
     | 'proposal_policy'
     | 'oauth_connection'
+    | 'organization'
+    | 'access_system'
+    | 'access_profile'
+    | 'entitlement_request'
+    | 'entitlement'
+    | 'access_review'
   entityId: string
   action: string
   changes: Changes
