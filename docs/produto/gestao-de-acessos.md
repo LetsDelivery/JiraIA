@@ -42,7 +42,7 @@ E a ISO/IEC 27701:2019: cada sistema diz se guarda dado pessoal, e o relatório 
 | A.10 | Desligamento abre remoção de todos os acessos, prazo de 24 h | M |
 | A.11 | Privilegiado com validade (até 90 dias); vencido vira remoção | M |
 | A.12 | Revisão periódica: trimestral para privilegiado, semestral para o resto | M |
-| A.13 | Perfis de base por grupo: entrar no grupo abre a concessão já aprovada | O2 |
+| A.13 | Perfis de base por grupo: entrar no grupo abre a concessão já aprovada | O2 (não entregue) |
 | A.14 | Relatórios e exportação CSV para auditoria (acessos atuais, histórico, cumprimento de SLA, dado pessoal) | M |
 | A.15 | Carga inicial do inventário de acessos atuais | M |
 | A.16 | Conectores que concedem e removem sozinhos (Google Workspace, AWS, GitHub) | D |
