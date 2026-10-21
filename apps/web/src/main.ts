@@ -38,7 +38,14 @@ import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { bindSelects, closeSelectsOnOutsideClick } from '@/ui/select'
 import { openCreateSpace } from '@/ui/space-dialogs'
 import { bindStars } from '@/ui/star'
-import { accessQueueView, accessSystemsView, heldAccessView, myAccessView } from '@/views/access'
+import {
+  accessQueueView,
+  accessReportView,
+  accessReviewsView,
+  accessSystemsView,
+  heldAccessView,
+  myAccessView
+} from '@/views/access'
 import { drawContentView, drawHomeView, drawSpaceView } from '@/views/draw'
 import { drawShell } from '@/views/draw-shell'
 import { forYouView } from '@/views/for-you'
@@ -73,6 +80,8 @@ const ROUTES: readonly View[] = [
   accessQueueView,
   heldAccessView,
   accessSystemsView,
+  accessReviewsView,
+  accessReportView,
   integrationsView,
   notificationsView,
   proposalsView,

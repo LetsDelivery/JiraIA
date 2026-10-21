@@ -56,7 +56,7 @@ const trail = (request: EntitlementRequest): Html => html`
   <ol class="trail">
     <li><span class="muted">Pedido por</span> ${request.requester.name} <time class="muted">${when(request.createdAt)}</time></li>
     ${request.decided ? html`<li><span class="muted">${request.status === 'declined' ? 'Recusado' : 'Aprovado'} por</span> ${request.decided.by.name} <time class="muted">${when(request.decided.at)}</time>${request.decided.note ? html` — “${request.decided.note}”` : ''}</li>` : ''}
-    ${request.completed ? html`<li><span class="muted">Executado por</span> ${request.completed.by.name} <time class="muted">${when(request.completed.at)}</time> — ${request.completed.evidence ?? ''}</li>` : ''}
+    ${request.completed ? html`<li><span class="muted">Executado por</span> ${request.completed.by.name} <time class="muted">${when(request.completed.at)}</time>${request.completed.evidence ? ` — ${request.completed.evidence}` : ''}</li>` : ''}
   </ol>
 `
 
@@ -81,7 +81,7 @@ const deadline = (request: EntitlementRequest): Html | string => {
 const why = (request: EntitlementRequest): Html =>
   request.origin === 'request'
     ? html`<p class="access-reason">${request.reason}</p>`
-    : html`<p class="access-reason"><span class="badge">${ORIGIN_LABEL[request.origin]}</span></p>`
+    : html`<p class="access-reason"><span class="badge">${ORIGIN_LABEL[request.origin]}</span> ${request.reason}</p>`
 
 export const requestRow = (request: EntitlementRequest): Html => html`
   <li class="access-row ${isOpen(request) ? '' : 'is-closed'}">
@@ -106,7 +106,7 @@ export const entitlementRow = (entitlement: Entitlement, options: { showMember: 
     <p class="access-row-who">
       ${options.showMember ? html`<strong>${entitlement.member.name}</strong> · ` : ''}desde ${day(entitlement.grantedAt)}${entitlement.expiresAt ? html` · até ${day(entitlement.expiresAt)}` : ''}
     </p>
-    <p class="access-reason muted">${entitlement.grantReason}</p>
+    <p class="access-reason muted">${entitlement.grantReason || ORIGIN_LABEL[entitlement.grantOrigin]}</p>
     ${options.canRemove ? html`<div class="request-actions"><button type="button" class="button button-ghost" data-remove="${entitlement.id}">Pedir remoção</button></div>` : ''}
   </li>
 `

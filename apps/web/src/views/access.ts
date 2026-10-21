@@ -12,6 +12,8 @@ import {
 } from '@/ui/access-governance'
 import { icon } from '@/ui/icons'
 
+import { bindReport, reportSection } from './access-report'
+import { bindReviews, reviewsSection } from './access-reviews'
 import { bindSystems, on, systemsSection } from './access-systems'
 import type { View } from './view'
 
@@ -35,7 +37,7 @@ const tabs = async (path: string): Promise<Html> => {
     </header>
     <nav class="tabs access-tabs" aria-label="Acessos">
       ${tab('/acessos', 'Meus acessos')}
-      ${answersForSomething(me, systems.items) ? html`${tab('/acessos/fila', 'Fila', waiting ? html`<span class="nav-count" aria-label="${waiting} esperando você">${waiting}</span>` : '')}${tab('/acessos/vigentes', 'Vigentes')}` : ''}
+      ${answersForSomething(me, systems.items) ? html`${tab('/acessos/fila', 'Fila', waiting ? html`<span class="nav-count" aria-label="${waiting} esperando você">${waiting}</span>` : '')}${tab('/acessos/vigentes', 'Vigentes')}${tab('/acessos/revisoes', 'Revisões')}${tab('/acessos/relatorio', 'Relatório')}` : ''}
       ${tab('/acessos/sistemas', 'Sistemas')}
     </nav>
   `
@@ -134,5 +136,25 @@ export const accessSystemsView: View = {
   bind: (root) => {
     bindRows(root)
     bindSystems(root)
+  }
+}
+
+export const accessReviewsView: View = {
+  path: '/acessos/revisoes',
+  title: 'Revisões de acessos',
+  render: async () => html`${await tabs('/acessos/revisoes')}${await reviewsSection()}`,
+  bind: (root) => {
+    bindRows(root)
+    bindReviews(root)
+  }
+}
+
+export const accessReportView: View = {
+  path: '/acessos/relatorio',
+  title: 'Relatório de acessos',
+  render: async () => html`${await tabs('/acessos/relatorio')}${await reportSection()}`,
+  bind: (root) => {
+    bindRows(root)
+    bindReport(root)
   }
 }

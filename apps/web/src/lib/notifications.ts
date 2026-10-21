@@ -27,7 +27,8 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
     entitlement_decided: () =>
       `Pedido de acesso ${OUTCOME[data.status ?? ''] ?? 'atualizado'}: ${data.systemName} · ${data.profileName}`,
     entitlement_overdue: () =>
-      `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`
+      `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`,
+    access_review_opened: () => `Revisão de acessos aberta: ${data.systemName}`
   }
   return sentences[notice.kind]()
 }
@@ -40,6 +41,9 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
 const _accessTarget = (kind: Notice['kind']): string => (kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila')
 
 export const target = (notice: Pick<Notice, 'kind' | 'data' | 'spaceId'>): string => {
+  if (notice.data.reviewId) {
+    return '/acessos/revisoes'
+  }
   if (notice.data.requestId) {
     return _accessTarget(notice.kind)
   }
@@ -74,6 +78,10 @@ export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {
   entitlement_overdue: {
     label: 'Acessos atrasados',
     hint: 'Um pedido de um sistema seu passou do prazo.'
+  },
+  access_review_opened: {
+    label: 'Revisões de acessos',
+    hint: 'Abriu a revisão periódica de um sistema que você é dono.'
   }
 }
 

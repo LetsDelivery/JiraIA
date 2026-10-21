@@ -45,3 +45,11 @@ describe('entitlement notices', () => {
     expect(target({ kind: 'entitlement_decided', data, spaceId: null })).toBe('/acessos')
   })
 })
+
+describe('access review notices', () => {
+  it('tell the owner which system to review, and open the reviews', () => {
+    const data = { reviewId: 'v1', systemName: 'AWS' }
+    expect(sentence({ kind: 'access_review_opened', actor, data })).toBe('Revisão de acessos aberta: AWS')
+    expect(target({ kind: 'access_review_opened', data, spaceId: null })).toBe('/acessos/revisoes')
+  })
+})

@@ -10,6 +10,7 @@ import { read } from '@/api/requests'
 import { DUTY_LABEL, PRIVILEGE_LABEL } from '@/lib/governance'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { openHistory, openImport, openReviewDialog } from '@/ui/access-catalog-tools'
 import { bindDatePickers, dateField } from '@/ui/date-picker'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { icon } from '@/ui/icons'
@@ -51,8 +52,13 @@ const systemBadges = (system: AccessSystem) => html`
   ${system.archived ? html`<span class="badge">Arquivado</span>` : ''}
 `
 
-const systemActions = (system: AccessSystem) => html`
+/** Its staff, auditors and admins read a system's history. */
+const readsHistory = (system: AccessSystem, auditor: boolean) => auditor || system.canManage || system.duties.length > 0
+
+const systemActions = (system: AccessSystem, auditor: boolean) => html`
   <span class="system-actions">
+    ${system.canEditProfiles ? html`<button type="button" class="button button-secondary" data-open-review="${system.id}">${icon('listCheck', 16)}Revisar</button>` : ''}
+    ${readsHistory(system, auditor) ? html`<button type="button" class="button button-ghost" data-history="${system.id}">${icon('history', 16)}Histórico</button>` : ''}
     ${system.canEditProfiles ? html`<button type="button" class="button button-secondary" data-new-profile="${system.id}">${icon('plus', 16)}Perfil</button>` : ''}
     ${system.canManage ? html`<button type="button" class="button button-secondary" data-sla="${system.id}">${icon('clock', 16)}Prazos</button>` : ''}
     ${system.canManage ? html`<button type="button" class="button button-secondary" data-staff="${system.id}">${icon('userPlus', 16)}Responsável</button>${archiveButton('archive-system', system.id, system.archived)}` : ''}
@@ -76,9 +82,9 @@ const staffColumn = (system: AccessSystem) => html`
 /** "1 dia útil", "2 dias úteis". */
 const businessDays = (count: number) => (count === 1 ? '1 dia útil' : `${count} dias úteis`)
 
-const systemCard = (system: AccessSystem): Html => html`
+const systemCard = (system: AccessSystem, auditor: boolean): Html => html`
   <section class="section system-card ${system.archived ? 'is-closed' : ''}">
-    <div class="system-head"><h2>${system.name}</h2>${systemBadges(system)}${systemActions(system)}</div>
+    <div class="system-head"><h2>${system.name}</h2>${systemBadges(system)}${systemActions(system, auditor)}</div>
     ${system.description ? html`<p class="muted">${system.description}</p>` : ''}
     <p class="muted system-sla">Prazos: conceder em ${businessDays(system.sla.grantDays)} · remover em ${businessDays(system.sla.removalDays)} · desligamento em ${system.sla.departureHours} h</p>
     <div class="system-columns">${profilesColumn(system)}${staffColumn(system)}</div>
@@ -90,9 +96,9 @@ export const systemsSection = async (): Promise<Html> => {
   return html`
     <div class="row access-intro">
       <p class="muted">Cada sistema tem perfis. Acesso só existe por um perfil, pedido com motivo.</p>
-      ${me.isOrgAdmin ? html`<button type="button" class="button button-secondary" data-new-system>${icon('plus', 16)}Novo sistema</button>` : ''}
+      ${me.isOrgAdmin ? html`<span class="request-actions"><button type="button" class="button button-secondary" data-new-system>${icon('plus', 16)}Novo sistema</button><button type="button" class="button button-ghost" data-import>${icon('fileUpload', 16)}Importar inventário</button></span>` : ''}
     </div>
-    ${systems.items.length ? systems.items.map(systemCard) : html`<p class="empty muted">Nenhum sistema no catálogo ainda.</p>`}
+    ${systems.items.length ? systems.items.map((system) => systemCard(system, me.isAccessAuditor)) : html`<p class="empty muted">Nenhum sistema no catálogo ainda.</p>`}
     ${await holidaysSection(me.isOrgAdmin)}
   `
 }
@@ -234,7 +240,18 @@ const addStaff = async (systemId: string) => {
   })
 }
 
+const withSystem = (act: (system: AccessSystem) => unknown) => async (button: HTMLElement) => {
+  const id = button.dataset.openReview ?? button.dataset.history ?? ''
+  const system = (await governanceRead.systems()).items.find((each) => each.id === id)
+  if (system) {
+    await act(system)
+  }
+}
+
 export const bindSystems = (root: HTMLElement): void => {
+  on(root, 'open-review', withSystem(openReviewDialog))
+  on(root, 'history', withSystem(openHistory))
+  on(root, 'import', async () => openImport())
   on(root, 'new-system', newSystem)
   on(root, 'new-profile', (button) => newProfile(button.dataset.newProfile ?? ''))
   on(root, 'staff', (button) => addStaff(button.dataset.staff ?? ''))

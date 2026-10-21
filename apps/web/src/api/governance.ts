@@ -23,6 +23,19 @@ export type RequestStatus = EntitlementRequest['status']
 export type Entitlement = Json<'/work/access/entitlements', 'get'>['items'][number]
 export type Holiday = Json<'/work/access/holidays', 'get'>['items'][number]
 export type SlaInput = { grantSlaDays: number; removalSlaDays: number; departureSlaHours: number }
+export type AccessReview = Json<'/work/access/reviews/{reviewId}', 'get'>
+export type ReviewItem = AccessReview['items'][number]
+export type AccessReport = Json<'/work/access/report', 'get'>
+export type ImportResult = Json<'/work/access/entitlements/import', 'post'>
+export type InventoryRow = {
+  email: string
+  system: string
+  profile: string
+  grantedAt?: string
+  expiresAt?: string
+  reason?: string
+}
+export type HistoryEvent = Json<'/work/access/systems/{systemId}/history', 'get'>['items'][number]
 export type GrantInput = { profileId: string; reason: string; beneficiaryId?: string; expiresAt?: string }
 
 const onSystem = (systemId: string) => ({ params: { path: { systemId } } })
@@ -44,6 +57,14 @@ export const governanceRead = {
     cached(`governance:held:${memberId}`, () =>
       unwrap(api.GET('/work/access/entitlements', { params: { query: { memberId, held: 'true' } } }))
     ),
+  reviews: () => cached('governance:reviews', () => unwrap(api.GET('/work/access/reviews', { params: { query: {} } }))),
+  report: (from: string, to: string) =>
+    cached(`governance:report:${from}:${to}`, () =>
+      unwrap(api.GET('/work/access/report', { params: { query: { from, to } } }))
+    ),
+  history: (systemId: string) => unwrap(api.GET('/work/access/systems/{systemId}/history', onSystem(systemId))),
+  /** Everything, held or not — what the auditor's export lists. */
+  allEntitlements: () => unwrap(api.GET('/work/access/entitlements', { params: { query: { held: 'false' } } })),
   holidays: () => cached('governance:holidays', () => unwrap(api.GET('/work/access/holidays'))),
   /** Everything the caller may see that is held now — their systems', or all of it for an auditor. */
   held: () =>
@@ -57,6 +78,21 @@ export const governanceWrite = {
     _done(await unwrap(api.POST('/work/access/systems', { body }))),
   archiveSystem: async (systemId: string, archived: boolean) =>
     _done(await unwrap(api.PATCH('/work/access/systems/{systemId}', { ...onSystem(systemId), body: { archived } }))),
+  openReview: async (systemId: string, privilege: Privilege) =>
+    _done(
+      await unwrap(api.POST('/work/access/systems/{systemId}/reviews', { ...onSystem(systemId), body: { privilege } }))
+    ),
+  decideReviewItem: async (reviewId: string, entitlementId: string, decision: 'keep' | 'remove') =>
+    _done(
+      await unwrap(
+        api.POST('/work/access/reviews/{reviewId}/items/{entitlementId}', {
+          params: { path: { reviewId, entitlementId } },
+          body: { decision }
+        })
+      )
+    ),
+  importInventory: async (rows: readonly InventoryRow[]) =>
+    _done(await unwrap(api.POST('/work/access/entitlements/import', { body: { rows: [...rows] } }))),
   setSla: async (systemId: string, sla: SlaInput) =>
     _done(await unwrap(api.PATCH('/work/access/systems/{systemId}', { ...onSystem(systemId), body: sla }))),
   putHoliday: async (day: string, name: string) =>
