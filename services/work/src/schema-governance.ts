@@ -169,3 +169,51 @@ export const businessHolidays = work.table(
   },
   (table) => [primaryKey({ columns: [table.organizationId, table.day] })]
 )
+
+/**
+ * A periodic review of one system's entitlements of one privilege (ADR-0024): every quarter for the
+ * privileged, every semester for the rest. Its owners confirm or remove each item; what is left
+ * unanswered when it is due becomes a removal.
+ */
+export const accessReviews = work.table(
+  'access_reviews',
+  {
+    id: uuid('id').primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    systemId: uuid('system_id')
+      .notNull()
+      .references(() => accessSystems.id),
+    /** `privileged` or `standard`: which profiles it covers. */
+    privilege: text('privilege').notNull(),
+    openedBy: uuid('opened_by')
+      .notNull()
+      .references(() => members.id),
+    openedAt: at('opened_at').notNull(),
+    dueAt: at('due_at').notNull(),
+    closedAt: at('closed_at')
+  },
+  (table) => [
+    index('access_reviews_system').on(table.systemId, table.privilege, table.openedAt),
+    uniqueIndex('access_reviews_open').on(table.systemId, table.privilege).where(sql`closed_at IS NULL`)
+  ]
+)
+
+/** One entitlement as a review found it, and what its owner decided: `keep` or `remove`. */
+export const accessReviewItems = work.table(
+  'access_review_items',
+  {
+    reviewId: uuid('review_id')
+      .notNull()
+      .references(() => accessReviews.id),
+    entitlementId: uuid('entitlement_id')
+      .notNull()
+      .references(() => entitlements.id),
+    decision: text('decision'),
+    decidedBy: uuid('decided_by').references(() => members.id),
+    decidedAt: at('decided_at'),
+    note: text('note'),
+    /** The removal a `remove` — or a review left unanswered — opened. */
+    removalRequestId: uuid('removal_request_id').references(() => entitlementRequests.id)
+  },
+  (table) => [primaryKey({ columns: [table.reviewId, table.entitlementId] })]
+)

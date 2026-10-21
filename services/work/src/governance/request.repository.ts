@@ -217,7 +217,8 @@ export class EntitlementRequestRepository {
         privilege: accessProfiles.privilege,
         memberName: holder.name,
         memberEmail: holder.email,
-        grantReason: grantRequest.reason
+        grantReason: grantRequest.reason,
+        grantOrigin: grantRequest.origin
       })
       .from(entitlements)
       .innerJoin(accessSystems, eq(accessSystems.id, entitlements.systemId))

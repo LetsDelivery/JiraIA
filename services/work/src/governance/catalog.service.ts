@@ -3,7 +3,7 @@ import type { Database } from '@jiraia/db'
 import type { Caller } from '@jiraia/http'
 
 import { type AccessResolver, assertOrgAdmin } from '../access.js'
-import { type AuditEntityType, type AuditTrail, type Changes, diff } from '../audit/audit.js'
+import { type AuditEntityType, type AuditEventView, type AuditTrail, type Changes, diff } from '../audit/audit.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
 import type { CatalogRepository } from './catalog.repository.js'
@@ -144,6 +144,27 @@ export class CatalogService {
       await this._audit(tx, actor, 'access_profile', profile.id, 'updated', diff(profile, fields))
     })
     return await this.read(caller, profile.systemId)
+  }
+
+  /**
+   * Every change to a system and its profiles, oldest first — who created a profile, named an owner,
+   * changed a deadline. Its staff, auditors and admins read it.
+   */
+  async history(caller: Caller, systemId: string): Promise<{ items: AuditEventView[] }> {
+    const actor = await this.deps.access.actor(caller)
+    const system = await this._system(actor, systemId)
+    const duties = await this.deps.catalog.dutiesOf(actor.id)
+    if (!actor.isOrgAdmin && !actor.isAccessAuditor && !duties.some((each) => each.systemId === system.id)) {
+      throw new ForbiddenException(`Only the staff of system "${system.name}" and auditors may read its history`, {
+        systemId: system.id
+      })
+    }
+    const profiles = await this.deps.catalog.profilesOf([system.id])
+    const trails = await Promise.all([
+      this.deps.audit.listForEntity('access_system', system.id),
+      ...profiles.map((profile) => this.deps.audit.listForEntity('access_profile', profile.id))
+    ])
+    return { items: trails.flat().sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)) }
   }
 
   private async _views(actor: MemberRow, rows: readonly SystemRow[]): Promise<SystemView[]> {

@@ -1,4 +1,7 @@
 import { defineRoute, type Route } from '@jiraia/http'
+import { z } from 'zod'
+
+import { auditEventViewSchema } from '../audit/audit.js'
 
 import {
   createProfileSchema,
@@ -13,6 +16,8 @@ import {
 } from './catalog.schemas.js'
 import type { CatalogService } from './catalog.service.js'
 import { type HolidayService, holidayListSchema, holidayPathSchema, putHolidaySchema } from './holidays.js'
+import { type InventoryImport, importResultSchema, importSchema } from './inventory.js'
+import { type AccessReport, reportQuerySchema, reportSchema } from './report.js'
 import {
   completionSchema,
   createRequestSchema,
@@ -25,6 +30,16 @@ import {
   requestViewSchema
 } from './request.schemas.js'
 import type { EntitlementRequestService } from './request.service.js'
+import {
+  decideItemSchema,
+  listReviewsQuerySchema,
+  openReviewSchema,
+  reviewItemPathSchema,
+  reviewListSchema,
+  reviewPathSchema,
+  reviewViewSchema
+} from './review.schemas.js'
+import type { ReviewService } from './review.service.js'
 
 /** Access governance (ADR-0024): the catalog of LET’S systems and their profiles. */
 export const catalogRoutes = (catalog: CatalogService): Route[] => [
@@ -95,6 +110,14 @@ export const catalogRoutes = (catalog: CatalogService): Route[] => [
       statusCode: 201,
       body: await catalog.createProfile(caller, path.systemId, body)
     })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/access/systems/{systemId}/history',
+    requires: 'authenticated',
+    schemas: { path: systemPathSchema },
+    responds: z.object({ items: z.array(auditEventViewSchema) }),
+    handler: async ({ caller, path }) => ({ statusCode: 200, body: await catalog.history(caller, path.systemId) })
   }),
   defineRoute({
     method: 'PATCH',
@@ -203,5 +226,70 @@ export const holidayRoutes = (holidays: HolidayService): Route[] => [
     schemas: { path: holidayPathSchema },
     responds: holidayListSchema,
     handler: async ({ caller, path }) => ({ statusCode: 200, body: await holidays.remove(caller, path.day) })
+  })
+]
+
+/** Periodic access reviews (ADR-0024): owners confirm or remove what their systems grant. */
+export const reviewRoutes = (reviews: ReviewService): Route[] => [
+  defineRoute({
+    method: 'GET',
+    path: '/access/reviews',
+    requires: 'authenticated',
+    schemas: { query: listReviewsQuerySchema },
+    responds: reviewListSchema,
+    handler: async ({ caller, query }) => ({
+      statusCode: 200,
+      body: await reviews.list(caller, query.open === undefined ? undefined : query.open === 'true')
+    })
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/access/systems/{systemId}/reviews',
+    requires: 'authenticated',
+    schemas: { path: systemPathSchema, body: openReviewSchema },
+    responds: reviewViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 201,
+      body: await reviews.open(caller, path.systemId, body.privilege)
+    })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/access/reviews/{reviewId}',
+    requires: 'authenticated',
+    schemas: { path: reviewPathSchema },
+    responds: reviewViewSchema,
+    handler: async ({ caller, path }) => ({ statusCode: 200, body: await reviews.read(caller, path.reviewId) })
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/access/reviews/{reviewId}/items/{entitlementId}',
+    requires: 'authenticated',
+    schemas: { path: reviewItemPathSchema, body: decideItemSchema },
+    responds: reviewViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await reviews.decide(caller, path.reviewId, path.entitlementId, body)
+    })
+  })
+]
+
+/** What an auditor needs (ADR-0024): the SLA report, and loading the access held before go-live. */
+export const auditRoutes = (report: AccessReport, inventory: InventoryImport): Route[] => [
+  defineRoute({
+    method: 'GET',
+    path: '/access/report',
+    requires: 'authenticated',
+    schemas: { query: reportQuerySchema },
+    responds: reportSchema,
+    handler: async ({ caller, query }) => ({ statusCode: 200, body: await report.read(caller, query.from, query.to) })
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/access/entitlements/import',
+    requires: 'authenticated',
+    schemas: { body: importSchema },
+    responds: importResultSchema,
+    handler: async ({ caller, body }) => ({ statusCode: 200, body: await inventory.run(caller, body.rows) })
   })
 ]

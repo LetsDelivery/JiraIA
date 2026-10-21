@@ -29,6 +29,7 @@ import { FormService } from './forms/form.service.js'
 import { CatalogRepository } from './governance/catalog.repository.js'
 import { EntitlementNotices } from './governance/notices.js'
 import { EntitlementRequestRepository } from './governance/request.repository.js'
+import { ReviewRepository } from './governance/review.repository.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GroupRepository } from './groups/group.repository.js'
 import { SlackChannelRepository } from './integrations/slack.repository.js'
@@ -216,7 +217,8 @@ export const buildNotifications = ({
       proposals: new ProposalRepository(db),
       entitlements: new EntitlementNotices({
         requests: new EntitlementRequestRepository(db),
-        catalog: new CatalogRepository(db)
+        catalog: new CatalogRepository(db),
+        reviews: new ReviewRepository(db)
       }),
       slack: slackDirect
     }),

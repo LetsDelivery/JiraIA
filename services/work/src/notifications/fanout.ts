@@ -65,7 +65,8 @@ export class NotificationFanout implements Consumer {
       (event.entityType === 'card' && CARD_ACTIONS.has(event.action)) ||
       (event.entityType === 'access_request' && REQUEST_ACTIONS.has(event.action)) ||
       (event.entityType === 'proposal' && event.action === 'proposed') ||
-      (event.entityType === 'entitlement_request' && ENTITLEMENT_ACTIONS.has(event.action))
+      (event.entityType === 'entitlement_request' && ENTITLEMENT_ACTIONS.has(event.action)) ||
+      (event.entityType === 'access_review' && event.action === 'opened')
     )
   }
 
@@ -77,7 +78,7 @@ export class NotificationFanout implements Consumer {
     if (event.entityType === 'card') {
       return await this._card(event)
     }
-    if (event.entityType === 'entitlement_request') {
+    if (event.entityType === 'entitlement_request' || event.entityType === 'access_review') {
       return (await this.deps.entitlements?.notices(event)) ?? []
     }
     return event.entityType === 'proposal' ? await this._proposal(event) : await this._request(event)

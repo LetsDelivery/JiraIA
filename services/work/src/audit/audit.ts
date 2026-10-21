@@ -48,6 +48,7 @@ export type AuditInput = {
     | 'access_profile'
     | 'entitlement_request'
     | 'entitlement'
+    | 'access_review'
   entityId: string
   action: string
   changes: Changes

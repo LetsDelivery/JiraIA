@@ -3,6 +3,7 @@ import type { Notice } from '../notifications/fanout.js'
 import type { CatalogRepository } from './catalog.repository.js'
 import type { EntitlementRequestRepository } from './request.repository.js'
 import type { RequestRead } from './request.schemas.js'
+import type { ReviewRepository } from './review.repository.js'
 
 /** The actions of an entitlement request someone has to hear about (ADR-0024). */
 export const ENTITLEMENT_ACTIONS = new Set(['requested', 'approved', 'declined', 'done', 'overdue'])
@@ -13,9 +14,18 @@ export const ENTITLEMENT_ACTIONS = new Set(['requested', 'approved', 'declined',
  * request past its deadline reaches owners and operators both.
  */
 export class EntitlementNotices {
-  constructor(private readonly deps: { requests: EntitlementRequestRepository; catalog: CatalogRepository }) {}
+  constructor(
+    private readonly deps: {
+      requests: EntitlementRequestRepository
+      catalog: CatalogRepository
+      reviews: ReviewRepository
+    }
+  ) {}
 
   async notices(event: DomainEvent): Promise<Notice[]> {
+    if (event.entityType === 'access_review') {
+      return await this._review(event)
+    }
     const request = await this.deps.requests.find(event.organizationId, event.entityId)
     if (!request) {
       return []
@@ -33,6 +43,24 @@ export class EntitlementNotices {
       }
     }
     return (await this._recipients(event.action, request)).map(({ memberId, kind }) => ({ ...base, memberId, kind }))
+  }
+
+  /** A review opened reaches the system's owners: they are the ones who answer it. */
+  private async _review(event: DomainEvent): Promise<Notice[]> {
+    const review = await this.deps.reviews.find(event.organizationId, event.entityId)
+    if (!review) {
+      return []
+    }
+    const owners = (await this.deps.catalog.staffOf([review.systemId])).filter((each) => each.duty === 'owner')
+    const itemCount = Number(event.changes.items?.after ?? 0)
+    const data = { reviewId: review.id, systemName: review.systemName, itemCount }
+    return owners.map((owner) => ({
+      memberId: owner.memberId,
+      kind: 'access_review_opened' as const,
+      cardId: null,
+      spaceId: null,
+      data
+    }))
   }
 
   private async _recipients(action: string, request: RequestRead): Promise<Pick<Notice, 'memberId' | 'kind'>[]> {

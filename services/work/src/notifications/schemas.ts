@@ -14,7 +14,8 @@ export const notificationKindValues = [
   'proposal_received',
   'entitlement_waiting',
   'entitlement_decided',
-  'entitlement_overdue'
+  'entitlement_overdue',
+  'access_review_opened'
 ] as const
 export const notificationKindSchema = z.enum(notificationKindValues)
 export type NotificationKind = z.infer<typeof notificationKindSchema>
@@ -35,7 +36,8 @@ export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
   proposal_received: 'email',
   entitlement_waiting: 'email',
   entitlement_decided: 'email',
-  entitlement_overdue: 'email'
+  entitlement_overdue: 'email',
+  access_review_opened: 'email'
 }
 
 /** What the notice says, captured when it happened — a card renamed later keeps its old notice. */
@@ -55,7 +57,10 @@ export const notificationDataSchema = z.object({
   requestKind: z.string().optional(),
   systemName: z.string().optional(),
   profileName: z.string().optional(),
-  personName: z.string().optional()
+  personName: z.string().optional(),
+  /** The access review an `access_review_opened` notice opens. */
+  reviewId: z.string().optional(),
+  itemCount: z.number().int().optional()
 })
 export type NotificationData = z.infer<typeof notificationDataSchema>
 

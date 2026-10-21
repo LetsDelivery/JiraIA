@@ -8,7 +8,7 @@ export type EntitlementRequestRow = typeof entitlementRequests.$inferSelect
 export type EntitlementRow = typeof entitlements.$inferSelect
 
 export const requestKindSchema = z.enum(['grant', 'removal'])
-export const requestOriginSchema = z.enum(['request', 'departure', 'expiry'])
+export const requestOriginSchema = z.enum(['request', 'departure', 'expiry', 'review', 'inventory'])
 export const requestStatusSchema = z.enum(['requested', 'approved', 'declined', 'done', 'cancelled'])
 export type RequestStatus = z.infer<typeof requestStatusSchema>
 
@@ -91,6 +91,8 @@ export const entitlementViewSchema = z.object({
   member: personSchema,
   grantRequestId: z.uuid(),
   grantReason: z.string(),
+  /** How the grant came: asked by a person, or loaded from the inventory. */
+  grantOrigin: requestOriginSchema,
   grantedAt: z.iso.datetime(),
   expiresAt: z.iso.datetime().nullable(),
   removalRequestId: z.uuid().nullable(),
@@ -117,6 +119,7 @@ export type EntitlementRead = EntitlementRow & {
   memberName: string
   memberEmail: string | null
   grantReason: string
+  grantOrigin: string
 }
 
 export type Abilities = Pick<RequestView, 'canDecide' | 'canComplete' | 'canCancel'>
@@ -159,6 +162,7 @@ export const toEntitlementView = (row: EntitlementRead): EntitlementView => ({
   member: { id: row.memberId, name: row.memberName, email: row.memberEmail },
   grantRequestId: row.grantRequestId,
   grantReason: row.grantReason,
+  grantOrigin: requestOriginSchema.parse(row.grantOrigin),
   grantedAt: toIso(row.grantedAt),
   expiresAt: row.expiresAt ? toIso(row.expiresAt) : null,
   removalRequestId: row.removalRequestId,

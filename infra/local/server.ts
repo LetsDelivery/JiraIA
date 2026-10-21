@@ -75,6 +75,7 @@ setInterval(
   () =>
     void work.accessClock
       .sweep()
+      .then(() => work.reviews.sweep())
       .then(() => afterWrite('POST'))
       .catch((error: unknown) => console.error('  access clock failed:', error)),
   60_000

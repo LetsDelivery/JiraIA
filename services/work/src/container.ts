@@ -54,9 +54,14 @@ import { AccessClock } from './governance/access-clock.js'
 import { CatalogRepository } from './governance/catalog.repository.js'
 import { CatalogService } from './governance/catalog.service.js'
 import { HolidayRepository, HolidayService, SlaClock } from './governance/holidays.js'
+import { InventoryImport } from './governance/inventory.js'
+import { Removals } from './governance/removals.js'
+import { AccessReport } from './governance/report.js'
 import { EntitlementRequestRepository } from './governance/request.repository.js'
 import { EntitlementRequestService } from './governance/request.service.js'
-import { catalogRoutes, entitlementRoutes, holidayRoutes } from './governance/routes.js'
+import { ReviewRepository } from './governance/review.repository.js'
+import { ReviewService } from './governance/review.service.js'
+import { auditRoutes, catalogRoutes, entitlementRoutes, holidayRoutes, reviewRoutes } from './governance/routes.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GrantService } from './grants/grant.service.js'
 import { grantRoutes } from './grants/routes.js'
@@ -249,6 +254,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...catalogRoutes(services.catalog),
     ...entitlementRoutes(services.entitlementRequests),
     ...holidayRoutes(services.holidays),
+    ...reviewRoutes(services.reviews),
+    ...auditRoutes(services.accessReport, services.inventory),
     ...drawSpaceRoutes(services.drawSpaces, services.drafts),
     ...contentRoutes(services.contents),
     ...documentRoutes(services.documents, services.realtime),
@@ -311,6 +318,7 @@ const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => 
   const sla = new SlaClock(holidays)
   const entitlementRows = new EntitlementRequestRepository(db)
   const system = new SystemActors({ db, clock, ids, audit, members })
+  const removals = new Removals({ ids, audit, requests: entitlementRows })
   const grantRows = new GrantRepository(db)
   const grants = new GrantService({ db, clock, audit, access, grants: grantRows, groups: groupRows, members })
   const requests = new AccessRequestRepository(db)
@@ -332,7 +340,23 @@ const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => 
       sla
     }),
     holidays: new HolidayService({ db, clock, audit, access, holidays }),
-    accessClock: new AccessClock({ db, clock, ids, audit, catalog, requests: entitlementRows, sla, system })
+    accessClock: new AccessClock({ db, clock, catalog, requests: entitlementRows, sla, system, removals }),
+    accessReport: new AccessReport({ db, clock, access, catalog }),
+    inventory: new InventoryImport({ db, clock, ids, audit, access, catalog, requests: entitlementRows, members }),
+    reviews: new ReviewService({
+      db,
+      clock,
+      ids,
+      audit,
+      access,
+      catalog,
+      requests: entitlementRows,
+      reviews: new ReviewRepository(db),
+      holidays,
+      sla,
+      removals,
+      system
+    })
   }
 }
 

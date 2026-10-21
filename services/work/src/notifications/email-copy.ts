@@ -18,6 +18,7 @@ const SENTENCE: Record<NotificationKind, (row: NotificationWithActor, data: Reco
     `Pedido de acesso esperando você: ${data.systemName} · ${data.profileName} para ${data.personName}`,
   entitlement_decided: (_, data) =>
     `Pedido de acesso ${OUTCOME[data.status ?? ''] ?? 'atualizado'}: ${data.systemName} · ${data.profileName}`,
+  access_review_opened: (_, data) => `Revisão de acessos aberta: ${data.systemName}`,
   entitlement_overdue: (_, data) =>
     `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`
 }
@@ -37,6 +38,9 @@ const _path = (kind: string, data: Record<string, string>): string => {
   }
   if (data.proposalId) {
     return `/propostas?proposta=${data.proposalId}`
+  }
+  if (data.reviewId) {
+    return '/acessos/revisoes'
   }
   if (data.requestId) {
     return kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila'
