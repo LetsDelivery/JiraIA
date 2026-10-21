@@ -24,4 +24,13 @@ describe('the OpenAPI contract', () => {
 
     expect(described.sort()).toEqual(mounted.sort())
   })
+
+  // Regression: `/access-requests` and `/access/requests` both became `workPostAccessRequests`, and the
+  // panel's generated types gave the second route the first one's body.
+  it('names every operation once', async () => {
+    const document = (await buildDocument()) as { paths: Record<string, Record<string, { operationId: string }>> }
+    const ids = Object.values(document.paths).flatMap((methods) => Object.values(methods).map((op) => op.operationId))
+
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([])
+  })
 })
