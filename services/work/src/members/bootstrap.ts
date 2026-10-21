@@ -39,6 +39,7 @@ export const bootstrapOrganization = async (
     jobTitle: null,
     isOrgAdmin: true,
     isSpaceManager: false,
+    isAccessAuditor: false,
     status: 'active',
     createdAt: now,
     deactivatedAt: null

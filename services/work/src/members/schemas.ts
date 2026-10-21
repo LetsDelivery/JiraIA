@@ -18,6 +18,8 @@ export const memberViewSchema = z.object({
   isOrgAdmin: z.boolean(),
   /** Creates JiraIA spaces without being an organization admin (ADR-0012). */
   isSpaceManager: z.boolean(),
+  /** Reads and exports everything in access governance (ADR-0024). */
+  isAccessAuditor: z.boolean(),
   status: memberStatusSchema,
   /** The platform's own "Automação" (ADR-0014): it acts, but holds no role and is chosen for nothing. */
   isSystem: z.boolean(),
@@ -63,6 +65,7 @@ export const toMemberView = (row: MemberRow): MemberView => ({
   jobTitle: row.jobTitle,
   isOrgAdmin: row.isOrgAdmin,
   isSpaceManager: row.isSpaceManager,
+  isAccessAuditor: row.isAccessAuditor,
   status: memberStatusSchema.parse(row.status),
   isSystem: row.subject?.startsWith('system:') ?? false,
   createdAt: toIso(row.createdAt),

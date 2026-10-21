@@ -130,6 +130,26 @@ export class MemberService {
     return toMemberView({ ...target, isSpaceManager })
   }
 
+  /** An access auditor reads and exports everything in access governance (ADR-0024). */
+  async setAccessAuditor(caller: Caller, memberId: string, isAccessAuditor: boolean): Promise<MemberView> {
+    const actor = await this.deps.access.actor(caller)
+    assertOrgAdmin(actor, 'change who audits access')
+    const target = await this._find(actor.organizationId, memberId)
+    await this.deps.db.transaction(async (tx) => {
+      await this.deps.members.setAccessAuditor(tx, target.id, isAccessAuditor)
+      await this.deps.audit.record(tx, {
+        organizationId: actor.organizationId,
+        spaceId: null,
+        actorId: actor.id,
+        entityType: 'member',
+        entityId: target.id,
+        action: isAccessAuditor ? 'made_access_auditor' : 'removed_access_auditor',
+        changes: { isAccessAuditor: { before: target.isAccessAuditor, after: isAccessAuditor } }
+      })
+    })
+    return toMemberView({ ...target, isAccessAuditor })
+  }
+
   /** The row stays: every card, comment and audit event that names this member keeps its author (1.4). */
   async deactivate(caller: Caller, memberId: string): Promise<MemberView> {
     const actor = await this.deps.access.actor(caller)
@@ -167,6 +187,7 @@ export class MemberService {
       jobTitle: input.jobTitle,
       isOrgAdmin: input.isOrgAdmin,
       isSpaceManager: false,
+      isAccessAuditor: false,
       status: 'active',
       createdAt: this.deps.clock.now(),
       deactivatedAt: null

@@ -90,6 +90,17 @@ const memberRoutes = ({ members }: Services): Route[] => [
   }),
   defineRoute({
     method: 'POST',
+    path: '/members/{memberId}/access-auditor',
+    requires: 'authenticated',
+    schemas: { path: memberPathSchema, body: z.object({ isAccessAuditor: z.boolean() }) },
+    responds: memberViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await members.setAccessAuditor(caller, path.memberId, body.isAccessAuditor)
+    })
+  }),
+  defineRoute({
+    method: 'POST',
     path: '/members/{memberId}/deactivate',
     requires: 'authenticated',
     schemas: { path: memberPathSchema },

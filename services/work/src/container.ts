@@ -50,6 +50,11 @@ import type { EventPublisher } from './events/event.js'
 import type { FileStore } from './files/file-store.js'
 import { S3FileStore } from './files/s3-file-store.js'
 import { formRoutes } from './forms/routes.js'
+import { CatalogRepository } from './governance/catalog.repository.js'
+import { CatalogService } from './governance/catalog.service.js'
+import { EntitlementRequestRepository } from './governance/request.repository.js'
+import { EntitlementRequestService } from './governance/request.service.js'
+import { catalogRoutes, entitlementRoutes } from './governance/routes.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GrantService } from './grants/grant.service.js'
 import { grantRoutes } from './grants/routes.js'
@@ -238,6 +243,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...groupRoutes(services.groups),
     ...grantRoutes(services.grants),
     ...accessRequestRoutes(services.accessRequests),
+    ...catalogRoutes(services.catalog),
+    ...entitlementRoutes(services.entitlementRequests),
     ...drawSpaceRoutes(services.drawSpaces, services.drafts),
     ...contentRoutes(services.contents),
     ...documentRoutes(services.documents, services.realtime),
@@ -289,16 +296,32 @@ type AccessDeps = {
   members: MemberRepository
 }
 
-/** Groups, the roles given to people and groups on a space, and access requests (ADR-0012). */
+/**
+ * Groups, the roles given to people and groups on a space, and access requests (ADR-0012); the
+ * governance of access to LET’S systems (ADR-0024).
+ */
 const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => {
   const groupRows = new GroupRepository(db)
+  const catalog = new CatalogRepository(db)
   const grantRows = new GrantRepository(db)
   const grants = new GrantService({ db, clock, audit, access, grants: grantRows, groups: groupRows, members })
   const requests = new AccessRequestRepository(db)
   return {
     groups: new GroupService({ db, clock, ids, audit, access, groups: groupRows, members }),
     grants,
-    accessRequests: new AccessRequestService({ db, clock, ids, audit, access, grants, grantRows, requests })
+    accessRequests: new AccessRequestService({ db, clock, ids, audit, access, grants, grantRows, requests }),
+    catalog: new CatalogService({ db, clock, ids, audit, access, catalog, members }),
+    entitlementRequests: new EntitlementRequestService({
+      db,
+      clock,
+      ids,
+      audit,
+      access,
+      catalog,
+      requests: new EntitlementRequestRepository(db),
+      groups: groupRows,
+      members
+    })
   }
 }
 

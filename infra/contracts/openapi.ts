@@ -41,6 +41,7 @@ const SERVICES = [
       'groups/routes.js',
       'grants/routes.js',
       'requests/routes.js',
+      'governance/routes.js',
       'draw/routes.js',
       'draw/space.routes.js',
       'forms/routes.js',
