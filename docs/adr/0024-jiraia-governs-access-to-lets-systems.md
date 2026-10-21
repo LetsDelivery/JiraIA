@@ -52,12 +52,15 @@ each step is an audit event in the same transaction, with actor, time and reason
 | Removal on request or change of function | request | 1 business day |
 | Removal on departure | deactivation of the person | 24 hours |
 
-Business days follow the São Paulo calendar with national holidays, kept in a table an organization
-admin edits; deadlines are stored as UTC instants. A request past its deadline is **overdue**: its
+Business days follow the São Paulo calendar: national holidays are computed (Carnival, Good Friday
+and Corpus Christi from Easter), and an organization admin adds LET’S's own days to a table;
+deadlines are stored as UTC instants. A request past its deadline is **overdue**: its
 operators and owners are notified, and it counts against the system's compliance.
 
 **Departure removes everything.** Deactivating a person (ADR-0012) opens, in the same transaction, a
-removal request for each entitlement they hold, already approved, on the 24-hour clock.
+removal request for each entitlement they hold, already approved, on the 24-hour clock, and cancels
+their grants still waiting. Removals the platform opens — departure, expiry — are requested by
+"Automação", so no operator is barred from carrying one out for having asked for it.
 
 **Periodic review.** Each quarter for privileged profiles and each semester for the rest, system owners
 confirm or remove every entitlement of their systems. Unanswered items after the review window become
