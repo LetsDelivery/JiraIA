@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, desc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm'
+import { and, desc, eq, exists, inArray, isNull, lte, not, or, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { members } from '../schema.js'
@@ -123,6 +123,61 @@ export class EntitlementRequestRepository {
 
   async endEntitlement(tx: Database, id: string, removalRequestId: string, at: Date): Promise<void> {
     await tx.update(entitlements).set({ removalRequestId, removedAt: at }).where(eq(entitlements.id, id))
+  }
+
+  /** What a member holds now — what a departure takes away. */
+  async heldBy(memberId: string): Promise<EntitlementRow[]> {
+    return await this.db
+      .select()
+      .from(entitlements)
+      .where(and(eq(entitlements.memberId, memberId), isNull(entitlements.removedAt)))
+  }
+
+  /** Grants still waiting for a member: a departure cancels them. */
+  async openGrantsOf(memberId: string): Promise<EntitlementRequestRow[]> {
+    return await this.db
+      .select()
+      .from(entitlementRequests)
+      .where(
+        and(
+          eq(entitlementRequests.beneficiaryId, memberId),
+          eq(entitlementRequests.kind, 'grant'),
+          inArray(entitlementRequests.status, ['requested', 'approved'])
+        )
+      )
+  }
+
+  /** Grants whose expiry has come and that no open removal is ending yet, across organizations. */
+  async expired(now: Date): Promise<EntitlementRow[]> {
+    const removing = this.db
+      .select({ id: entitlementRequests.id })
+      .from(entitlementRequests)
+      .where(
+        and(
+          eq(entitlementRequests.entitlementId, entitlements.id),
+          inArray(entitlementRequests.status, ['requested', 'approved'])
+        )
+      )
+    return await this.db
+      .select()
+      .from(entitlements)
+      .where(and(isNull(entitlements.removedAt), lte(entitlements.expiresAt, now), not(exists(removing))))
+      .limit(200)
+  }
+
+  /** Approved requests past their due moment that nobody was told about yet, across organizations. */
+  async overdue(now: Date): Promise<EntitlementRequestRow[]> {
+    return await this.db
+      .select()
+      .from(entitlementRequests)
+      .where(
+        and(
+          eq(entitlementRequests.status, 'approved'),
+          isNull(entitlementRequests.overdueAt),
+          lte(entitlementRequests.dueAt, now)
+        )
+      )
+      .limit(200)
   }
 
   /** Requests with the names they point at; newest first. */

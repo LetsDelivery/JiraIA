@@ -50,11 +50,13 @@ import type { EventPublisher } from './events/event.js'
 import type { FileStore } from './files/file-store.js'
 import { S3FileStore } from './files/s3-file-store.js'
 import { formRoutes } from './forms/routes.js'
+import { AccessClock } from './governance/access-clock.js'
 import { CatalogRepository } from './governance/catalog.repository.js'
 import { CatalogService } from './governance/catalog.service.js'
+import { HolidayRepository, HolidayService, SlaClock } from './governance/holidays.js'
 import { EntitlementRequestRepository } from './governance/request.repository.js'
 import { EntitlementRequestService } from './governance/request.service.js'
-import { catalogRoutes, entitlementRoutes } from './governance/routes.js'
+import { catalogRoutes, entitlementRoutes, holidayRoutes } from './governance/routes.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GrantService } from './grants/grant.service.js'
 import { grantRoutes } from './grants/routes.js'
@@ -68,6 +70,7 @@ import { mcpRoutes } from './mcp/routes.js'
 import { MemberAdmission } from './members/admission.js'
 import { MemberRepository } from './members/member.repository.js'
 import { MemberService } from './members/member.service.js'
+import { SystemActors } from './members/system-actor.js'
 import type { Mailer } from './notifications/mailer.js'
 import { notificationRoutes } from './notifications/routes.js'
 import { buildOAuth } from './oauth/build.js'
@@ -160,7 +163,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const comments = new CommentService({ ...onCards, comments: new CommentRepository(db), watchers, members })
 
   const services = {
-    members: new MemberService({ ...shared, members, allowedDomain }),
+    members: new MemberService({ ...shared, members, allowedDomain, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
     fields: new FieldService({ db, clock, ids, audit, gate, fields, workflows }),
@@ -245,6 +248,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...accessRequestRoutes(services.accessRequests),
     ...catalogRoutes(services.catalog),
     ...entitlementRoutes(services.entitlementRequests),
+    ...holidayRoutes(services.holidays),
     ...drawSpaceRoutes(services.drawSpaces, services.drafts),
     ...contentRoutes(services.contents),
     ...documentRoutes(services.documents, services.realtime),
@@ -303,6 +307,10 @@ type AccessDeps = {
 const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => {
   const groupRows = new GroupRepository(db)
   const catalog = new CatalogRepository(db)
+  const holidays = new HolidayRepository(db)
+  const sla = new SlaClock(holidays)
+  const entitlementRows = new EntitlementRequestRepository(db)
+  const system = new SystemActors({ db, clock, ids, audit, members })
   const grantRows = new GrantRepository(db)
   const grants = new GrantService({ db, clock, audit, access, grants: grantRows, groups: groupRows, members })
   const requests = new AccessRequestRepository(db)
@@ -318,10 +326,13 @@ const buildAccess = ({ db, clock, ids, audit, access, members }: AccessDeps) => 
       audit,
       access,
       catalog,
-      requests: new EntitlementRequestRepository(db),
+      requests: entitlementRows,
       groups: groupRows,
-      members
-    })
+      members,
+      sla
+    }),
+    holidays: new HolidayService({ db, clock, audit, access, holidays }),
+    accessClock: new AccessClock({ db, clock, ids, audit, catalog, requests: entitlementRows, sla, system })
   }
 }
 

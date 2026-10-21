@@ -8,6 +8,7 @@ export type EntitlementRequestRow = typeof entitlementRequests.$inferSelect
 export type EntitlementRow = typeof entitlements.$inferSelect
 
 export const requestKindSchema = z.enum(['grant', 'removal'])
+export const requestOriginSchema = z.enum(['request', 'departure', 'expiry'])
 export const requestStatusSchema = z.enum(['requested', 'approved', 'declined', 'done', 'cancelled'])
 export type RequestStatus = z.infer<typeof requestStatusSchema>
 
@@ -60,6 +61,12 @@ export const requestViewSchema = z.object({
   id: z.uuid(),
   kind: requestKindSchema,
   status: requestStatusSchema,
+  /** Who opened it: a person, a departure of the beneficiary, or the expiry of a grant. */
+  origin: requestOriginSchema,
+  /** When it must be carried out; null while a grant waits for approval. */
+  dueAt: z.iso.datetime().nullable(),
+  /** Whether it went past `dueAt` while open — a breach of the SLA that stays on the record. */
+  overdue: z.boolean(),
   system: nameRefSchema,
   profile: profileRefSchema,
   beneficiary: personSchema,
@@ -117,6 +124,10 @@ export type Abilities = Pick<RequestView, 'canDecide' | 'canComplete' | 'canCanc
 const _stamp = (by: string | null, name: string | null, at: Date | null) =>
   by && at ? { by: { id: by, name: name ?? '' }, at: toIso(at) } : null
 
+/** Past due while still open, or carried out after the deadline. */
+const _breached = (row: EntitlementRequestRow): boolean =>
+  row.overdueAt !== null || (row.dueAt !== null && row.completedAt !== null && row.completedAt > row.dueAt)
+
 export const toRequestView = (row: RequestRead, abilities: Abilities): RequestView => {
   const decided = _stamp(row.decidedBy, row.deciderName, row.decidedAt)
   const completed = _stamp(row.completedBy, row.completerName, row.completedAt)
@@ -124,6 +135,9 @@ export const toRequestView = (row: RequestRead, abilities: Abilities): RequestVi
     id: row.id,
     kind: requestKindSchema.parse(row.kind),
     status: requestStatusSchema.parse(row.status),
+    origin: requestOriginSchema.parse(row.origin),
+    dueAt: row.dueAt ? toIso(row.dueAt) : null,
+    overdue: _breached(row),
     system: { id: row.systemId, name: row.systemName },
     profile: { id: row.profileId, name: row.profileName, privilege: privilegeSchema.parse(row.privilege) },
     beneficiary: { id: row.beneficiaryId, name: row.beneficiaryName, email: row.beneficiaryEmail },
@@ -150,3 +164,18 @@ export const toEntitlementView = (row: EntitlementRead): EntitlementView => ({
   removalRequestId: row.removalRequestId,
   removedAt: row.removedAt ? toIso(row.removedAt) : null
 })
+
+/** What a new request has not lived yet: no decision, no completion, no clock. */
+export const BLANK_REQUEST = {
+  origin: 'request',
+  expiresAt: null,
+  entitlementId: null,
+  dueAt: null,
+  overdueAt: null,
+  decidedBy: null,
+  decidedAt: null,
+  decisionNote: null,
+  completedBy: null,
+  completedAt: null,
+  evidence: null
+}

@@ -12,6 +12,7 @@ import {
   updateSystemSchema
 } from './catalog.schemas.js'
 import type { CatalogService } from './catalog.service.js'
+import { type HolidayService, holidayListSchema, holidayPathSchema, putHolidaySchema } from './holidays.js'
 import {
   completionSchema,
   createRequestSchema,
@@ -171,5 +172,36 @@ export const entitlementRoutes = (requests: EntitlementRequestService): Route[] 
     schemas: { query: listEntitlementsQuerySchema },
     responds: entitlementListSchema,
     handler: async ({ caller, query }) => ({ statusCode: 200, body: await requests.entitlements(caller, query) })
+  })
+]
+
+/** The business calendar the SLAs count on (ADR-0024): national holidays and the organization's own. */
+export const holidayRoutes = (holidays: HolidayService): Route[] => [
+  defineRoute({
+    method: 'GET',
+    path: '/access/holidays',
+    requires: 'authenticated',
+    schemas: {},
+    responds: holidayListSchema,
+    handler: async ({ caller }) => ({ statusCode: 200, body: await holidays.list(caller) })
+  }),
+  defineRoute({
+    method: 'PUT',
+    path: '/access/holidays/{day}',
+    requires: 'authenticated',
+    schemas: { path: holidayPathSchema, body: putHolidaySchema },
+    responds: holidayListSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await holidays.put(caller, path.day, body.name)
+    })
+  }),
+  defineRoute({
+    method: 'DELETE',
+    path: '/access/holidays/{day}',
+    requires: 'authenticated',
+    schemas: { path: holidayPathSchema },
+    responds: holidayListSchema,
+    handler: async ({ caller, path }) => ({ statusCode: 200, body: await holidays.remove(caller, path.day) })
   })
 ]

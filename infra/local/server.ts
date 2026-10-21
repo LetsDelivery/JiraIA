@@ -70,6 +70,15 @@ const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } :
   ...(process.env.SLACK_CLIENT_ID ? {} : { slackApi: new LocalSlackApi() })
 })
 const afterWrite = drainAfterWrites(work.drain)
+// Access governance's own clock (ADR-0024): expiries and overdue requests, as its Lambda runs it.
+setInterval(
+  () =>
+    void work.accessClock
+      .sweep()
+      .then(() => afterWrite('POST'))
+      .catch((error: unknown) => console.error('  access clock failed:', error)),
+  60_000
+)
 // The webhook retry sweep, as the scheduled Lambda runs it in AWS.
 setInterval(
   () => void work.webhookSender.retryDue().catch((error: unknown) => console.error('  webhook retry failed:', error)),

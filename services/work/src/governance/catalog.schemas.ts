@@ -13,12 +13,19 @@ export const privilegeSchema = z.enum(['standard', 'privileged'])
 
 const nameSchema = z.string().trim().min(1).max(80)
 const descriptionSchema = z.string().trim().max(500)
+/** SLA bounds (ADR-0024): defaults 2 business days to grant, 1 to remove, 24 h after a departure. */
+const grantDaysSchema = z.number().int().min(1).max(30)
+const removalDaysSchema = z.number().int().min(1).max(30)
+const departureHoursSchema = z.number().int().min(1).max(168)
 const atLeastOne = (input: Record<string, unknown>) => Object.values(input).some((value) => value !== undefined)
 
 export const createSystemSchema = z.object({
   name: nameSchema,
   description: descriptionSchema.default(''),
-  holdsPersonalData: z.boolean().default(false)
+  holdsPersonalData: z.boolean().default(false),
+  grantSlaDays: grantDaysSchema.default(2),
+  removalSlaDays: removalDaysSchema.default(1),
+  departureSlaHours: departureHoursSchema.default(24)
 })
 export type CreateSystem = z.infer<typeof createSystemSchema>
 export const updateSystemSchema = z
@@ -26,6 +33,9 @@ export const updateSystemSchema = z
     name: nameSchema.optional(),
     description: descriptionSchema.optional(),
     holdsPersonalData: z.boolean().optional(),
+    grantSlaDays: grantDaysSchema.optional(),
+    removalSlaDays: removalDaysSchema.optional(),
+    departureSlaHours: departureHoursSchema.optional(),
     archived: z.boolean().optional()
   })
   .refine(atLeastOne, { message: 'Nothing to change' })
@@ -71,6 +81,8 @@ export const systemViewSchema = z.object({
   name: z.string(),
   description: z.string(),
   holdsPersonalData: z.boolean(),
+  /** How long each kind of request may take here (ADR-0024). */
+  sla: z.object({ grantDays: z.number().int(), removalDays: z.number().int(), departureHours: z.number().int() }),
   archived: z.boolean(),
   profiles: z.array(profileViewSchema),
   staff: z.array(staffViewSchema),
@@ -106,6 +118,7 @@ export const toSystemView = (
     name: row.name,
     description: row.description,
     holdsPersonalData: row.holdsPersonalData,
+    sla: { grantDays: row.grantSlaDays, removalDays: row.removalSlaDays, departureHours: row.departureSlaHours },
     archived: row.archivedAt !== null,
     profiles: profiles.filter((each) => each.systemId === row.id).map(toProfileView),
     staff: own.map((each) => ({

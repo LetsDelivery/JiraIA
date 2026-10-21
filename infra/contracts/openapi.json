@@ -19293,6 +19293,32 @@
                           "holdsPersonalData": {
                             "type": "boolean"
                           },
+                          "sla": {
+                            "type": "object",
+                            "properties": {
+                              "grantDays": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "removalDays": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "departureHours": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "grantDays",
+                              "removalDays",
+                              "departureHours"
+                            ],
+                            "additionalProperties": false
+                          },
                           "archived": {
                             "type": "boolean"
                           },
@@ -19400,6 +19426,7 @@
                           "name",
                           "description",
                           "holdsPersonalData",
+                          "sla",
                           "archived",
                           "profiles",
                           "staff",
@@ -19460,6 +19487,24 @@
                   "holdsPersonalData": {
                     "default": false,
                     "type": "boolean"
+                  },
+                  "grantSlaDays": {
+                    "default": 2,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30
+                  },
+                  "removalSlaDays": {
+                    "default": 1,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30
+                  },
+                  "departureSlaHours": {
+                    "default": 24,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 168
                   }
                 },
                 "required": [
@@ -19490,6 +19535,32 @@
                     },
                     "holdsPersonalData": {
                       "type": "boolean"
+                    },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
                     },
                     "archived": {
                       "type": "boolean"
@@ -19598,6 +19669,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -19666,6 +19738,32 @@
                     "holdsPersonalData": {
                       "type": "boolean"
                     },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
+                    },
                     "archived": {
                       "type": "boolean"
                     },
@@ -19773,6 +19871,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -19836,6 +19935,21 @@
                   "holdsPersonalData": {
                     "type": "boolean"
                   },
+                  "grantSlaDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30
+                  },
+                  "removalSlaDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30
+                  },
+                  "departureSlaHours": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 168
+                  },
                   "archived": {
                     "type": "boolean"
                   }
@@ -19865,6 +19979,32 @@
                     },
                     "holdsPersonalData": {
                       "type": "boolean"
+                    },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
                     },
                     "archived": {
                       "type": "boolean"
@@ -19973,6 +20113,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -20063,6 +20204,32 @@
                     "holdsPersonalData": {
                       "type": "boolean"
                     },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
+                    },
                     "archived": {
                       "type": "boolean"
                     },
@@ -20170,6 +20337,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -20258,6 +20426,32 @@
                     "holdsPersonalData": {
                       "type": "boolean"
                     },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
+                    },
                     "archived": {
                       "type": "boolean"
                     },
@@ -20365,6 +20559,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -20466,6 +20661,32 @@
                     "holdsPersonalData": {
                       "type": "boolean"
                     },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
+                    },
                     "archived": {
                       "type": "boolean"
                     },
@@ -20573,6 +20794,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -20672,6 +20894,32 @@
                     "holdsPersonalData": {
                       "type": "boolean"
                     },
+                    "sla": {
+                      "type": "object",
+                      "properties": {
+                        "grantDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "removalDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "departureHours": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "grantDays",
+                        "removalDays",
+                        "departureHours"
+                      ],
+                      "additionalProperties": false
+                    },
                     "archived": {
                       "type": "boolean"
                     },
@@ -20779,6 +21027,7 @@
                     "name",
                     "description",
                     "holdsPersonalData",
+                    "sla",
                     "archived",
                     "profiles",
                     "staff",
@@ -20884,6 +21133,29 @@
                               "done",
                               "cancelled"
                             ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "request",
+                              "departure",
+                              "expiry"
+                            ]
+                          },
+                          "dueAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "overdue": {
+                            "type": "boolean"
                           },
                           "system": {
                             "type": "object",
@@ -21124,6 +21396,9 @@
                           "id",
                           "kind",
                           "status",
+                          "origin",
+                          "dueAt",
+                          "overdue",
                           "system",
                           "profile",
                           "beneficiary",
@@ -21269,6 +21544,29 @@
                         "cancelled"
                       ]
                     },
+                    "origin": {
+                      "type": "string",
+                      "enum": [
+                        "request",
+                        "departure",
+                        "expiry"
+                      ]
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
                     "system": {
                       "type": "object",
                       "properties": {
@@ -21508,6 +21806,9 @@
                     "id",
                     "kind",
                     "status",
+                    "origin",
+                    "dueAt",
+                    "overdue",
                     "system",
                     "profile",
                     "beneficiary",
@@ -21590,6 +21891,29 @@
                         "cancelled"
                       ]
                     },
+                    "origin": {
+                      "type": "string",
+                      "enum": [
+                        "request",
+                        "departure",
+                        "expiry"
+                      ]
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
                     "system": {
                       "type": "object",
                       "properties": {
@@ -21829,6 +22153,9 @@
                     "id",
                     "kind",
                     "status",
+                    "origin",
+                    "dueAt",
+                    "overdue",
                     "system",
                     "profile",
                     "beneficiary",
@@ -21934,6 +22261,29 @@
                         "cancelled"
                       ]
                     },
+                    "origin": {
+                      "type": "string",
+                      "enum": [
+                        "request",
+                        "departure",
+                        "expiry"
+                      ]
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
                     "system": {
                       "type": "object",
                       "properties": {
@@ -22173,6 +22523,9 @@
                     "id",
                     "kind",
                     "status",
+                    "origin",
+                    "dueAt",
+                    "overdue",
                     "system",
                     "profile",
                     "beneficiary",
@@ -22275,6 +22628,29 @@
                         "cancelled"
                       ]
                     },
+                    "origin": {
+                      "type": "string",
+                      "enum": [
+                        "request",
+                        "departure",
+                        "expiry"
+                      ]
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
                     "system": {
                       "type": "object",
                       "properties": {
@@ -22514,6 +22890,9 @@
                     "id",
                     "kind",
                     "status",
+                    "origin",
+                    "dueAt",
+                    "overdue",
                     "system",
                     "profile",
                     "beneficiary",
@@ -22596,6 +22975,29 @@
                         "cancelled"
                       ]
                     },
+                    "origin": {
+                      "type": "string",
+                      "enum": [
+                        "request",
+                        "departure",
+                        "expiry"
+                      ]
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
                     "system": {
                       "type": "object",
                       "properties": {
@@ -22835,6 +23237,9 @@
                     "id",
                     "kind",
                     "status",
+                    "origin",
+                    "dueAt",
+                    "overdue",
                     "system",
                     "profile",
                     "beneficiary",
@@ -23062,6 +23467,238 @@
                           "expiresAt",
                           "removalRequestId",
                           "removedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/access/holidays": {
+      "get": {
+        "operationId": "workGetAccessHolidays",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /access/holidays",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "national": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "name",
+                          "national"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/access/holidays/{day}": {
+      "put": {
+        "operationId": "workPutAccessHolidaysDay",
+        "tags": [
+          "work"
+        ],
+        "summary": "PUT /access/holidays/{day}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "national": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "name",
+                          "national"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "workDeleteAccessHolidaysDay",
+        "tags": [
+          "work"
+        ],
+        "summary": "DELETE /access/holidays/{day}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "national": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "name",
+                          "national"
                         ],
                         "additionalProperties": false
                       }
@@ -31342,7 +31979,10 @@
                               "state_changed",
                               "access_requested",
                               "access_decided",
-                              "proposal_received"
+                              "proposal_received",
+                              "entitlement_waiting",
+                              "entitlement_decided",
+                              "entitlement_overdue"
                             ]
                           },
                           "actor": {
@@ -31419,6 +32059,21 @@
                                 "type": "string"
                               },
                               "proposalId": {
+                                "type": "string"
+                              },
+                              "requestId": {
+                                "type": "string"
+                              },
+                              "requestKind": {
+                                "type": "string"
+                              },
+                              "systemName": {
+                                "type": "string"
+                              },
+                              "profileName": {
+                                "type": "string"
+                              },
+                              "personName": {
                                 "type": "string"
                               }
                             },
@@ -31713,7 +32368,10 @@
                               "state_changed",
                               "access_requested",
                               "access_decided",
-                              "proposal_received"
+                              "proposal_received",
+                              "entitlement_waiting",
+                              "entitlement_decided",
+                              "entitlement_overdue"
                             ]
                           },
                           "channel": {
@@ -31778,7 +32436,10 @@
                       "state_changed",
                       "access_requested",
                       "access_decided",
-                      "proposal_received"
+                      "proposal_received",
+                      "entitlement_waiting",
+                      "entitlement_decided",
+                      "entitlement_overdue"
                     ]
                   },
                   "channel": {
@@ -31821,7 +32482,10 @@
                               "state_changed",
                               "access_requested",
                               "access_decided",
-                              "proposal_received"
+                              "proposal_received",
+                              "entitlement_waiting",
+                              "entitlement_decided",
+                              "entitlement_overdue"
                             ]
                           },
                           "channel": {

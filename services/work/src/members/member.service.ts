@@ -23,6 +23,10 @@ type Deps = {
   members: MemberRepository
   /** Only addresses of this Google Workspace domain can ever sign in (ADR-0005). */
   allowedDomain: string
+  /** What a departure takes away in the same transaction: the person's access to LET’S systems (ADR-0024). */
+  departures?: {
+    depart(tx: Database, input: { organizationId: string; actorId: string; memberId: string; at: Date }): Promise<void>
+  }
 }
 
 /** The people (and, from Etapa 6, agents) of the organization (escopo-mvp 1.4, 1.5). */
@@ -161,6 +165,12 @@ export class MemberService {
     await this.deps.db.transaction(async (tx) => {
       await this.deps.members.deactivate(tx, target.id, at)
       await this._audit(tx, actor, target.id, 'deactivated', { status: 'inactive' })
+      await this.deps.departures?.depart(tx, {
+        organizationId: actor.organizationId,
+        actorId: actor.id,
+        memberId: target.id,
+        at
+      })
     })
 
     return toMemberView({ ...target, status: 'inactive', deactivatedAt: at })

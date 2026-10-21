@@ -665,6 +665,36 @@ Resources:
           Type: Schedule
           Properties: {Schedule: rate(1 minute)}
 
+  AccessClockFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub jiraia-work-access-clock-${Environment}
+      CodeUri: app.zip
+      Handler: consumers/access-clock.handler
+      Timeout: 60
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [rds-data:ExecuteStatement, rds-data:BatchExecuteStatement, rds-data:BeginTransaction, rds-data:CommitTransaction, rds-data:RollbackTransaction]
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-cluster-arn}}'
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub '{{resolve:ssm:/jiraia/${Environment}/platform/db-secret-arn}}'
+      Events:
+        EveryFiveMinutes:
+          Type: Schedule
+          Properties: {Schedule: rate(5 minutes)}
+
+  AccessClockLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/jiraia-work-access-clock-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
   WebhooksLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

@@ -26,6 +26,9 @@ import { OutboxRepository } from './events/outbox.js'
 import { DirectPublisher, Receipts } from './events/receipts.js'
 import { FormRepository } from './forms/form.repository.js'
 import { FormService } from './forms/form.service.js'
+import { CatalogRepository } from './governance/catalog.repository.js'
+import { EntitlementNotices } from './governance/notices.js'
+import { EntitlementRequestRepository } from './governance/request.repository.js'
 import { GrantRepository } from './grants/grant.repository.js'
 import { GroupRepository } from './groups/group.repository.js'
 import { SlackChannelRepository } from './integrations/slack.repository.js'
@@ -211,6 +214,10 @@ export const buildNotifications = ({
       grants: new GrantRepository(db),
       groups: new GroupRepository(db),
       proposals: new ProposalRepository(db),
+      entitlements: new EntitlementNotices({
+        requests: new EntitlementRequestRepository(db),
+        catalog: new CatalogRepository(db)
+      }),
       slack: slackDirect
     }),
     digest: new DigestService({

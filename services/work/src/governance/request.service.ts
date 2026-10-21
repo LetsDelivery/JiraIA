@@ -8,10 +8,12 @@ import type { GroupRepository } from '../groups/group.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
 import type { CatalogRepository } from './catalog.repository.js'
-import { type Duty, dutySchema, type ProfileRow } from './catalog.schemas.js'
+import { type Duty, dutySchema, type ProfileRow, type SystemRow } from './catalog.schemas.js'
+import type { SlaClock } from './holidays.js'
 import { abilitiesOf, expiryOf, type Governor, hasDuty, isInvolved, scopeOf } from './policy.js'
 import type { EntitlementRequestRepository } from './request.repository.js'
 import {
+  BLANK_REQUEST,
   type CreateGrant,
   type CreateRemoval,
   type CreateRequest,
@@ -34,6 +36,7 @@ type Deps = {
   requests: EntitlementRequestRepository
   groups: GroupRepository
   members: MemberRepository
+  sla: SlaClock
 }
 
 type Context = { actor: MemberRow; who: Governor }
@@ -71,8 +74,9 @@ export class EntitlementRequestService {
     }
     const status = decision.approve ? 'approved' : 'declined'
     const at = this.deps.clock.now()
+    const dueAt = decision.approve ? await this.deps.sla.grant(await this._system(context, request.systemId), at) : null
     await this.deps.db.transaction(async (tx) => {
-      const fields = { status, decidedBy: context.actor.id, decidedAt: at, decisionNote: decision.note || null }
+      const fields = { status, dueAt, decidedBy: context.actor.id, decidedAt: at, decisionNote: decision.note || null }
       await this.deps.requests.update(tx, request.id, fields)
       await this._audit(tx, context.actor, 'entitlement_request', request.id, status, {
         status: { before: request.status, after: status },
@@ -158,11 +162,13 @@ export class EntitlementRequestService {
     }
     await this._assertAsksFor(context, entitlement.memberId, entitlement.systemId)
     const profile = await this._profile(entitlement.profileId)
+    const system = await this._system(context, entitlement.systemId)
     return await this._insert(context, profile, entitlement.memberId, {
       kind: 'removal',
       status: 'approved',
       reason: input.reason,
-      entitlementId: entitlement.id
+      entitlementId: entitlement.id,
+      dueAt: await this.deps.sla.removal(system, this.deps.clock.now())
     })
   }
 
@@ -170,7 +176,14 @@ export class EntitlementRequestService {
     { actor }: Context,
     profile: ProfileRow,
     beneficiaryId: string,
-    fields: { kind: string; status: string; reason: string; expiresAt?: Date | null; entitlementId?: string }
+    fields: {
+      kind: string
+      status: string
+      reason: string
+      expiresAt?: Date | null
+      entitlementId?: string
+      dueAt?: Date
+    }
   ): Promise<string> {
     if (await this.deps.requests.openFor(profile.id, beneficiaryId, fields.kind)) {
       throw new ConflictException(`A ${fields.kind} of profile "${profile.name}" for this person is already open`, {
@@ -180,7 +193,7 @@ export class EntitlementRequestService {
     }
     const id = this.deps.ids.next()
     const row = {
-      ...EMPTY,
+      ...BLANK_REQUEST,
       ...fields,
       id,
       organizationId: actor.organizationId,
@@ -256,6 +269,14 @@ export class EntitlementRequestService {
       })
     }
     return profile
+  }
+
+  private async _system({ actor }: Context, systemId: string): Promise<SystemRow> {
+    const system = await this.deps.catalog.system(actor.organizationId, systemId)
+    if (!system) {
+      throw new NotFoundException('System', systemId)
+    }
+    return system
   }
 
   private async _profile(profileId: string): Promise<ProfileRow> {
@@ -338,14 +359,3 @@ export class EntitlementRequestService {
 }
 
 const EMPTY_PARTIES = { requesterId: '', beneficiaryId: '' }
-
-const EMPTY = {
-  expiresAt: null,
-  entitlementId: null,
-  decidedBy: null,
-  decidedAt: null,
-  decisionNote: null,
-  completedBy: null,
-  completedAt: null,
-  evidence: null
-}
