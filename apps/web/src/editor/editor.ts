@@ -6,6 +6,8 @@ import Highlight from '@tiptap/extension-highlight'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import Mention from '@tiptap/extension-mention'
 import { TableKit } from '@tiptap/extension-table'
+import TextAlign from '@tiptap/extension-text-align'
+import { Color, TextStyle } from '@tiptap/extension-text-style'
 import { Placeholder } from '@tiptap/extensions'
 import { PluginKey, TextSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
@@ -15,6 +17,8 @@ import type * as Y from 'yjs'
 import { type Member, read } from '@/api/requests'
 import { cardKey } from '@/lib/search'
 
+import { BoardEmbed } from './board-embed'
+import { editLink } from './format-toolbar'
 import { Callout, CardEmbed, CardRef, CommentMark, PageFile, PageImage } from './nodes'
 import type { ContentProvider } from './provider'
 import { SlashCommand, type SlashContext } from './slash'
@@ -89,6 +93,19 @@ const cardItems = async (query: string): Promise<CardItem[]> => {
     .map((card) => ({ key: card.key, title: card.title, label: card.title, hint: card.key }))
 }
 
+/** ⌘K asks for a link on the selection, as the bar's button does. */
+const LinkShortcut = Extension.create({
+  name: 'linkShortcut',
+  addKeyboardShortcuts() {
+    return {
+      'Mod-k': () => {
+        editLink(this.editor)
+        return true
+      }
+    }
+  }
+})
+
 /**
  * The page editor (escopo-mvp 5.2–5.7): TipTap on the page's Y.Doc, so what one person types reaches
  * the others (5.3) with their cursor and name. History (undo) is Yjs's, per person.
@@ -102,17 +119,26 @@ export const createPageEditor = (options: PageEditorOptions): Editor =>
       Placeholder.configure({ placeholder: 'Escreva, ou digite / para inserir um bloco' }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Highlight,
+      Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      LinkShortcut,
       TableKit.configure({ table: { resizable: false } }),
       Callout,
       CardRef,
       CardEmbed,
+      BoardEmbed,
       PageImage.configure({ contentId: options.contentId }),
       PageFile.configure({ contentId: options.contentId }),
       CommentMark,
       Mention.configure({ HTMLAttributes: { class: 'mention' }, suggestions: [people(options.members)] }),
       CardSuggestion,
-      SlashCommand.configure({ insertFile: options.insertFile, insertCard: options.insertCard }),
+      SlashCommand.configure({
+        insertFile: options.insertFile,
+        insertCard: options.insertCard,
+        insertBoard: options.insertBoard
+      }),
       BubbleMenu.configure({
         element: options.bubble,
         shouldShow: ({ editor, state }) =>

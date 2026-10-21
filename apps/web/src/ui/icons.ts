@@ -15,6 +15,8 @@ import arrowsExchange from '@tabler/icons/outline/arrows-exchange.svg?raw'
 import arrowsRightLeft from '@tabler/icons/outline/arrows-right-left.svg?raw'
 import at from '@tabler/icons/outline/at.svg?raw'
 import bell from '@tabler/icons/outline/bell.svg?raw'
+import blockquote from '@tabler/icons/outline/blockquote.svg?raw'
+import bold from '@tabler/icons/outline/bold.svg?raw'
 import bolt from '@tabler/icons/outline/bolt.svg?raw'
 import bookmark from '@tabler/icons/outline/bookmark.svg?raw'
 import boxMultiple from '@tabler/icons/outline/box-multiple.svg?raw'
@@ -32,9 +34,11 @@ import chevronsDown from '@tabler/icons/outline/chevrons-down.svg?raw'
 import chevronsUp from '@tabler/icons/outline/chevrons-up.svg?raw'
 import circle from '@tabler/icons/outline/circle.svg?raw'
 import circleCheck from '@tabler/icons/outline/circle-check.svg?raw'
+import clearFormatting from '@tabler/icons/outline/clear-formatting.svg?raw'
 import clock from '@tabler/icons/outline/clock.svg?raw'
 import clockHour from '@tabler/icons/outline/clock-hour-4.svg?raw'
 import clockPause from '@tabler/icons/outline/clock-pause.svg?raw'
+import code from '@tabler/icons/outline/code.svg?raw'
 import columns from '@tabler/icons/outline/columns-3.svg?raw'
 import copy from '@tabler/icons/outline/copy.svg?raw'
 import cornerDownLeft from '@tabler/icons/outline/corner-down-left.svg?raw'
@@ -61,8 +65,11 @@ import gridDots from '@tabler/icons/outline/grid-dots.svg?raw'
 import grip from '@tabler/icons/outline/grip-vertical.svg?raw'
 import handStop from '@tabler/icons/outline/hand-stop.svg?raw'
 import hash from '@tabler/icons/outline/hash.svg?raw'
+import highlight from '@tabler/icons/outline/highlight.svg?raw'
 import history from '@tabler/icons/outline/history.svg?raw'
 import home from '@tabler/icons/outline/home.svg?raw'
+import infoCircle from '@tabler/icons/outline/info-circle.svg?raw'
+import italic from '@tabler/icons/outline/italic.svg?raw'
 import alignBottom from '@tabler/icons/outline/layout-align-bottom.svg?raw'
 import layoutAlignCenter from '@tabler/icons/outline/layout-align-center.svg?raw'
 import layoutAlignLeft from '@tabler/icons/outline/layout-align-left.svg?raw'
@@ -77,7 +84,9 @@ import sidebar from '@tabler/icons/outline/layout-sidebar.svg?raw'
 import line from '@tabler/icons/outline/line.svg?raw'
 import link from '@tabler/icons/outline/link.svg?raw'
 import list from '@tabler/icons/outline/list.svg?raw'
+import listCheck from '@tabler/icons/outline/list-check.svg?raw'
 import listDetails from '@tabler/icons/outline/list-details.svg?raw'
+import listNumbers from '@tabler/icons/outline/list-numbers.svg?raw'
 import lock from '@tabler/icons/outline/lock.svg?raw'
 import lockOpen from '@tabler/icons/outline/lock-open.svg?raw'
 import logout from '@tabler/icons/outline/logout.svg?raw'
@@ -96,16 +105,20 @@ import robot from '@tabler/icons/outline/robot.svg?raw'
 import search from '@tabler/icons/outline/search.svg?raw'
 import settings from '@tabler/icons/outline/settings.svg?raw'
 import shieldCheck from '@tabler/icons/outline/shield-check.svg?raw'
+import sourceCode from '@tabler/icons/outline/source-code.svg?raw'
 import sparkles from '@tabler/icons/outline/sparkles.svg?raw'
 import square from '@tabler/icons/outline/square.svg?raw'
 import squareRotated from '@tabler/icons/outline/square-rotated.svg?raw'
 import stack2 from '@tabler/icons/outline/stack-2.svg?raw'
 import star from '@tabler/icons/outline/star.svg?raw'
+import strikethrough from '@tabler/icons/outline/strikethrough.svg?raw'
 import subtask from '@tabler/icons/outline/subtask.svg?raw'
 import sun from '@tabler/icons/outline/sun.svg?raw'
 import table from '@tabler/icons/outline/table.svg?raw'
+import textColor from '@tabler/icons/outline/text-color.svg?raw'
 import trash from '@tabler/icons/outline/trash.svg?raw'
 import typography from '@tabler/icons/outline/typography.svg?raw'
+import underline from '@tabler/icons/outline/underline.svg?raw'
 import upload from '@tabler/icons/outline/upload.svg?raw'
 import user from '@tabler/icons/outline/user.svg?raw'
 import userPlus from '@tabler/icons/outline/user-plus.svg?raw'
@@ -123,6 +136,19 @@ import { type Html, raw } from '@/lib/html'
  * Outline for interface, filled for state (the original identity guidance).
  */
 const ICONS = {
+  bold,
+  italic,
+  underline,
+  strikethrough,
+  code,
+  listNumbers,
+  listCheck,
+  blockquote,
+  highlight,
+  textColor,
+  clearFormatting,
+  sourceCode,
+  infoCircle,
   gitPullRequest,
   robot,
   slack,
