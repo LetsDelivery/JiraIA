@@ -192,6 +192,7 @@ export const shell = (
       ${spacesGroup(me, mine, all, path)}
       ${navItem('/propostas', 'Propostas', 'gitPullRequest', path, proposals)}
       ${navItem('/grupos', 'Grupos', 'usersGroup', path)}
+      ${navItem('/acessos', 'Acessos', 'lock', path.startsWith('/acessos') ? '/acessos' : path)}
       ${me.isOrgAdmin ? navItem('/pessoas', 'Pessoas', 'users', path) : ''}
       ${navItem('/integracoes', 'Integrações', 'bolt', path)}
       <hr class="nav-divider" />

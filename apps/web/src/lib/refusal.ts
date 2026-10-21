@@ -24,7 +24,18 @@ const CONFLICTS: { field: string; sentence: (value: string) => string }[] = [
   { field: 'proposalId', sentence: () => 'A proposta já foi decidida, venceu ou não pôde ser aplicada.' },
   { field: 'key', sentence: (key) => `Já existe um espaço com a chave ${key}.` },
   { field: 'email', sentence: (email) => `${email} já é membro.` },
-  { field: 'name', sentence: (name) => `Já existe um grupo chamado ${name}.` }
+  { field: 'name', sentence: (name) => `Já existe um grupo chamado ${name}.` },
+  { field: 'systemName', sentence: (name) => `Já existe um sistema chamado ${name}.` },
+  { field: 'heldProfile', sentence: (name) => `A pessoa já tem o perfil ${name}.` },
+  { field: 'openProfile', sentence: (name) => `Já existe um pedido em aberto do perfil ${name} para essa pessoa.` },
+  { field: 'archivedProfile', sentence: (name) => `O perfil ${name} está arquivado e não pode ser pedido.` },
+  { field: 'requestStatus', sentence: () => 'O pedido já mudou de situação. Atualize a página.' }
+]
+
+/** Refusals of a field whose value the server names: what to change, in the words of the screen. */
+const VALIDATIONS: { field: string; sentence: string }[] = [
+  { field: 'privilege', sentence: 'Perfil privilegiado precisa de data de validade.' },
+  { field: 'expiresAt', sentence: 'A validade precisa ser uma data futura, até 90 dias para perfil privilegiado.' }
 ]
 
 export const refusalSentence = (refusal: unknown): string => {
@@ -36,6 +47,12 @@ export const refusalSentence = (refusal: unknown): string => {
     const known = CONFLICTS.find((conflict) => typeof error.details?.[conflict.field] === 'string')
     if (known) {
       return known.sentence(String(error.details?.[known.field]))
+    }
+  }
+  if (error.code === 'VALIDATION_FAILED') {
+    const known = VALIDATIONS.find((validation) => error.details?.[validation.field] !== undefined)
+    if (known) {
+      return known.sentence
     }
   }
   return BY_CODE[error.code] ?? 'Não foi possível concluir. Tente de novo.'
