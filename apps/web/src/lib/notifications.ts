@@ -8,6 +8,9 @@ import { spacePath } from './space-types'
  *
  * @example sentence({ kind: 'mentioned', actor: { name: 'Ana' }, data: { cardKey: 'PRD-4' } })   // 'Ana mencionou você em PRD-4'
  */
+/** What became of an entitlement request (ADR-0024), in the notice's words. */
+const OUTCOME: Record<string, string> = { approved: 'aprovado', declined: 'recusado', done: 'concluído' }
+
 export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): string => {
   const { actor, data } = notice
   const sentences: Record<NoticeKind, () => string> = {
@@ -18,7 +21,13 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
     access_requested: () => `${actor.name} pediu para editar ${data.spaceName}`,
     access_decided: () =>
       `Seu pedido para editar ${data.spaceName} foi ${data.status === 'approved' ? 'aprovado' : 'recusado'}`,
-    proposal_received: () => `${actor.name} propôs mudanças em ${data.spaceName}`
+    proposal_received: () => `${actor.name} propôs mudanças em ${data.spaceName}`,
+    entitlement_waiting: () =>
+      `Pedido de acesso esperando você: ${data.systemName} · ${data.profileName} para ${data.personName}`,
+    entitlement_decided: () =>
+      `Pedido de acesso ${OUTCOME[data.status ?? ''] ?? 'atualizado'}: ${data.systemName} · ${data.profileName}`,
+    entitlement_overdue: () =>
+      `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`
   }
   return sentences[notice.kind]()
 }
@@ -27,7 +36,13 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
  * A card notice opens the card; a proposal notice, the proposal; an access notice, the place the
  * request is about.
  */
+/** An entitlement notice opens the queue for whoever acts on it, Meus acessos for whoever asked. */
+const _accessTarget = (kind: Notice['kind']): string => (kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila')
+
 export const target = (notice: Pick<Notice, 'kind' | 'data' | 'spaceId'>): string => {
+  if (notice.data.requestId) {
+    return _accessTarget(notice.kind)
+  }
   if (notice.data.proposalId) {
     return `/propostas?proposta=${notice.data.proposalId}`
   }
@@ -50,6 +65,15 @@ export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {
   proposal_received: {
     label: 'Propostas de agentes',
     hint: 'Um agente propôs mudanças num espaço que você administra.'
+  },
+  entitlement_waiting: {
+    label: 'Fila de acessos',
+    hint: 'Um pedido de acesso a um sistema que você aprova ou executa.'
+  },
+  entitlement_decided: { label: 'Seus pedidos de acesso', hint: 'Um pedido seu foi aprovado, recusado ou concluído.' },
+  entitlement_overdue: {
+    label: 'Acessos atrasados',
+    hint: 'Um pedido de um sistema seu passou do prazo.'
   }
 }
 

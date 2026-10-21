@@ -13,6 +13,17 @@ export const KIND_LABEL: Record<EntitlementRequest['kind'], string> = { grant: '
 export const PRIVILEGE_LABEL: Record<Privilege, string> = { standard: 'Padrão', privileged: 'Privilegiado' }
 export const DUTY_LABEL: Record<Duty, string> = { owner: 'Dono', operator: 'Operador' }
 
+/** Who opened a request, when it was not a person asking (ADR-0024). */
+export const ORIGIN_LABEL: Record<EntitlementRequest['origin'], string> = {
+  request: 'Pedido',
+  departure: 'Desligamento',
+  expiry: 'Validade vencida'
+}
+
+/** Whether to flag a request as late: on record as breached, or open and already past its deadline. */
+export const isLate = (request: Pick<EntitlementRequest, 'overdue' | 'dueAt' | 'status'>, now: Date): boolean =>
+  request.overdue || (isOpen(request) && request.dueAt !== null && new Date(request.dueAt).getTime() < now.getTime())
+
 /** The longest a privileged grant lasts (ADR-0024); the server refuses more. */
 export const PRIVILEGED_MAX_DAYS = 90
 

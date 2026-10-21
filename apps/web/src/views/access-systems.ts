@@ -1,8 +1,16 @@
-import { type AccessSystem, type Duty, governanceRead, governanceWrite, type Privilege } from '@/api/governance'
+import {
+  type AccessSystem,
+  type Duty,
+  governanceRead,
+  governanceWrite,
+  type Holiday,
+  type Privilege
+} from '@/api/governance'
 import { read } from '@/api/requests'
 import { DUTY_LABEL, PRIVILEGE_LABEL } from '@/lib/governance'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { bindDatePickers, dateField } from '@/ui/date-picker'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { icon } from '@/ui/icons'
 import { selectField } from '@/ui/select'
@@ -46,6 +54,7 @@ const systemBadges = (system: AccessSystem) => html`
 const systemActions = (system: AccessSystem) => html`
   <span class="system-actions">
     ${system.canEditProfiles ? html`<button type="button" class="button button-secondary" data-new-profile="${system.id}">${icon('plus', 16)}Perfil</button>` : ''}
+    ${system.canManage ? html`<button type="button" class="button button-secondary" data-sla="${system.id}">${icon('clock', 16)}Prazos</button>` : ''}
     ${system.canManage ? html`<button type="button" class="button button-secondary" data-staff="${system.id}">${icon('userPlus', 16)}Responsável</button>${archiveButton('archive-system', system.id, system.archived)}` : ''}
   </span>
 `
@@ -64,10 +73,14 @@ const staffColumn = (system: AccessSystem) => html`
   </div>
 `
 
+/** "1 dia útil", "2 dias úteis". */
+const businessDays = (count: number) => (count === 1 ? '1 dia útil' : `${count} dias úteis`)
+
 const systemCard = (system: AccessSystem): Html => html`
   <section class="section system-card ${system.archived ? 'is-closed' : ''}">
     <div class="system-head"><h2>${system.name}</h2>${systemBadges(system)}${systemActions(system)}</div>
     ${system.description ? html`<p class="muted">${system.description}</p>` : ''}
+    <p class="muted system-sla">Prazos: conceder em ${businessDays(system.sla.grantDays)} · remover em ${businessDays(system.sla.removalDays)} · desligamento em ${system.sla.departureHours} h</p>
     <div class="system-columns">${profilesColumn(system)}${staffColumn(system)}</div>
   </section>
 `
@@ -80,7 +93,70 @@ export const systemsSection = async (): Promise<Html> => {
       ${me.isOrgAdmin ? html`<button type="button" class="button button-secondary" data-new-system>${icon('plus', 16)}Novo sistema</button>` : ''}
     </div>
     ${systems.items.length ? systems.items.map(systemCard) : html`<p class="empty muted">Nenhum sistema no catálogo ainda.</p>`}
+    ${await holidaysSection(me.isOrgAdmin)}
   `
+}
+
+/** The days the SLAs skip beyond weekends: the organization's own, and the national ones ahead. */
+const holidaysSection = async (canEdit: boolean): Promise<Html> => {
+  const holidays = (await governanceRead.holidays()).items
+  const own = holidays.filter((each) => !each.national)
+  const label = (holiday: Holiday) =>
+    `${holiday.day.slice(8, 10)}/${holiday.day.slice(5, 7)}/${holiday.day.slice(0, 4)}`
+  return html`
+    <section class="section system-card">
+      <div class="system-head">
+        <h2>Calendário dos prazos</h2>
+        ${canEdit ? html`<span class="system-actions"><button type="button" class="button button-secondary" data-new-holiday>${icon('plus', 16)}Feriado</button></span>` : ''}
+      </div>
+      <p class="muted">Prazos contam dias úteis em São Paulo: sem fins de semana, feriados nacionais (${holidays.filter((each) => each.national).length} até o fim do ano que vem) nem os dias abaixo.</p>
+      ${
+        own.length
+          ? html`<ul class="holiday-list">${own.map((holiday) => html`<li class="holiday-item badge">${label(holiday)} · ${holiday.name}${canEdit ? html`<button type="button" class="button button-ghost button-icon" data-remove-holiday="${holiday.day}" aria-label="Tirar ${holiday.name}">${icon('x', 14)}</button>` : ''}</li>`)}</ul>`
+          : html`<p class="muted">Nenhum feriado próprio da LET’S cadastrado.</p>`
+      }
+    </section>
+  `
+}
+
+const newHoliday = async () =>
+  openFormDialog({
+    title: 'Novo feriado',
+    submit: 'Adicionar',
+    done: 'Feriado adicionado ao calendário.',
+    fields: html`${dateField({ name: 'day', label: 'Dia' })}
+      ${textField({ name: 'name', label: 'Nome', required: true, maxLength: 80, placeholder: 'Aniversário de São Paulo' })}`,
+    onOpen: (dialog) => bindDatePickers(dialog),
+    onSubmit: async (data) => {
+      const day = String(data.get('day') ?? '')
+      if (!day) {
+        throw { error: { code: 'VALIDATION_FAILED', message: 'Choose a day' } }
+      }
+      await governanceWrite.putHoliday(day, String(data.get('name')).trim())
+    }
+  })
+
+const editSla = async (systemId: string) => {
+  const system = (await governanceRead.systems()).items.find((each) => each.id === systemId)
+  if (!system) {
+    return
+  }
+  openFormDialog({
+    title: `Prazos — ${system.name}`,
+    submit: 'Salvar',
+    done: 'Prazos salvos. Valem para os próximos pedidos.',
+    fields: html`
+      ${textField({ name: 'grant', label: 'Conceder (dias úteis após a aprovação)', type: 'number', required: true, value: String(system.sla.grantDays) })}
+      ${textField({ name: 'removal', label: 'Remover (dias úteis após o pedido)', type: 'number', required: true, value: String(system.sla.removalDays) })}
+      ${textField({ name: 'departure', label: 'Desligamento (horas corridas)', type: 'number', required: true, value: String(system.sla.departureHours) })}
+    `,
+    onSubmit: (data) =>
+      governanceWrite.setSla(systemId, {
+        grantSlaDays: Number(data.get('grant')),
+        removalSlaDays: Number(data.get('removal')),
+        departureSlaHours: Number(data.get('departure'))
+      })
+  })
 }
 
 const PRIVILEGES: readonly { value: Privilege; label: string }[] = [
@@ -162,6 +238,9 @@ export const bindSystems = (root: HTMLElement): void => {
   on(root, 'new-system', newSystem)
   on(root, 'new-profile', (button) => newProfile(button.dataset.newProfile ?? ''))
   on(root, 'staff', (button) => addStaff(button.dataset.staff ?? ''))
+  on(root, 'sla', (button) => editSla(button.dataset.sla ?? ''))
+  on(root, 'new-holiday', newHoliday)
+  on(root, 'remove-holiday', (button) => governanceWrite.removeHoliday(button.dataset.removeHoliday ?? ''))
   on(root, 'unstaff', (button) =>
     governanceWrite.removeStaff(
       button.dataset.unstaff ?? '',

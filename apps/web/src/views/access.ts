@@ -88,13 +88,17 @@ export const myAccessView: View = {
   bind: bindRows
 }
 
+/** The nearest deadline first; a grant still waiting for approval has none yet and goes last. */
+const byDeadline = <T extends { dueAt: string | null }>(items: readonly T[]): T[] =>
+  [...items].sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999'))
+
 export const accessQueueView: View = {
   path: '/acessos/fila',
   title: 'Fila de acessos',
   render: async () => {
     const requests = (await governanceRead.requests()).items
-    const forMe = requests.filter(waitsOnMe)
-    const open = requests.filter((each) => isOpen(each) && !waitsOnMe(each))
+    const forMe = byDeadline(requests.filter(waitsOnMe))
+    const open = byDeadline(requests.filter((each) => isOpen(each) && !waitsOnMe(each)))
     const closed = requests.filter((each) => !isOpen(each)).slice(0, 50)
     return html`
       ${await tabs('/acessos/fila')}

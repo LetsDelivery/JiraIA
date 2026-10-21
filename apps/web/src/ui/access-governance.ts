@@ -8,8 +8,10 @@ import {
 import { type Me, read } from '@/api/requests'
 import {
   endOfDayInSaoPaulo,
+  isLate,
   isOpen,
   KIND_LABEL,
+  ORIGIN_LABEL,
   PRIVILEGE_LABEL,
   PRIVILEGED_MAX_DAYS,
   STATUS_LABEL
@@ -66,6 +68,21 @@ const requestActions = (request: EntitlementRequest): Html => html`
   </div>
 `
 
+/** The deadline, and whether it was missed — the SLA, on the request itself (ADR-0024). */
+const deadline = (request: EntitlementRequest): Html | string => {
+  if (!request.dueAt) {
+    return ''
+  }
+  const late = isLate(request, new Date())
+  return html`<p class="access-due ${late ? 'is-late' : ''}">${late ? html`<span class="badge badge-danger">Atrasado</span>` : ''}Prazo ${when(request.dueAt)}</p>`
+}
+
+/** A person's reason, or — when the platform opened it — why it did. */
+const why = (request: EntitlementRequest): Html =>
+  request.origin === 'request'
+    ? html`<p class="access-reason">${request.reason}</p>`
+    : html`<p class="access-reason"><span class="badge">${ORIGIN_LABEL[request.origin]}</span></p>`
+
 export const requestRow = (request: EntitlementRequest): Html => html`
   <li class="access-row ${isOpen(request) ? '' : 'is-closed'}">
     <div class="access-row-head">
@@ -74,7 +91,8 @@ export const requestRow = (request: EntitlementRequest): Html => html`
       <span class="access-status status-${request.status}">${STATUS_LABEL[request.status]}</span>
     </div>
     <p class="access-row-who">Para <strong>${request.beneficiary.name}</strong>${request.expiresAt ? html` · até ${day(request.expiresAt)}` : ''}</p>
-    <p class="access-reason">${request.reason}</p>
+    ${why(request)}
+    ${deadline(request)}
     ${trail(request)}
     ${requestActions(request)}
   </li>

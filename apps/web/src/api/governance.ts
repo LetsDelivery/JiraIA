@@ -21,6 +21,8 @@ export type Privilege = AccessProfile['privilege']
 export type EntitlementRequest = Json<'/work/access/entitlement-requests/{requestId}', 'get'>
 export type RequestStatus = EntitlementRequest['status']
 export type Entitlement = Json<'/work/access/entitlements', 'get'>['items'][number]
+export type Holiday = Json<'/work/access/holidays', 'get'>['items'][number]
+export type SlaInput = { grantSlaDays: number; removalSlaDays: number; departureSlaHours: number }
 export type GrantInput = { profileId: string; reason: string; beneficiaryId?: string; expiresAt?: string }
 
 const onSystem = (systemId: string) => ({ params: { path: { systemId } } })
@@ -42,6 +44,7 @@ export const governanceRead = {
     cached(`governance:held:${memberId}`, () =>
       unwrap(api.GET('/work/access/entitlements', { params: { query: { memberId, held: 'true' } } }))
     ),
+  holidays: () => cached('governance:holidays', () => unwrap(api.GET('/work/access/holidays'))),
   /** Everything the caller may see that is held now — their systems', or all of it for an auditor. */
   held: () =>
     cached('governance:held', () =>
@@ -54,6 +57,12 @@ export const governanceWrite = {
     _done(await unwrap(api.POST('/work/access/systems', { body }))),
   archiveSystem: async (systemId: string, archived: boolean) =>
     _done(await unwrap(api.PATCH('/work/access/systems/{systemId}', { ...onSystem(systemId), body: { archived } }))),
+  setSla: async (systemId: string, sla: SlaInput) =>
+    _done(await unwrap(api.PATCH('/work/access/systems/{systemId}', { ...onSystem(systemId), body: sla }))),
+  putHoliday: async (day: string, name: string) =>
+    _done(await unwrap(api.PUT('/work/access/holidays/{day}', { params: { path: { day } }, body: { name } }))),
+  removeHoliday: async (day: string) =>
+    _done(await unwrap(api.DELETE('/work/access/holidays/{day}', { params: { path: { day } } }))),
   putStaff: async (systemId: string, duty: Duty, memberId: string) =>
     _done(
       await unwrap(
