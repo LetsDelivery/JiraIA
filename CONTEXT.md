@@ -149,3 +149,46 @@ _Avoid_: board (a board is JiraIA's kanban), canvas
 **Draft**:
 What "Criar com IA" proposes from a conversation — a page or a whiteboard not yet created (ADR-0011).
 _Avoid_: proposal (an agent's change, Etapa 6), suggestion
+
+## Access governance (ADR-0024)
+
+**System**:
+Something LET’S grants access to — AWS, Google Workspace, GitHub, JiraIA itself — with its owners,
+operators and SLAs. Says whether it holds personal data. Screen word: "Sistema".
+_Avoid_: application (an OAuth client), integration, tool
+
+**Profile**:
+A named set of rights in one system ("AWS — leitura produção"), standard or privileged. Access exists
+only through a profile. Screen word: "Perfil".
+_Avoid_: role (a space role), permission, group
+
+**Privileged profile**:
+A profile that administers a system or reaches beyond one person's work. Every grant of it expires,
+90 days at most.
+_Avoid_: admin access, elevated role
+
+**Entitlement**:
+A person holding a profile, from the request that granted it to the one that removed it. Never
+deleted. Screen word: "Acesso".
+_Avoid_: grant, permission, access (alone)
+
+**Entitlement request**:
+A request to grant or remove one profile for one person, with a mandatory reason: requested,
+approved or declined, then done with evidence or cancelled. Screen word: "Solicitação".
+_Avoid_: access request (a reader asking to edit a space), ticket
+
+**System owner**:
+Approves requests and reviews the entitlements of a system.
+_Avoid_: lead (a space's), approver, manager
+
+**Operator**:
+Carries out approved requests in the system and records the evidence.
+_Avoid_: admin, executor, provisioner
+
+**Access auditor**:
+Reads and exports everything in access governance; never approves or carries out.
+_Avoid_: compliance user, viewer
+
+**Access review**:
+A periodic campaign in which system owners confirm or remove each entitlement of their systems.
+_Avoid_: recertification, audit
