@@ -24,10 +24,14 @@ export const easter = (year: number): Date => {
 }
 
 const FIXED = ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25']
-/** Carnival Monday and Tuesday, Good Friday and Corpus Christi, in days from Easter. */
-const FROM_EASTER = [-48, -47, -2, 60]
+/**
+ * Good Friday, in days from Easter — the one movable national holiday. Carnival and Corpus Christi
+ * are optional days off (ponto facultativo), not holidays: they count as business days unless the
+ * organization adds them to its own calendar.
+ */
+const FROM_EASTER = [-2]
 
-/** Brazil's national holidays of a year — and the days the market stops with them. */
+/** Brazil's national holidays of a year, as the law lists them. */
 export const nationalHolidays = (year: number): string[] => {
   const sunday = easter(year).getTime()
   return [

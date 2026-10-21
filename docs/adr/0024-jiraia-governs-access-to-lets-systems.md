@@ -52,8 +52,8 @@ each step is an audit event in the same transaction, with actor, time and reason
 | Removal on request or change of function | request | 1 business day |
 | Removal on departure | deactivation of the person | 24 hours |
 
-Business days follow the São Paulo calendar: national holidays are computed (Carnival, Good Friday
-and Corpus Christi from Easter), and an organization admin adds LET’S's own days to a table;
+Business days follow the São Paulo calendar: the national holidays the law lists are computed
+(Good Friday from Easter; Carnival and Corpus Christi are optional days off and count as business days), and an organization admin adds LET’S's own days to a table;
 deadlines are stored as UTC instants. A request past its deadline is **overdue**: its
 operators and owners are notified, and it counts against the system's compliance.
 
