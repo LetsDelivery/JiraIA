@@ -13,7 +13,7 @@ import { openCreateMenu } from '@/ui/create-menu'
 import { icon } from '@/ui/icons'
 import { toast } from '@/ui/toast'
 
-import { attachBubble, bubbleMenu, insertCard, insertFile } from './page-actions'
+import { attachBubble, bubbleMenu, insertBoard, insertCard, insertFile } from './page-actions'
 
 /**
  * The editors — TipTap, Yjs and the whiteboard, most of the panel's weight — load the first time a
@@ -81,8 +81,10 @@ const titleRow = (data: Loaded): Html => html`
   <header class="page-title-row">
     <label class="sr-only" for="page-title">Título</label>
     <input id="page-title" class="page-title" data-page-title value="${data.content.title}" maxlength="255" />
-    <span class="page-presence" data-presence></span>
-    <span class="page-status muted" data-page-status role="status"></span>
+    <div class="page-meta">
+      <span class="page-presence" data-presence></span>
+      <span class="page-status muted" data-page-status role="status"></span>
+    </div>
   </header>
 `
 
@@ -128,7 +130,7 @@ export const documentScreen = async (data: Loaded): Promise<Html> => {
           board
             ? html`<div class="wb-stage"><div data-editor-host class="board-host"></div>
               <div class="wb-toolbar-host" data-board-toolbar></div><div class="wb-panel-host" data-board-style></div></div>`
-            : html`<div data-editor-host></div>`
+            : html`<div class="page-toolbar" data-format-host></div><div data-editor-host></div>`
         }
       </article>
       <aside class="page-panel">${panelTabs(data, panelOf(), open.length)}${await panel(data)}</aside>
@@ -182,6 +184,10 @@ export const bindDocument = (root: HTMLElement, data: Loaded): void => {
       status.dataset.state = next
     }
   })
+  const toolbar = 'toolbar' in session.surface ? session.surface.toolbar : undefined
+  if (toolbar) {
+    root.querySelector('[data-format-host]')?.append(toolbar)
+  }
   bindTitle(root, data.content)
   bindPresence(root, session.provider.awareness)
   bindPanels(root, data, session, redraw)
@@ -196,7 +202,11 @@ const openPage = (loaded: Editors, data: Loaded, redraw: () => void) => {
       members: data.members,
       bubble: bubbleMenu((editor) => startInlineComment(data.content.id, editor, redraw)),
       insertFile: (editor, kind) => insertFile(data.content.id, editor, kind),
-      insertCard: (editor) => insertCard(editor)
+      insertCard: (editor) => insertCard(editor),
+      insertBoard: (editor) =>
+        void insertBoard(data.content.spaceId, editor).catch((refusal: unknown) =>
+          toast(refusalSentence(refusal), 'error')
+        )
     })
   )
   attachBubble(session.surface.bubble, session.surface.editor)

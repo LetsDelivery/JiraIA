@@ -12,6 +12,8 @@ export type SlashContext = {
   insertFile: (editor: Editor, kind: 'image' | 'file') => void
   /** Asks which card and embeds it. */
   insertCard: (editor: Editor) => void
+  /** Asks which whiteboard and shows it in the page. */
+  insertBoard: (editor: Editor) => void
 }
 
 type Command = MenuItem & { keywords: string; run: (editor: Editor, context: SlashContext) => void }
@@ -89,6 +91,12 @@ const COMMANDS: readonly Command[] = [
     hint: 'embutido',
     keywords: 'card embutir jira',
     run: (editor, context) => context.insertCard(editor)
+  },
+  {
+    label: 'Quadro',
+    hint: 'whiteboard',
+    keywords: 'quadro whiteboard desenho diagrama board',
+    run: (editor, context) => context.insertBoard(editor)
   }
 ]
 
@@ -107,7 +115,7 @@ export const slashItems = (query: string): Command[] => {
 /** `/` at the start of a word opens the block menu (escopo-mvp 5.2). */
 export const SlashCommand = Extension.create<SlashContext>({
   name: 'slashCommand',
-  addOptions: () => ({ insertFile: () => undefined, insertCard: () => undefined }),
+  addOptions: () => ({ insertFile: () => undefined, insertCard: () => undefined, insertBoard: () => undefined }),
   addProseMirrorPlugins() {
     const context = this.options
     return [

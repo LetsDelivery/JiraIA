@@ -15,6 +15,8 @@
 
 .page-panel {
   position: sticky;
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--border);
   top: calc(var(--topbar-height) + var(--space-4));
   max-height: calc(100vh - var(--topbar-height) - var(--space-8));
   overflow-y: auto;
@@ -22,6 +24,24 @@
 
 .page-main {
   min-width: 0;
+}
+
+/* A page reads in a column of its own, centred in the space the panel leaves; a board takes it all. */
+.page-layout:not(.is-board) .page-main {
+  justify-self: center;
+  width: 100%;
+  max-width: 760px;
+  padding-top: var(--space-4);
+}
+
+@media (max-width: 1100px) {
+  .page-panel {
+    position: static;
+    max-height: none;
+    padding: var(--space-6) 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
 }
 
 /* ---------- Tree ---------- */
@@ -120,7 +140,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-4);
   color: var(--muted);
   font-size: var(--text-sm);
 }
@@ -132,13 +152,22 @@
 
 .page-title-row {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-meta {
+  display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  min-height: 24px;
 }
 
 .page-title {
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -146,12 +175,14 @@
   color: var(--fg);
   font-size: 2rem;
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   outline: none;
 }
 
 .page-presence {
   display: inline-flex;
+  padding-left: 6px;
 }
 
 .presence {
@@ -173,23 +204,55 @@
   min-height: 60vh;
   outline: none;
   font-size: var(--text-md);
-  line-height: 1.65;
+  line-height: 1.75;
 }
 
+/* Paragraphs breathe; a heading opens a new section, so it sits far from what is above it. */
 .page-editor .tiptap > * + * {
+  margin-top: 1em;
+}
+
+.page-editor .tiptap :is(h1, h2, h3) {
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.page-editor .tiptap > :is(h1, h2, h3) + * {
   margin-top: 0.6em;
 }
 
 .page-editor .tiptap h1 {
-  font-size: 1.6rem;
+  font-size: 1.75rem;
 }
 
 .page-editor .tiptap h2 {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
+  font-weight: 600;
 }
 
 .page-editor .tiptap h3 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.page-editor .tiptap > * + h1 {
+  margin-top: 2.2em;
+}
+
+.page-editor .tiptap > * + :is(h2, h3) {
+  margin-top: 1.9em;
+}
+
+.page-editor .tiptap :is(ul, ol) {
+  padding-left: 1.5em;
+}
+
+.page-editor .tiptap li + li {
+  margin-top: 0.35em;
+}
+
+.page-editor .tiptap > :is(table, pre, blockquote, .callout, .card-embed, .page-image, hr) {
+  margin-block: 1.5em;
 }
 
 .page-editor .tiptap p.is-editor-empty:first-child::before {
@@ -253,7 +316,7 @@
 
 .page-editor .tiptap td,
 .page-editor .tiptap th {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   vertical-align: top;
 }
@@ -409,11 +472,22 @@
 
 /* ---------- Side panel: comments and versions ---------- */
 .page-panel-tabs {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.page-panel [data-page-comments] {
+  gap: var(--space-4);
+}
+
+.page-panel .composer {
+  gap: var(--space-2);
 }
 
 .page-thread {
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
   background: var(--surface);
@@ -432,7 +506,7 @@
 .page-thread-quote {
   display: block;
   width: 100%;
-  margin: 0 0 var(--space-2);
+  margin: 0;
   padding: 0 0 0 var(--space-2);
   border: 0;
   border-left: 3px solid #f5d90a;
@@ -501,4 +575,22 @@
 /* A page uses the whole width: the tree, the document and the panel side by side. */
 .view:has(.page-layout) {
   max-width: none;
+}
+
+.page-thread .comments {
+  gap: var(--space-4);
+}
+
+.page-thread .comment-content {
+  gap: 2px;
+  font-size: var(--text-sm);
+}
+
+.page-thread .comment-body {
+  color: var(--fg);
+  line-height: 1.55;
+}
+
+.page-thread > .row {
+  padding-left: 32px;
 }

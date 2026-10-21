@@ -5,11 +5,12 @@ import type { Content } from '@/api/draw'
 import type { Member } from '@/api/requests'
 
 import { createPageEditor } from './editor'
+import { formatToolbar } from './format-toolbar'
 import type { ContentProvider } from './provider'
 import { caretColor, type Surface } from './session'
 import type { SlashContext } from './slash'
 
-export type PageSurface = Surface & { editor: Editor; bubble: HTMLElement }
+export type PageSurface = Surface & { editor: Editor; bubble: HTMLElement; toolbar: HTMLElement }
 
 export type PageSurfaceOptions = SlashContext & {
   content: Content
@@ -34,19 +35,25 @@ export const pageSurface =
       // Editable once the document is loaded — a keystroke before that would be overwritten.
       editable: false
     })
+    const toolbar = formatToolbar(editor)
     return {
       root,
       editor,
       bubble: options.bubble,
+      toolbar,
       derive: () => ({ json: editor.getJSON(), text: editor.getText({ blockSeparator: '\n' }) }),
       isEmpty: () => editor.isEmpty,
       seed: (json) => {
         editor.commands.setContent(json)
       },
-      setEditable: (editable) => editor.setEditable(editable),
+      setEditable: (editable) => {
+        editor.setEditable(editable)
+        toolbar.hidden = !editable
+      },
       destroy: () => {
         editor.destroy()
         options.bubble.remove()
+        toolbar.remove()
       }
     }
   }

@@ -1,7 +1,8 @@
 import type { Editor } from '@tiptap/core'
 
-import { drawWrite } from '@/api/draw'
+import { drawRead, drawWrite } from '@/api/draw'
 import { read, write } from '@/api/requests'
+import { editLink } from '@/editor/format-toolbar'
 import { html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { openFormDialog, textField } from '@/ui/dialog'
@@ -55,6 +56,33 @@ export const insertCard = (editor: Editor): void => {
   })
 }
 
+/** A whiteboard of the space, picked by title, shown in the page where the cursor is. */
+export const insertBoard = async (spaceId: string, editor: Editor): Promise<void> => {
+  const boards = (await drawRead.tree(spaceId)).items.filter((node) => node.kind === 'whiteboard')
+  if (!boards.length) {
+    toast('Não há quadros neste espaço. Crie um quadro primeiro.', 'error')
+    return
+  }
+  openFormDialog({
+    title: 'Inserir quadro',
+    submit: 'Inserir',
+    done: 'Quadro inserido.',
+    fields: selectField({
+      name: 'board',
+      label: 'Quadro',
+      options: boards.map((board) => ({ value: board.id, label: board.title })),
+      value: boards[0]?.id ?? ''
+    }),
+    onSubmit: async (data) => {
+      const board = boards.find((each) => each.id === data.get('board'))
+      if (board) {
+        const attrs = { contentId: board.id, spaceId, title: board.title }
+        editor.chain().focus().insertContent({ type: 'boardEmbed', attrs }).run()
+      }
+    }
+  })
+}
+
 /** The selected text becomes a card's title; in the page it is replaced by that card (5.6). */
 const createCardFromSelection = async (editor: Editor): Promise<void> => {
   const { from, to } = editor.state.selection
@@ -84,8 +112,9 @@ const createCardFromSelection = async (editor: Editor): Promise<void> => {
 type BubbleAction = (editor: Editor) => void
 
 /**
- * The menu over selected text: bold, italic, highlight, comment on the stretch, make it a card. The
- * element is the editor's for as long as the page is open; the menu extension shows and moves it.
+ * The menu over selected text: bold, italic, underline, strike, highlight, link, comment on the stretch,
+ * make it a card. The element is the editor's for as long as the page is open; the menu extension shows
+ * and moves it.
  */
 export const bubbleMenu = (comment: (editor: Editor) => void): HTMLElement => {
   const menu = document.createElement('div')
@@ -93,16 +122,22 @@ export const bubbleMenu = (comment: (editor: Editor) => void): HTMLElement => {
   menu.setAttribute('role', 'toolbar')
   menu.setAttribute('aria-label', 'Formatar o trecho')
   menu.innerHTML = html`
-    <button type="button" class="button button-ghost button-icon" data-bubble="bold" aria-label="Negrito" title="Negrito"><strong>B</strong></button>
-    <button type="button" class="button button-ghost button-icon" data-bubble="italic" aria-label="Itálico" title="Itálico"><em>I</em></button>
-    <button type="button" class="button button-ghost button-icon" data-bubble="highlight" aria-label="Realçar" title="Realçar">${icon('pencil', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="bold" aria-label="Negrito" title="Negrito">${icon('bold', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="italic" aria-label="Itálico" title="Itálico">${icon('italic', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="underline" aria-label="Sublinhado" title="Sublinhado">${icon('underline', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="strike" aria-label="Tachado" title="Tachado">${icon('strikethrough', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="highlight" aria-label="Realçar" title="Realçar">${icon('highlight', 16)}</button>
+    <button type="button" class="button button-ghost button-icon" data-bubble="link" aria-label="Link" title="Link">${icon('link', 16)}</button>
     <button type="button" class="button button-ghost button-small" data-bubble="comment">${icon('message', 16)}Comentar</button>
     <button type="button" class="button button-ghost button-small" data-bubble="card">${icon('plus', 16)}Criar card</button>
   `.value
   const actions: Record<string, BubbleAction> = {
     bold: (editor) => editor.chain().focus().toggleBold().run(),
     italic: (editor) => editor.chain().focus().toggleItalic().run(),
+    underline: (editor) => editor.chain().focus().toggleUnderline().run(),
+    strike: (editor) => editor.chain().focus().toggleStrike().run(),
     highlight: (editor) => editor.chain().focus().toggleHighlight().run(),
+    link: editLink,
     comment,
     card: (editor) =>
       void createCardFromSelection(editor).catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
