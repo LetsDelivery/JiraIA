@@ -5,7 +5,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from '
 /**
  * gzip on the way out, because nothing above us does it.
  *
- * The services are behind `AWS::Serverless::HttpApi` — API Gateway **v2** — and v2 has no response
+ * The API is an HTTP API (`template.yml`) — API Gateway **v2** — and v2 has no response
  * compression at all: `MinimumCompressionSize` is a REST API (v1) property and there is no
  * equivalent. So a listing leaves the account uncompressed unless the handler compresses it, and
  * egress is billed per byte.

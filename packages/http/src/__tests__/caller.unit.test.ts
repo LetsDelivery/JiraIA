@@ -30,6 +30,17 @@ describe('callerFromClaims', () => {
     expect(callerFromClaims({ sub: '1', email: 'a@gmail.com', email_verified: true }).hostedDomain).toBeUndefined()
   })
 
+  it('reads the Workspace domain a Cognito ID token carries as custom:hd (ADR-0026)', () => {
+    const caller = callerFromClaims({
+      sub: '1b7e',
+      email: 'ana@uselets.com',
+      email_verified: true,
+      'custom:hd': 'uselets.com'
+    })
+
+    expect(caller.hostedDomain).toBe('uselets.com')
+  })
+
   it('refuses claims with no subject', () => {
     expect(() => callerFromClaims({ email: 'a@uselets.com' })).toThrow(UnauthenticatedException)
   })

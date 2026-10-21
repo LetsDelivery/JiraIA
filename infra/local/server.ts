@@ -8,6 +8,7 @@ import { WebhookSlackNotifier } from '../../services/work/src/integrations/slack
 import { drainAfterWrites, LocalMailbox, PrintedSlack, PrintedWebhooks } from './bus.js'
 import {
   ALLOWED_EMAIL_DOMAIN,
+  ALLOWED_EMAIL_DOMAINS,
   assertDevDatabase,
   DEV_DATABASE_URL,
   LOCAL_FILES_DIR,
@@ -42,7 +43,7 @@ const db = connectDatabase({ DATABASE_URL: url })
 const config = {
   DATABASE_URL: url,
   AWS_REGION: 'us-east-1',
-  ALLOWED_EMAIL_DOMAIN,
+  ALLOWED_EMAIL_DOMAINS,
   ATTACHMENTS_BUCKET: 'local',
   REALTIME_URL: `ws://localhost:${LOCAL_PORT}/realtime`,
   WEB_URL: process.env.LOCAL_WEB_URL ?? 'http://localhost:5280',
@@ -70,7 +71,7 @@ const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } :
   ...(process.env.SLACK_CLIENT_ID ? {} : { slackApi: new LocalSlackApi() })
 })
 const afterWrite = drainAfterWrites(work.drain)
-// Access governance's own clock (ADR-0024): expiries and overdue requests, as its Lambda runs it.
+// Access governance's own clock (ADR-0024): expiries and overdue requests, as its job runs in AWS.
 setInterval(
   () =>
     void work.accessClock
@@ -80,7 +81,7 @@ setInterval(
       .catch((error: unknown) => console.error('  access clock failed:', error)),
   60_000
 )
-// The webhook retry sweep, as the scheduled Lambda runs it in AWS.
+// The webhook retry sweep, as its job runs in AWS.
 setInterval(
   () => void work.webhookSender.retryDue().catch((error: unknown) => console.error('  webhook retry failed:', error)),
   60_000
@@ -133,7 +134,7 @@ const _route = async (request: Request): Promise<Response> => {
   if (prefix === 'files') {
     return await files.serve(request, rest.join('/'))
   }
-  // Slack's events skip the router, as their own Lambda does in AWS (ADR-0018).
+  // Slack's events skip the router, as the function does in AWS (ADR-0018, ADR-0025).
   if (prefix === 'work' && rest.join('/') === 'slack/events' && request.method === 'POST') {
     const reply = await work.slackEvents.handle({
       body: await request.text(),
@@ -166,6 +167,6 @@ Bun.serve<SocketData>({
 
 console.error('')
 console.error(`  JiraIA local  →  http://localhost:${LOCAL_PORT}   (services: ${Object.keys(routers).join(', ')})`)
-console.error(`  Google sign-in is a header; only @${ALLOWED_EMAIL_DOMAIN} addresses are admitted:`)
+console.error(`  Google sign-in is a header; only ${ALLOWED_EMAIL_DOMAINS.join(' and ')} addresses are admitted:`)
 console.error(`    curl -H 'x-local-user: admin@${ALLOWED_EMAIL_DOMAIN}' localhost:${LOCAL_PORT}/work/spaces`)
 console.error('')

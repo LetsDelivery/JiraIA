@@ -24,7 +24,7 @@ import '@fontsource/caveat/400.css'
 import { noticesRead } from '@/api/notifications'
 import { proposalsRead } from '@/api/proposals'
 import { read } from '@/api/requests'
-import { session, signOut } from '@/auth/session'
+import { session, signOut, signOutEverywhere } from '@/auth/session'
 import { clearCache, onInvalidate } from '@/lib/cache'
 import { html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
@@ -229,7 +229,7 @@ const openAccountMenu = async (): Promise<void> => {
 
 /** Controls that belong to the frame, not to a screen: sign out, theme, collapse. */
 const FRAME_ACTIONS: Record<string, () => void> = {
-  '[data-sign-out]': () => signOut(),
+  '[data-sign-out]': () => signOutEverywhere(),
   '[data-theme-toggle]': () => {
     theme.set(isDark() ? 'light' : 'dark')
     applyTheme()

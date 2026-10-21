@@ -80,7 +80,7 @@ type IntakeDeps = {
 /**
  * Etapa 5: intake forms, automations and Slack, and the events that carry changes to them (ADR-0014).
  *
- * `dispatcher` is what the scheduled Lambda runs; `consumers` are the queue-fed Lambdas. `drain` runs
+ * `dispatcher` is what the dispatch job runs; `consumers` read the queues (ADR-0025). `drain` runs
  * both in this process until nothing is left — the local harness after each write, and the suites,
  * which want to see a rule's effect without a bus.
  */

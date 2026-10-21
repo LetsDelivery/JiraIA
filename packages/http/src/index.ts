@@ -7,6 +7,7 @@ export {
   redactHeaders
 } from './client.js'
 export { acceptsGzip, compressed } from './compress.js'
+export { type CognitoIdentityOptions, cognitoIdentity, type IdentityVerifier } from './identity.js'
 export { type Matched, matchPath, matchRoute } from './match.js'
 export {
   created,

@@ -5,7 +5,8 @@ Date: 2026-10-17
 ## Status
 
 Accepted. Extends the Slack of Etapa 5a (incoming webhooks for automations, escopo-mvp 4.5), which
-stays as it is.
+stays as it is. Amended by ADR-0025: Slack's events are a path of the general function, handed to
+the Slack service before the router.
 
 ## Context
 

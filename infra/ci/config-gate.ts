@@ -1,5 +1,6 @@
 /**
- * Checks that every Lambda whose handler reads the service config is given the variables it needs.
+ * Checks that every Lambda in `template.yml` whose handler reads the service config is given the
+ * variables it needs.
  *
  * A sibling of `handlers-gate.ts`. In uselets it found four functions that would have died on their
  * first cold start. Every handler starts with
@@ -11,127 +12,63 @@
  * Usage: bun run infra/ci/config-gate.ts
  */
 
-import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { load } from './cfn.js'
+import { load, PACKAGE_SERVICE, TEMPLATE_PATH } from './cfn.js'
+import { requiredKeys } from './config-keys.js'
 
-const SERVICES = 'services'
+type Problem = { fn: string; missing: string[] }
 
-/**
- * Variables the Lambda runtime sets by itself.
- *
- * A template that also set them would be refused by CloudFormation, so a config schema that asks
- * for one is satisfied without the template saying anything.
- */
-const PROVIDED = new Set([
-  'AWS_REGION',
-  'AWS_DEFAULT_REGION',
-  'AWS_LAMBDA_FUNCTION_NAME',
-  'AWS_LAMBDA_FUNCTION_VERSION',
-  'AWS_LAMBDA_LOG_GROUP_NAME',
-  'AWS_LAMBDA_LOG_STREAM_NAME',
-  'AWS_EXECUTION_ENV',
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'AWS_SESSION_TOKEN'
-])
-
-type Problem = { service: string; fn: string; missing: string[] }
-
-/** Every key in the config schema that has no `.optional()` and no `.default(`. */
-const _requiredKeys = (source: string): string[] => {
-  const body = source.slice(source.indexOf('z.object({'))
-
-  return [...body.matchAll(/^\s{2}([A-Z][A-Z0-9_]*):\s*(.+)$/gm)]
-    .filter(([, , rest]) => !(rest as string).includes('.optional()') && !(rest as string).includes('.default('))
-    .map(([, key]) => key as string)
-    .filter((key) => !PROVIDED.has(key))
-}
-
-/** `consumers/x-consumer.onY` → `services/<svc>/src/consumers/x-consumer.ts` — first dot, as the runtime reads it. */
-const _sourceOf = (service: string, handler: string): string =>
-  join(SERVICES, service, 'src', `${handler.slice(0, handler.indexOf('.'))}.ts`)
+/** `index.handler` → `services/work/src/index.ts` — first dot, as the runtime reads it. */
+const _sourceOf = (handler: string): string =>
+  join('services', PACKAGE_SERVICE, 'src', `${handler.slice(0, handler.indexOf('.'))}.ts`)
 
 /** What one function is missing, or nothing — including when it is not a config-reading function. */
 const _missingFor = async (
-  service: string,
   resource: {
     Type?: string
     Properties?: { Handler?: unknown; Environment?: { Variables?: Record<string, unknown> } }
   },
-  globals: Record<string, unknown>,
   required: readonly string[]
 ): Promise<string[]> => {
-  if (resource.Type !== 'AWS::Serverless::Function') {
-    return []
-  }
-
   const handler = resource.Properties?.Handler
-
-  if (typeof handler !== 'string') {
+  if (resource.Type !== 'AWS::Lambda::Function' || typeof handler !== 'string') {
     return []
   }
 
-  const source = Bun.file(_sourceOf(service, handler))
+  const source = Bun.file(_sourceOf(handler))
 
-  // Only handlers that actually read the config. A Cognito trigger that reads none of it needs none
-  // of it, and demanding the whole set would make this gate noise instead of a signal.
+  // Only handlers that actually read the config: one that reads none of it needs none of it.
   if (!(await source.exists()) || !(await source.text()).includes('readConfig(')) {
     return []
   }
 
-  const variables = { ...globals, ...(resource.Properties?.Environment?.Variables ?? {}) }
+  const variables = resource.Properties?.Environment?.Variables ?? {}
 
   return required.filter((key) => !(key in variables))
 }
 
-const _check = async (service: string): Promise<Problem[]> => {
-  const template = Bun.file(join(SERVICES, service, 'template.yml'))
-  const config = Bun.file(join(SERVICES, service, 'src', 'config.ts'))
+const required = requiredKeys(await Bun.file(join('services', PACKAGE_SERVICE, 'src', 'config.ts')).text())
+const resources = Object.entries(load(await Bun.file(TEMPLATE_PATH).text()).Resources ?? {})
+const problems: Problem[] = []
 
-  if (!(await template.exists()) || !(await config.exists())) {
-    return []
+for (const [fn, resource] of resources) {
+  const missing = await _missingFor(resource, required)
+  if (missing.length > 0) {
+    problems.push({ fn, missing })
   }
-
-  const required = _requiredKeys(await config.text())
-
-  if (required.length === 0) {
-    return []
-  }
-
-  const parsed = load(await template.text())
-  const globals = parsed.Globals?.Function?.Environment?.Variables ?? {}
-  const problems: Problem[] = []
-
-  for (const [name, resource] of Object.entries(parsed.Resources ?? {})) {
-    const missing = await _missingFor(service, resource, globals, required)
-
-    if (missing.length > 0) {
-      problems.push({ service, fn: name, missing })
-    }
-  }
-
-  return problems
 }
 
-const services = (await readdir(SERVICES, { withFileTypes: true }))
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-  .sort()
-
-const problems = (await Promise.all(services.map(_check))).flat()
-
 if (problems.length === 0) {
-  console.error(`config: every config-reading Lambda in ${services.length} services has the variables it needs`)
+  console.error(`config: every config-reading Lambda in ${TEMPLATE_PATH} has the variables it needs`)
   process.exit(0)
 }
 
 console.error(`${problems.length} function(s) would fail at cold start with a missing variable:\n`)
 
 for (const problem of problems) {
-  console.error(`  ${problem.service}: ${problem.fn}`)
-  console.error(`    ${problem.missing.join(', ')} — required by services/${problem.service}/src/config.ts`)
+  console.error(`  ${problem.fn}`)
+  console.error(`    ${problem.missing.join(', ')} — required by services/${PACKAGE_SERVICE}/src/config.ts`)
 }
 
 console.error(

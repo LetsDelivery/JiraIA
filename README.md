@@ -5,12 +5,13 @@ Confluence), native in AI: people and AI agents are members of the same spaces a
 boards. The MVP goes to production by 2026-11-30.
 
 > **Status:** Etapa 1 (foundation) done; Etapa 2 (cards and board) in progress — see
-> [`docs/etapas/`](docs/etapas/). Not deployed yet: the AWS accounts are pending
-> ([`docs/pendencias-externas.md`](docs/pendencias-externas.md)).
+> [`docs/etapas/`](docs/etapas/). Not deployed yet: the stack and its pipeline are ready for the Max
+> accounts; Google sign-in waits on its OAuth client ([`docs/pendencias-externas.md`](docs/pendencias-externas.md) #4).
 
 ## What it does today
 
-- **Sign-in with Google**, only for verified accounts of the company's Google Workspace domain.
+- **Sign-in with Google** through Cognito, only for verified accounts of the company's Google Workspace
+  domains, `uselets.com` and `lets.delivery`.
   The first sign-in creates the member, who reads every space; roles to edit are given afterwards.
 - **Spaces** — what Jira now calls a space: a key (`REQ`, `PRD`, `TEC`), a type, a lead, and roles
   per person or group (admin, member, reader) — see ADR-0012.
@@ -96,15 +97,11 @@ The API can be called directly; locally a header stands in for the Google token:
 curl -H 'x-local-user: admin@uselets.com' localhost:8280/work/spaces
 ```
 
-### Real Google sign-in (optional)
+### Real Google sign-in
 
-To see the real "Entrar com Google" button locally, create an OAuth client of type *Web application*
-in the company's Google Cloud, with `http://localhost:5280` as an authorised JavaScript origin, and put
-its client id in `apps/web/.env.local` (git-ignored):
-
-```sh
-VITE_GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
-```
+Locally there is no Cognito user pool, so the sign-in screen is always the e-mail one. The real "Entrar
+com Google" — through the pool, to Google and back — is in the dev account, at the stack's `PanelUrl`
+([ADR-0026](docs/adr/0026-google-sign-in-through-cognito.md)).
 
 ## Commands
 
@@ -140,19 +137,33 @@ The stack and conventions follow the team's other AI-native product, `LetsDelive
 | Layer | Choice |
 |---|---|
 | Runtime | bun workspaces, TypeScript, Node 24 on AWS Lambda |
-| API | One router Lambda per bounded context behind API Gateway; zod contracts and generated OpenAPI |
+| API | A general Lambda behind one API Gateway `ANY /{proxy+}`, routing in code, and a scheduler Lambda for the jobs; zod contracts and generated OpenAPI ([ADR-0025](docs/adr/0025-one-stack-deployed-by-the-lets-pipeline.md)) |
 | Data | Aurora PostgreSQL through the RDS Data API, Drizzle ([ADR-0002](docs/adr/0002-postgres-through-the-data-api.md)) |
-| Sign-in | Google ID tokens verified by API Gateway; Workspace domain checked by the service ([ADR-0005](docs/adr/0005-google-sign-in-for-the-workspace-domain.md)) |
-| Panel | Plain JavaScript, no framework ([ADR-0006](docs/adr/0006-plain-javascript-panel-with-glass-on-what-floats.md)) |
-| Infra | SAM/CloudFormation, configuration from SSM at deploy time |
+| Sign-in | Google through a Cognito user pool; its ID token verified by the service, which also checks the Workspace domain ([ADR-0026](docs/adr/0026-google-sign-in-through-cognito.md)) |
+| Panel | Plain JavaScript, no framework ([ADR-0006](docs/adr/0006-plain-javascript-panel-with-glass-on-what-floats.md)), on S3 behind CloudFront |
+| Infra | One `template.yml` at the root, plain CloudFormation, deployed by the LET'S pipeline through `buildspec.yml` |
 
 ```
+template.yml        the whole AWS stack: Aurora, bus, queues, Cognito, two Lambdas, APIs, S3 + CloudFront
+buildspec.yml       what the LET'S pipeline builds and hands to CloudFormation
 services/work       organization, members, spaces, workflow, cards, audit   (Postgres schema `work`)
+                    src/index.ts is the general Lambda, src/scheduler.ts the jobs' one
 packages/           core, logger, http · authorization, db, testing
 apps/web            the panel
-infra/              platform (Aurora, event bus) · local harness · CI gates · contracts · build
+infra/              local harness · CI gates · contracts · build (package, layer)
 docs/               adr/ · etapas/ · produto/ (specs, pt-BR)
 ```
+
+## Deploy
+
+There is no deploy command: merging to `master` is the deploy. The LET'S pipeline (`JiraIA` in
+`aws-cicd`, stack `jiraia`, as for max-core) runs [`buildspec.yml`](buildspec.yml), which builds the panel and the function's package
+and the dependency layer, uploads them, and hands [`template.yml`](template.yml) to CloudFormation:
+dev first, then prod after a manual approval. Each deploy applies the migrations and publishes the
+panel from inside the stack ([ADR-0025](docs/adr/0025-one-stack-deployed-by-the-lets-pipeline.md)).
+
+What differs between dev and prod is in the template's `Mappings`, by account id. The panel is at the
+CloudFront address in the stack's `PanelUrl` output, and the API under `/api/work` on that address.
 
 ## Contributing
 
@@ -165,8 +176,8 @@ docs/               adr/ · etapas/ · produto/ (specs, pt-BR)
 
 ## Security
 
-- Never commit `.env`, `.env.local` or any credential. In AWS, configuration comes from SSM and
-  secrets from Secrets Manager; nothing secret lives in this repository.
+- Never commit `.env`, `.env.local` or any credential. In AWS, what differs per account is in the
+  template's `Mappings` and secrets come from Secrets Manager; nothing secret lives in this repository.
 - `x-local-user` exists only in the local harness, which refuses to start against anything but the
   local containers.
 - Report a vulnerability to the Tecnologia team privately, not in an issue.

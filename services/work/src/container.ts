@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { type Clock, type IdGenerator, systemClock, uuidGenerator } from '@jiraia/core'
 import { connectDatabase, type Database } from '@jiraia/db'
-import { createRouter, type HttpClient, type Route } from '@jiraia/http'
+import { cognitoIdentity, createRouter, type HttpClient, type Route } from '@jiraia/http'
 import { createLogger } from '@jiraia/logger'
 import { AccessResolver } from './access.js'
 import { AuditTrail } from './audit/audit.js'
@@ -149,8 +149,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const workflows = new WorkflowRepository(db)
   const cards = new CardRepository(db)
   const audit = new AuditTrail({ db, clock, ids })
-  const allowedDomain = config.ALLOWED_EMAIL_DOMAIN
-  const admission = new MemberAdmission({ db, clock, ids, audit, members, allowedDomain })
+  const allowedDomains = config.ALLOWED_EMAIL_DOMAINS
+  const admission = new MemberAdmission({ db, clock, ids, audit, members, allowedDomains })
   const access = new AccessResolver({ db, admission })
   const shared = { db, clock, ids, access, audit }
   const gate = new SpaceGate({ access, spaces })
@@ -168,7 +168,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const comments = new CommentService({ ...onCards, comments: new CommentRepository(db), watchers, members })
 
   const services = {
-    members: new MemberService({ ...shared, members, allowedDomain, departures: accessParts.accessClock }),
+    members: new MemberService({ ...shared, members, allowedDomains, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
     fields: new FieldService({ db, clock, ids, audit, gate, fields, workflows }),
@@ -293,7 +293,11 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
       tokens: {
         verify: (value) => (OAuthTokens.owns(value) ? oauth.tokens.verify(value) : outward.tokens.verify(value))
       },
-      challenge: (path, headers) => (path === '/mcp' ? mcpChallenge(publicBase(config.API_URL, headers)) : undefined)
+      challenge: (path, headers) => (path === '/mcp' ? mcpChallenge(publicBase(config.API_URL, headers)) : undefined),
+      // The Cognito ID token of a Google sign-in, verified here: the API has no authorizer (ADR-0025, ADR-0026).
+      ...(config.COGNITO_ISSUER && config.COGNITO_CLIENT_ID
+        ? { identity: cognitoIdentity({ issuer: config.COGNITO_ISSUER, audience: config.COGNITO_CLIENT_ID }) }
+        : {})
     })
   }
 }

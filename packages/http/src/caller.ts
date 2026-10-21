@@ -34,16 +34,19 @@ export type Caller = {
 }
 
 /**
- * The claims the API Gateway JWT authorizer hands over. Anything else is ignored.
+ * The claims of a sign-in token. Anything else is ignored.
  *
- * The authorizer flattens every claim to a string, so `email_verified` arrives as `"true"`; the local
- * harness and the tests send the same shape.
+ * A Cognito ID token (ADR-0026) carries Google's Workspace domain as `custom:hd`, the attribute the
+ * user pool maps Google's `hd` into, and `email_verified` as a boolean. An API Gateway JWT authorizer
+ * flattens every claim to a string, so it arrives as `"true"`, and the local harness and the tests send
+ * that shape with Google's own `hd`. All of it is read.
  */
 const claimsSchema = z.object({
   sub: z.string().min(1),
   email: z.string().optional(),
   email_verified: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
   hd: z.string().optional(),
+  'custom:hd': z.string().optional(),
   name: z.string().optional()
 })
 
@@ -55,7 +58,8 @@ export const callerFromClaims = (claims: unknown): Caller => {
     throw new UnauthenticatedException(`The token is missing required claims — ${issues}`)
   }
 
-  const { sub, email, email_verified: verified, hd, name } = parsed.data
+  const { sub, email, email_verified: verified, name } = parsed.data
+  const hd = parsed.data.hd ?? parsed.data['custom:hd']
 
   return {
     subject: sub,

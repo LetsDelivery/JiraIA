@@ -4,7 +4,9 @@ Date: 2026-10-15
 
 ## Status
 
-Accepted. Supersedes the Cognito part of ADR-0001 and the `identity` service of ADR-0003.
+Accepted. Supersedes the Cognito part of ADR-0001 and the `identity` service of ADR-0003. Superseded
+in part by ADR-0026: Google sign-in goes through a Cognito user pool, whose ID token the router
+verifies.
 
 ## Context
 

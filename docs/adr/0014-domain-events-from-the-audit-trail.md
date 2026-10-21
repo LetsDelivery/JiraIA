@@ -5,7 +5,9 @@ Date: 2026-10-17
 ## Status
 
 Accepted. Builds on ADR-0001 (EventBridge with one SQS queue per consumer) and ADR-0002 (Aurora
-through the Data API).
+through the Data API). Amended by ADR-0025: the consumers run in the stack's general function and
+the dispatcher in its scheduler; the schedules go through a FIFO queue instead of a reserved
+concurrency of one.
 
 ## Context
 

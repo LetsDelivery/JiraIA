@@ -3,6 +3,7 @@ import type { Database } from '@jiraia/db'
 import type { Caller } from '@jiraia/http'
 
 import type { AuditTrail } from '../audit/audit.js'
+import { domainList, isAllowedAddress } from './domains.js'
 import type { MemberRepository } from './member.repository.js'
 import type { MemberRow } from './schemas.js'
 
@@ -12,8 +13,8 @@ type Deps = {
   ids: IdGenerator
   audit: AuditTrail
   members: MemberRepository
-  /** The Google Workspace domain whose people may sign in, e.g. `uselets.com`. */
-  allowedDomain: string
+  /** The Google Workspace domains whose people may sign in: `uselets.com` and `lets.delivery`. */
+  allowedDomains: readonly string[]
 }
 
 /**
@@ -78,13 +79,18 @@ export class MemberAdmission {
     return this._active(winner, caller)
   }
 
-  /** The address, if the token proves it is a verified address of the allowed Workspace domain. */
+  /**
+   * The address, if the token proves it is a verified address of an allowed Workspace domain. The
+   * account's `hd` must be one of them too: Google may name the organization's primary domain there for
+   * an address of its other one, so either is accepted, but a consumer account (no `hd`) never is.
+   */
   private _admissibleEmail(caller: Caller): string {
-    const domain = this.deps.allowedDomain
+    const domains = this.deps.allowedDomains
     const email = caller.email
+    const workspace = caller.hostedDomain !== undefined && domains.includes(caller.hostedDomain)
 
-    if (!email || !caller.emailVerified || caller.hostedDomain !== domain || !email.endsWith(`@${domain}`)) {
-      throw new ForbiddenException(`Only verified Google accounts of ${domain} may sign in`, {
+    if (!email || !caller.emailVerified || !workspace || !isAllowedAddress(email, domains)) {
+      throw new ForbiddenException(`Only verified Google accounts of ${domainList(domains)} may sign in`, {
         email: email ?? null,
         hostedDomain: caller.hostedDomain ?? null
       })

@@ -35,7 +35,7 @@ export class Receipts {
 
 /**
  * Hands each published event to the consumers in this process — the local harness and the suites,
- * where there is no EventBridge. In AWS each consumer is its own Lambda behind its own queue.
+ * where there is no EventBridge. In AWS each consumer reads its own queue (ADR-0025).
  */
 export class DirectPublisher {
   constructor(private readonly deps: { receipts: Receipts; consumers: () => readonly Consumer[] }) {}

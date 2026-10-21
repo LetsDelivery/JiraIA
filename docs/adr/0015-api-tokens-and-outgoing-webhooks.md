@@ -5,7 +5,8 @@ Date: 2026-10-17
 ## Status
 
 Accepted. Builds on ADR-0004 (authorization in the service), ADR-0005 (Google sign-in) and ADR-0014
-(events).
+(events). Amended by ADR-0025: there is no JWT authorizer in front; the router tells a sign-in token
+from an API token by the path, as before.
 
 ## Context
 

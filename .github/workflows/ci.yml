@@ -37,6 +37,8 @@ jobs:
               - 'packages/**'
               - 'services/**'
               - 'infra/**'
+              - 'template.yml'
+              - 'buildspec.yml'
               - 'package.json'
               - 'bun.lock'
               - '.tool-versions'
@@ -113,6 +115,9 @@ jobs:
         run: bunx biome check
       - name: Typecheck
         run: bunx tsc --noEmit
+      # The one stack the pipeline deploys (ADR-0025): references, types, cycles, before any account sees it.
+      - name: Lint the CloudFormation template
+        run: pipx run cfn-lint==1.58.0 --regions us-east-1 -- template.yml
 
   backend-test:
     needs: changes
@@ -141,7 +146,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Run all backend tests
         run: bun run test
-      - name: Build every service package
+      - name: Build the package the pipeline deploys, panel included
         run: bun run build
       - name: Gates the build cannot see
         run: |

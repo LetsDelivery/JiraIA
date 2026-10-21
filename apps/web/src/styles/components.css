@@ -961,12 +961,6 @@ td .select-trigger {
   font-size: var(--text-xl);
 }
 
-.google-button {
-  display: flex;
-  justify-content: center;
-  min-height: 44px;
-}
-
 .page-header .row .key {
   align-self: center;
 }

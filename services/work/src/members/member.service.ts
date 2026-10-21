@@ -11,6 +11,7 @@ import type { Caller } from '@jiraia/http'
 
 import { type AccessResolver, assertOrgAdmin } from '../access.js'
 import type { AuditTrail } from '../audit/audit.js'
+import { domainList, isAllowedAddress } from './domains.js'
 import type { MemberRepository } from './member.repository.js'
 import { type InviteMember, type MemberRow, type MemberView, toMemberView, type UpdateProfile } from './schemas.js'
 
@@ -21,8 +22,8 @@ type Deps = {
   access: AccessResolver
   audit: AuditTrail
   members: MemberRepository
-  /** Only addresses of this Google Workspace domain can ever sign in (ADR-0005). */
-  allowedDomain: string
+  /** Only addresses of these Google Workspace domains can ever sign in (ADR-0005, ADR-0026). */
+  allowedDomains: readonly string[]
   /** What a departure takes away in the same transaction: the person's access to LET’S systems (ADR-0024). */
   departures?: {
     depart(tx: Database, input: { organizationId: string; actorId: string; memberId: string; at: Date }): Promise<void>
@@ -178,10 +179,10 @@ export class MemberService {
 
   /** An address of another domain could be invited and never sign in; refuse it at the door. */
   private _assertAllowedDomain(email: string): void {
-    if (!email.endsWith(`@${this.deps.allowedDomain}`)) {
-      throw new ValidationException(`Only addresses of ${this.deps.allowedDomain} can be invited`, {
+    if (!isAllowedAddress(email, this.deps.allowedDomains)) {
+      throw new ValidationException(`Only addresses of ${domainList(this.deps.allowedDomains)} can be invited`, {
         email,
-        allowedDomain: this.deps.allowedDomain
+        allowedDomains: this.deps.allowedDomains
       })
     }
   }

@@ -5,7 +5,8 @@ Date: 2026-10-15
 ## Status
 
 Accepted. Cognito, originally inherited here, was replaced by Google sign-in (ADR-0005), and the
-React panel by plain JavaScript (ADR-0006)
+React panel by plain JavaScript (ADR-0006) Amended by ADR-0025: plain CloudFormation in one root
+`template.yml`, deployed by the LET'S pipeline, instead of SAM stacks with configuration from SSM.
 
 ## Context
 

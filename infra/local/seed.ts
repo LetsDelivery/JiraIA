@@ -7,7 +7,13 @@ import { buildService } from '../../services/work/src/container.js'
 import { bootstrapOrganization } from '../../services/work/src/members/bootstrap.js'
 import { auditEvents, organizations } from '../../services/work/src/schema.js'
 import type { CardFilter, CardOrder } from '../../services/work/src/search/filter.schemas.js'
-import { ALLOWED_EMAIL_DOMAIN, assertDevDatabase, DEV_DATABASE_URL, localClaims } from './config.js'
+import {
+  ALLOWED_EMAIL_DOMAIN,
+  ALLOWED_EMAIL_DOMAINS,
+  assertDevDatabase,
+  DEV_DATABASE_URL,
+  localClaims
+} from './config.js'
 import { seedIntake } from './seed-intake.js'
 
 /**
@@ -39,7 +45,7 @@ const service = buildService(
   {
     DATABASE_URL: url,
     AWS_REGION: 'us-east-1',
-    ALLOWED_EMAIL_DOMAIN,
+    ALLOWED_EMAIL_DOMAINS,
     ATTACHMENTS_BUCKET: 'local',
     REALTIME_URL: 'ws://localhost/realtime'
   },

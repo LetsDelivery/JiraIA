@@ -21,8 +21,14 @@ export const MIGRATION_FOLDERS = ['services/work/drizzle'] as const
 /** The service mounted under each first path segment: `/work/spaces` → `work`'s `/spaces`. */
 export const SERVICES = ['work'] as const
 
-/** The Google Workspace domain whose people may sign in, as in AWS (ADR-0005). */
-export const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? 'uselets.com'
+/** The Google Workspace domains whose people may sign in, as in AWS (ADR-0005, ADR-0026). */
+export const ALLOWED_EMAIL_DOMAINS: string[] = (process.env.ALLOWED_EMAIL_DOMAINS ?? 'uselets.com,lets.delivery')
+  .split(',')
+  .map((domain) => domain.trim().toLowerCase())
+  .filter(Boolean)
+
+/** The first of them: the domain of the seed's fictitious accounts and of the examples printed. */
+export const ALLOWED_EMAIL_DOMAIN = ALLOWED_EMAIL_DOMAINS[0] ?? 'uselets.com'
 
 /**
  * The claims Google would put in an ID token for this address, as API Gateway flattens them.
