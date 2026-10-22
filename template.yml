@@ -62,6 +62,10 @@ Mappings:
       DatabaseMaxCapacity: '4'
       DeletionProtection: 'false'
       LogRetentionDays: '30'
+      # The panel's own address (pendência #3) and the ACM certificate in us-east-1 that covers it.
+      # Empty: the panel and the API answer only on the distribution's *.cloudfront.net name.
+      PanelDomain: 'dev-jiraia.uselets.com'
+      PanelCertificateArn: 'arn:aws:acm:us-east-1:761817249596:certificate/a36f7ada-dbe5-467a-9e1f-0218e8cc0501'
     # AccountId (prod)
     '009485101578':
       AllowedEmailDomains: 'uselets.com,lets.delivery'
@@ -74,12 +78,15 @@ Mappings:
       DatabaseMaxCapacity: '8'
       DeletionProtection: 'true'
       LogRetentionDays: '90'
+      PanelDomain: 'jiraia.uselets.com'
+      PanelCertificateArn: 'arn:aws:acm:us-east-1:009485101578:certificate/8a8dece2-2479-48e5-bbfd-1e2ca114e24a'
 
 Conditions:
   HasGoogle: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', GoogleClientId], '']]
   HasAlarmEmail: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', AlarmEmail], '']]
   HasMailFrom: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', MailFrom], '']]
   HasSlack: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', SlackClientId], '']]
+  HasPanelDomain: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain], '']]
 
 Resources:
   #########################
@@ -198,6 +205,10 @@ Resources:
           # The upload and the download go from the panel's browser straight to S3.
           - AllowedOrigins:
               - !Sub 'https://${PanelDistribution.DomainName}'
+              - !If
+                - HasPanelDomain
+                - !Sub ['https://${Domain}', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}]
+                - !Ref AWS::NoValue
             AllowedMethods: [PUT, GET]
             AllowedHeaders: [content-type]
             MaxAge: 600
@@ -332,6 +343,16 @@ Resources:
         Enabled: true
         Comment: JiraIA panel and API
         PriceClass: PriceClass_All
+        Aliases: !If
+          - HasPanelDomain
+          - [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]]
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - HasPanelDomain
+          - AcmCertificateArn: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelCertificateArn]
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         HttpVersion: http2and3
         DefaultRootObject: index.html
         Origins:
@@ -441,10 +462,19 @@ Resources:
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows: [code]
       AllowedOAuthScopes: [openid, email, profile]
+      # The panel's own domain and the distribution's name, so either signs in.
       CallbackURLs:
         - !Sub 'https://${PanelDistribution.DomainName}/entrar'
+        - !If
+          - HasPanelDomain
+          - !Sub ['https://${Domain}/entrar', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}]
+          - !Ref AWS::NoValue
       LogoutURLs:
         - !Sub 'https://${PanelDistribution.DomainName}/entrar'
+        - !If
+          - HasPanelDomain
+          - !Sub ['https://${Domain}/entrar', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}]
+          - !Ref AWS::NoValue
       SupportedIdentityProviders: !If
         - HasGoogle
         - [!Ref GoogleIdentityProvider]
@@ -645,8 +675,8 @@ Resources:
           ATTACHMENTS_BUCKET: !Ref AttachmentsBucket
           PANEL_BUCKET: !Ref PanelBucket
           # Links in comments and Slack, and the OAuth issuer and MCP resource (ADR-0021).
-          WEB_URL: !Sub 'https://${PanelDistribution.DomainName}'
-          API_URL: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+          WEB_URL: !If [HasPanelDomain, !Sub ['https://${Domain}', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}']
+          API_URL: !If [HasPanelDomain, !Sub ['https://${Domain}/api/work', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}/api/work']
           REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
           EVENT_BUS_NAME: !Ref EventBus
           MAIL_FROM: !If
@@ -733,8 +763,8 @@ Resources:
           ALLOWED_EMAIL_DOMAINS: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', AllowedEmailDomains]
           ATTACHMENTS_BUCKET: !Ref AttachmentsBucket
           # Links in the daily summary.
-          WEB_URL: !Sub 'https://${PanelDistribution.DomainName}'
-          API_URL: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+          WEB_URL: !If [HasPanelDomain, !Sub ['https://${Domain}', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}']
+          API_URL: !If [HasPanelDomain, !Sub ['https://${Domain}/api/work', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}/api/work']
           REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
           EVENT_BUS_NAME: !Ref EventBus
           MAIL_FROM: !If
@@ -1222,10 +1252,10 @@ Resources:
 Outputs:
   PanelUrl:
     Description: The panel, and the API under /api/work
-    Value: !Sub 'https://${PanelDistribution.DomainName}'
+    Value: !If [HasPanelDomain, !Sub ['https://${Domain}', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}']
   ApiUrl:
     Description: The API as clients reach it (API tokens, MCP, Slack)
-    Value: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+    Value: !If [HasPanelDomain, !Sub ['https://${Domain}/api/work', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}/api/work']
   RealtimeUrl:
     Value: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
   FunctionName:
