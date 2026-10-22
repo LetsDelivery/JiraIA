@@ -42,6 +42,11 @@ on screen is pt-BR, chosen by the web app from the error `code`, never the API's
   `design-principles` skill and the tokens in `src/styles/tokens.css`; glass only on what floats.
   Mobile first (ADR-0023): check a new screen at 390px and 820px; no screen scrolls the page sideways.
 - Schema changes: edit `src/schema.ts`, run `bun run db:generate --name <what>`, commit the migration.
+- Infra is one `template.yml` at the root, plain CloudFormation with no SAM (ADR-0025): a general
+  Lambda (`services/work/src/index.ts`) behind `ANY /{proxy+}` and a scheduler Lambda
+  (`services/work/src/scheduler.ts`). A new queue or job is named the same in the template and in
+  `services/work/src/lambda/`; a value that differs per account goes in `Mappings`, a secret in
+  Secrets Manager. Sign-in is Google through Cognito (ADR-0026).
 
 ## Tests
 

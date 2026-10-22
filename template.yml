@@ -1,0 +1,1237 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  JiraIA from LET'S: work management and knowledge, native in AI. One stack per account (ADR-0025):
+  the database, the event bus, a general Lambda behind one HTTP API (ANY /{proxy+}) and one WebSocket
+  API, a scheduler Lambda for the jobs, Google sign-in through Cognito (ADR-0026), and the panel on S3
+  behind CloudFront, which also serves the API on the panel's own origin.
+
+Parameters:
+  # Artifact Ref (buildspec.yml writes these into config.json)
+  ArtifactBucket:
+    Description: Artifact bucket Reference
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: security
+  ArtifactPackage:
+    Description: Artifact package Reference (the function, its migrations and the built panel)
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: app.zip
+  ArtifactPackageVersion:
+    Description: Artifact package version Reference
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: version
+  LayerPackage:
+    Description: Dependency layer package Reference (infra/layers/build.ts)
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: jiraia-deps.zip
+  LayerPackageVersion:
+    Description: Dependency layer package version Reference
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: version
+
+# Non-secret values per AWS account only. Every secret lives in Secrets Manager and is read by a
+# dynamic reference, never written in this file (.gitleaks.toml).
+Mappings:
+  EnvConfig:
+    # AccountId (dev)
+    '761817249596':
+      # The Google Workspace domains whose people may sign in, comma-separated (ADR-0005, ADR-0026).
+      AllowedEmailDomains: 'uselets.com,lets.delivery'
+      # The Google OAuth client the user pool federates with (pendência #4); its secret is
+      # client_secret in the Secrets Manager secret jiraia/google. Empty: no Google provider, so
+      # nobody signs in yet.
+      GoogleClientId: '721914026671-reh4ebrbphkvo02t5i2lmqarln2a8pjb.apps.googleusercontent.com'
+      # Where CRITICAL alarms are delivered. Empty: alarms go to the topic only.
+      AlarmEmail: ''
+      # The verified SES sender of the daily summary (pendência #11). Empty holds the summaries.
+      MailFrom: ''
+      # The Slack app's client id (pendência #10). When set, the secret jiraia/slack must hold
+      # client_secret, signing_secret and token_key.
+      SlackClientId: ''
+      # Aurora capacity units: zero lets dev pause when nobody is using it.
+      DatabaseMinCapacity: '0'
+      DatabaseMaxCapacity: '4'
+      DeletionProtection: 'false'
+      LogRetentionDays: '30'
+    # AccountId (prod)
+    '009485101578':
+      AllowedEmailDomains: 'uselets.com,lets.delivery'
+      GoogleClientId: ''
+      AlarmEmail: ''
+      MailFrom: ''
+      SlackClientId: ''
+      # At least half a unit, so the first request of the morning does not wait for a resume.
+      DatabaseMinCapacity: '0.5'
+      DatabaseMaxCapacity: '8'
+      DeletionProtection: 'true'
+      LogRetentionDays: '90'
+
+Conditions:
+  HasGoogle: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', GoogleClientId], '']]
+  HasAlarmEmail: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', AlarmEmail], '']]
+  HasMailFrom: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', MailFrom], '']]
+  HasSlack: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', SlackClientId], '']]
+
+Resources:
+  #########################
+  # Database
+  #########################
+  # Aurora PostgreSQL Serverless v2 with the Data API (ADR-0002). The Lambda reaches it over HTTPS
+  # with IAM — no VPC attachment, no connection pool. The cluster itself lives in the account's
+  # default VPC subnets; nothing but the Data API endpoint talks to it.
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: jiraia/database/master
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "jiraia"}'
+        GenerateStringKey: password
+        PasswordLength: 40
+        ExcludePunctuation: true
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  DatabaseCluster:
+    Type: AWS::RDS::DBCluster
+    # Every card and page the company has. A replaced stack must not take them with it.
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBClusterIdentifier: jiraia
+      Engine: aurora-postgresql
+      # The same major version as the local pgvector image (docker-compose.yml). pgvector ships with it.
+      EngineVersion: '16.15'
+      DatabaseName: jiraia
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
+      EnableHttpEndpoint: true
+      StorageEncrypted: true
+      DeletionProtection: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', DeletionProtection]
+      # Daily snapshots kept for two weeks (escopo-mvp 8.2); restore is rehearsed before the cut.
+      BackupRetentionPeriod: 14
+      PreferredBackupWindow: '06:00-07:00'
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', DatabaseMinCapacity]
+        MaxCapacity: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', DatabaseMaxCapacity]
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref DatabaseCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+
+  #########################
+  # Events and alarms
+  #########################
+  # Committed audit lines become domain events here (ADR-0014); each consumer reads its own queue.
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: jiraia
+
+  # Replay is a first-class operation, as in uselets (ADR-0004 there).
+  EventArchive:
+    Type: AWS::Events::Archive
+    Properties:
+      ArchiveName: jiraia-archive
+      SourceArn: !GetAtt EventBus.Arn
+      RetentionDays: 30
+
+  CriticalAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: jiraia-critical
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  CriticalAlarmSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlarmEmail
+    Properties:
+      TopicArn: !Ref CriticalAlarmTopic
+      Protocol: email
+      Endpoint: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', AlarmEmail]
+
+  #########################
+  # Files on cards
+  #########################
+  # Private (escopo-mvp 2.9): the browser reaches an object only by a URL the function pre-signs for a
+  # few minutes. Versioned, so a removed or overwritten file can be restored (escopo-mvp 8.2);
+  # retained if the stack goes, because it holds people's work.
+  AttachmentsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub jiraia-attachments-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      CorsConfiguration:
+        CorsRules:
+          # The upload and the download go from the panel's browser straight to S3.
+          - AllowedOrigins:
+              - !Sub 'https://${PanelDistribution.DomainName}'
+            AllowedMethods: [PUT, GET]
+            AllowedHeaders: [content-type]
+            MaxAge: 600
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-unfinished-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+          - Id: expire-old-versions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  #########################
+  # Panel (S3 + CloudFront)
+  #########################
+  # The built panel (apps/web). Private: only the distribution reads it (OAC), and only the deploy
+  # writes it — the `Deploy` custom resource, from the panel inside the function's package.
+  PanelBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub jiraia-panel-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  PanelOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-panel'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  PanelBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PanelBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${PanelBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${PanelDistribution}'
+
+  # The panel routes with the History API (apps/web/src/lib/router.ts): a path with no file extension
+  # is a screen, and every screen is index.html. Done here rather than with custom error responses,
+  # which would also turn the API's own 404s into the panel.
+  PanelRouteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-panel-route'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: A screen of the panel is index.html
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var last = request.uri.split('/').pop();
+          if (last.indexOf('.') === -1) {
+            request.uri = '/index.html';
+          }
+          return request;
+        }
+
+  # The panel calls the API at /api/work (apps/web/src/api/client.ts and vite.config.ts locally); the
+  # HTTP API answers the same routes at its root, so the prefix goes here.
+  ApiPathFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-api-path'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: /api/work/x on the panel is /x on the API
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          request.uri = request.uri.replace(/^\/api\/work(?=\/|$)/, '') || '/';
+          return request;
+        }
+
+  # Nothing of the API is cached: a TTL of zero unless a response asks for more, which none does.
+  # The Authorization header is in the key only because that is how CloudFront forwards it.
+  ApiCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-api'
+        Comment: The API, never cached, with its bearer token forwarded
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 1
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: false
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers: [Authorization]
+          QueryStringsConfig:
+            QueryStringBehavior: all
+          CookiesConfig:
+            CookieBehavior: none
+
+  PanelDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: JiraIA panel and API
+        PriceClass: PriceClass_All
+        HttpVersion: http2and3
+        DefaultRootObject: index.html
+        Origins:
+          - Id: panel
+            DomainName: !GetAtt PanelBucket.RegionalDomainName
+            OriginAccessControlId: !Ref PanelOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+          - Id: api
+            DomainName: !Sub '${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+        DefaultCacheBehavior:
+          TargetOriginId: panel
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          Compress: true
+          # Managed policy CachingOptimized. Hashed assets never go stale; the rest is `no-cache`.
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          # Managed policy SecurityHeadersPolicy.
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt PanelRouteFunction.FunctionMetadata.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref ApiCachePolicy
+            # Managed policy AllViewerExceptHostHeader: API Gateway routes by its own host name.
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt ApiPathFunction.FunctionMetadata.FunctionARN
+          # OAuth discovery looks at the host's root (RFC 8414, RFC 9728; ADR-0021).
+          - PathPattern: /.well-known/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref ApiCachePolicy
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  #########################
+  # Sign-in (Cognito, federated with Google)
+  #########################
+  # People sign in with their Google Workspace account through this pool (ADR-0026): the panel goes to
+  # the pool's hosted sign-in, straight on to Google, and gets back an ID token the API verifies. The
+  # pool holds no passwords: nobody signs up to it, and the panel's client offers Google alone.
+  # Whether an account is of our Workspace domain is still the service's decision, read from
+  # custom:hd — Google's `hd`, mapped by the provider below.
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: jiraia
+      # No self-service sign-up and no admin-made users; a Google sign-in creates its own profile.
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Schema:
+        - Name: hd
+          AttributeDataType: String
+          Mutable: true
+      UserPoolTags:
+        project: JiraIA
+
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogle
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', GoogleClientId]
+        client_secret: '{{resolve:secretsmanager:jiraia/google:SecretString:client_secret}}'
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        email_verified: email_verified
+        name: name
+        custom:hd: hd
+
+  # The hosted sign-in, at https://jiraia-<account>.auth.<region>.amazoncognito.com. Google's OAuth
+  # client lists <that>/oauth2/idpresponse as its redirect URI.
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Sub 'jiraia-${AWS::AccountId}'
+
+  # The panel: a public client (no secret), code flow with PKCE, back to /entrar.
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: jiraia-panel
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      CallbackURLs:
+        - !Sub 'https://${PanelDistribution.DomainName}/entrar'
+      LogoutURLs:
+        - !Sub 'https://${PanelDistribution.DomainName}/entrar'
+      SupportedIdentityProviders: !If
+        - HasGoogle
+        - [!Ref GoogleIdentityProvider]
+        - [COGNITO]
+      ExplicitAuthFlows: [ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      # An hour of ID token, renewed by the panel; thirty days before Google is asked again.
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        IdToken: minutes
+        AccessToken: minutes
+        RefreshToken: days
+      ReadAttributes: [email, email_verified, name, custom:hd]
+      # Writable so the provider's attribute mapping can set them at each sign-in.
+      WriteAttributes: [email, name, custom:hd]
+
+  #########################
+  # Lambda
+  #########################
+  # Third-party dependencies and @jiraia/* (infra/layers/build.ts), so the function's own package
+  # stays small enough for the console editor (ADR-0010).
+  DepsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: jiraia-deps
+      Description: JiraIA dependencies, from bun.lock
+      Content:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref LayerPackage
+        S3ObjectVersion: !Ref LayerPackageVersion
+      CompatibleRuntimes: [nodejs24.x]
+      CompatibleArchitectures: [arm64]
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: JiraIAPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-data:ExecuteStatement
+                  - rds-data:BatchExecuteStatement
+                  - rds-data:BeginTransaction
+                  - rds-data:CommitTransaction
+                  - rds-data:RollbackTransaction
+                Resource: !GetAtt DatabaseCluster.DBClusterArn
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref DatabaseSecret
+              # Signing a URL needs the permission the URL grants: put, get (and head) and delete.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource: !Sub '${AttachmentsBucket.Arn}/*'
+              # Only the deploy writes the panel.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub '${PanelBucket.Arn}/*'
+              # Relaying a change to a page is posting it to the page's other connections (ADR-0009).
+              - Effect: Allow
+                Action:
+                  - execute-api:ManageConnections
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RealtimeApi}/live/POST/@connections/*'
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                Resource:
+                  - !GetAtt AutomationQueue.Arn
+                  - !GetAtt NotificationsQueue.Arn
+                  - !GetAtt WebhooksQueue.Arn
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  # The scheduler's: the database, the bus it dispatches to, the summary it mails, the jobs queue.
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: JiraIASchedulerPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-data:ExecuteStatement
+                  - rds-data:BatchExecuteStatement
+                  - rds-data:BeginTransaction
+                  - rds-data:CommitTransaction
+                  - rds-data:RollbackTransaction
+                Resource: !GetAtt DatabaseCluster.DBClusterArn
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref DatabaseSecret
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: !GetAtt EventBus.Arn
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                Resource: !GetAtt JobsQueue.Arn
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                Resource: '*'
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/jiraia
+      RetentionInDays: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', LogRetentionDays]
+
+  # The general function (services/work/src/index.ts): HTTP, WebSocket, the domain-event queues and
+  # the deploy.
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: jiraia
+      Description: JiraIA API, realtime relay, consumers and deploy
+      Code:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref ArtifactPackage
+        S3ObjectVersion: !Ref ArtifactPackageVersion
+      Handler: index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 512
+      # What the deploy's migrations may need. A request is cut at 30 seconds by API Gateway whatever
+      # this says.
+      Timeout: 300
+      Role: !GetAtt Role.Arn
+      Layers:
+        - !Ref DepsLayer
+      TracingConfig:
+        Mode: Active
+      LoggingConfig:
+        LogGroup: !Ref LogGroup
+      Environment:
+        Variables:
+          NODE_ENV: production
+          TZ: UTC
+          POWERTOOLS_SERVICE_NAME: work
+          POWERTOOLS_METRICS_NAMESPACE: jiraia/work
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          DB_CLUSTER_ARN: !GetAtt DatabaseCluster.DBClusterArn
+          DB_SECRET_ARN: !Ref DatabaseSecret
+          DB_NAME: jiraia
+          ALLOWED_EMAIL_DOMAINS: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', AllowedEmailDomains]
+          # The pool and the panel's client a sign-in token must come from (ADR-0026).
+          COGNITO_ISSUER: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+          COGNITO_CLIENT_ID: !Ref UserPoolClient
+          COGNITO_DOMAIN: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'
+          ATTACHMENTS_BUCKET: !Ref AttachmentsBucket
+          PANEL_BUCKET: !Ref PanelBucket
+          # Links in comments and Slack, and the OAuth issuer and MCP resource (ADR-0021).
+          WEB_URL: !Sub 'https://${PanelDistribution.DomainName}'
+          API_URL: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
+          EVENT_BUS_NAME: !Ref EventBus
+          MAIL_FROM: !If
+            - HasMailFrom
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', MailFrom]
+            - !Ref AWS::NoValue
+          # The Slack app (ADR-0018): its id, and from Secrets Manager its secrets and the key that seals tokens.
+          SLACK_CLIENT_ID: !If
+            - HasSlack
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', SlackClientId]
+            - !Ref AWS::NoValue
+          SLACK_CLIENT_SECRET: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:client_secret}}'
+            - !Ref AWS::NoValue
+          SLACK_SIGNING_SECRET: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:signing_secret}}'
+            - !Ref AWS::NoValue
+          SLACK_TOKEN_KEY: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:token_key}}'
+            - !Ref AWS::NoValue
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  # Every deploy of new code applies its migrations and publishes its panel (ADR-0002, ADR-0025): the
+  # package version changes, so this resource updates, and the function runs it. A failure here
+  # rolls the stack back.
+  Deploy:
+    Type: Custom::Deploy
+    DependsOn:
+      - DatabaseInstance
+      - PanelBucketPolicy
+    Properties:
+      ServiceToken: !GetAtt Function.Arn
+      Package: !Ref ArtifactPackageVersion
+      # The panel's settings (config.js): a change republishes them.
+      CognitoClientId: !Ref UserPoolClient
+      CognitoDomain: !Ref UserPoolDomain
+      AllowedEmailDomains: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', AllowedEmailDomains]
+
+  SchedulerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/jiraia-scheduler
+      RetentionInDays: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', LogRetentionDays]
+
+  # The scheduler function (services/work/src/scheduler.ts): the jobs queue the schedules fill. Apart
+  # from the general function so a job's minutes never compete with requests.
+  SchedulerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: jiraia-scheduler
+      Description: JiraIA jobs - dispatch, daily summary, webhook retries, access clock
+      Code:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref ArtifactPackage
+        S3ObjectVersion: !Ref ArtifactPackageVersion
+      Handler: scheduler.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 512
+      # The slowest job, the daily summary.
+      Timeout: 300
+      Role: !GetAtt SchedulerRole.Arn
+      Layers:
+        - !Ref DepsLayer
+      TracingConfig:
+        Mode: Active
+      LoggingConfig:
+        LogGroup: !Ref SchedulerLogGroup
+      Environment:
+        Variables:
+          NODE_ENV: production
+          TZ: UTC
+          POWERTOOLS_SERVICE_NAME: work
+          POWERTOOLS_METRICS_NAMESPACE: jiraia/work
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          DB_CLUSTER_ARN: !GetAtt DatabaseCluster.DBClusterArn
+          DB_SECRET_ARN: !Ref DatabaseSecret
+          DB_NAME: jiraia
+          ALLOWED_EMAIL_DOMAINS: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', AllowedEmailDomains]
+          ATTACHMENTS_BUCKET: !Ref AttachmentsBucket
+          # Links in the daily summary.
+          WEB_URL: !Sub 'https://${PanelDistribution.DomainName}'
+          API_URL: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+          REALTIME_URL: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
+          EVENT_BUS_NAME: !Ref EventBus
+          MAIL_FROM: !If
+            - HasMailFrom
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', MailFrom]
+            - !Ref AWS::NoValue
+          SLACK_CLIENT_ID: !If
+            - HasSlack
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', SlackClientId]
+            - !Ref AWS::NoValue
+          SLACK_CLIENT_SECRET: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:client_secret}}'
+            - !Ref AWS::NoValue
+          SLACK_SIGNING_SECRET: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:signing_secret}}'
+            - !Ref AWS::NoValue
+          SLACK_TOKEN_KEY: !If
+            - HasSlack
+            - '{{resolve:secretsmanager:jiraia/slack:SecretString:token_key}}'
+            - !Ref AWS::NoValue
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  #########################
+  # HTTP API
+  #########################
+  # One route, ANY /{proxy+}, and no authorizer: the function routes (packages/http) and proves who is
+  # calling — the Cognito ID token of a Google sign-in, or an API token on /v1 (ADR-0015, ADR-0025,
+  # ADR-0026).
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: jiraia
+      Description: JiraIA API from LET'S
+      ProtocolType: HTTP
+      Tags:
+        project: JiraIA
+
+  HttpIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Function.Arn
+      PayloadFormatVersion: '2.0'
+
+  HttpProxyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: ANY /{proxy+}
+      Target: !Sub 'integrations/${HttpIntegration}'
+
+  # `$default` passes the path through untouched (packages/http, requestPath).
+  HttpStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 500
+        ThrottlingRateLimit: 200
+
+  HttpInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
+  #########################
+  # WebSocket API
+  #########################
+  # Pages edited together (ADR-0009). Browsers cannot send an Authorization header on a WebSocket, so
+  # there is no authorizer here either: `$connect` takes a one-use ticket the HTTP API issued.
+  RealtimeApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: jiraia-realtime
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: $request.body.action
+      Tags:
+        project: JiraIA
+
+  RealtimeIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RealtimeApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Function.Arn}/invocations'
+
+  RealtimeConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      Target: !Sub 'integrations/${RealtimeIntegration}'
+
+  RealtimeDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $disconnect
+      Target: !Sub 'integrations/${RealtimeIntegration}'
+
+  RealtimeDefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RealtimeApi
+      RouteKey: $default
+      Target: !Sub 'integrations/${RealtimeIntegration}'
+
+  RealtimeStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref RealtimeApi
+      StageName: live
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+        ThrottlingRateLimit: 100
+
+  RealtimeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RealtimeApi}/*'
+
+  #########################
+  # Domain event consumers
+  #########################
+  # Each consumer has its own queue and dead-letter queue (ADR-0014). A message tried five times goes
+  # to the DLQ, and a DLQ holding anything is an alarm. The queue names are how the general function
+  # tells one batch from another (services/work/src/lambda/queues.ts). Visibility is six times the
+  # function's timeout, as Lambda asks of a queue it reads.
+  AutomationDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-automation-dlq
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  AutomationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-automation
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AutomationDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  AutomationRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source: [jiraia.work]
+        detail-type: [card.created, card.updated, card.moved]
+      Targets:
+        - Id: automation-queue
+          Arn: !GetAtt AutomationQueue.Arn
+
+  AutomationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref AutomationQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt AutomationQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt AutomationRule.Arn
+
+  AutomationMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt AutomationQueue.Arn
+      FunctionName: !Ref Function
+      BatchSize: 10
+      FunctionResponseTypes: [ReportBatchItemFailures]
+
+  AutomationDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: jiraia-automation-dlq
+      AlarmDescription: Card events the automation consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AutomationDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref CriticalAlarmTopic]
+
+  NotificationsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-notifications-dlq
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  NotificationsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-notifications
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt NotificationsDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  NotificationsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source: [jiraia.work]
+        detail-type:
+          - card.created
+          - card.updated
+          - card.moved
+          - card.commented
+          - access_request.requested
+          - access_request.approved
+          - access_request.declined
+      Targets:
+        - Id: notifications-queue
+          Arn: !GetAtt NotificationsQueue.Arn
+
+  NotificationsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref NotificationsQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt NotificationsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt NotificationsRule.Arn
+
+  NotificationsMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt NotificationsQueue.Arn
+      FunctionName: !Ref Function
+      BatchSize: 10
+      FunctionResponseTypes: [ReportBatchItemFailures]
+
+  NotificationsDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: jiraia-notifications-dlq
+      AlarmDescription: Events the notifications consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt NotificationsDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref CriticalAlarmTopic]
+
+  WebhooksDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-webhooks-dlq
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  WebhooksQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-webhooks
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WebhooksDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  WebhooksRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source: [jiraia.work]
+        detail-type: [card.created, card.updated, card.moved, card.commented]
+      Targets:
+        - Id: webhooks-queue
+          Arn: !GetAtt WebhooksQueue.Arn
+
+  WebhooksQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref WebhooksQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt WebhooksQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt WebhooksRule.Arn
+
+  WebhooksMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt WebhooksQueue.Arn
+      FunctionName: !Ref Function
+      BatchSize: 10
+      FunctionResponseTypes: [ReportBatchItemFailures]
+
+  WebhooksDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: jiraia-webhooks-dlq
+      AlarmDescription: Card events the webhooks consumer gave up on; read them before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt WebhooksDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref CriticalAlarmTopic]
+
+  #########################
+  # Jobs
+  #########################
+  # Each schedule puts {"job": …, "at": <tick>} in one FIFO queue, grouped by job, which the scheduler
+  # function reads. A FIFO group is read one message at a time, so two passes of a job never run
+  # together, and one job never waits on another (services/work/src/lambda/jobs.ts). `at` makes every
+  # tick's body unique for content-based deduplication. Visibility equals the scheduler's timeout, the
+  # least Lambda allows, so a failed pass is retried within five minutes; a tick left unread for an
+  # hour has been overtaken by the next and expires.
+  JobsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-jobs-dlq.fifo
+      FifoQueue: true
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  JobsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: jiraia-jobs.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 3600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt JobsDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  JobsMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt JobsQueue.Arn
+      FunctionName: !Ref SchedulerFunction
+      BatchSize: 1
+      FunctionResponseTypes: [ReportBatchItemFailures]
+
+  # Every minute, what committed leaves the audit trail for the bus (ADR-0014).
+  DispatchSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      Targets:
+        - Id: dispatch
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: dispatch
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "dispatch", "at": "<at>"}'
+
+  # The daily summary (escopo-mvp 4.6): 11:00 UTC is 08:00 in São Paulo.
+  DigestSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: cron(0 11 * * ? *)
+      Targets:
+        - Id: digest
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: digest
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "digest", "at": "<at>"}'
+
+  # The webhook retry sweep (escopo-mvp 4.7): pending deliveries whose next try is due.
+  WebhookRetrySchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      Targets:
+        - Id: webhook-retry
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: webhook-retry
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "webhook-retry", "at": "<at>"}'
+
+  # Access governance's own clock (ADR-0024): expiries, overdue requests, reviews.
+  AccessClockSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(5 minutes)
+      Targets:
+        - Id: access-clock
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: access-clock
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "access-clock", "at": "<at>"}'
+
+  JobsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref JobsQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt JobsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  - !GetAtt DispatchSchedule.Arn
+                  - !GetAtt DigestSchedule.Arn
+                  - !GetAtt WebhookRetrySchedule.Arn
+                  - !GetAtt AccessClockSchedule.Arn
+
+  JobsDeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: jiraia-jobs-dlq
+      AlarmDescription: A scheduled job failed three passes in a row; read its log before redriving.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt JobsDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref CriticalAlarmTopic]
+
+Outputs:
+  PanelUrl:
+    Description: The panel, and the API under /api/work
+    Value: !Sub 'https://${PanelDistribution.DomainName}'
+  ApiUrl:
+    Description: The API as clients reach it (API tokens, MCP, Slack)
+    Value: !Sub 'https://${PanelDistribution.DomainName}/api/work'
+  RealtimeUrl:
+    Value: !Sub 'wss://${RealtimeApi}.execute-api.${AWS::Region}.amazonaws.com/live'
+  FunctionName:
+    Value: !Ref Function
+  SchedulerFunctionName:
+    Value: !Ref SchedulerFunction
+  SignInUrl:
+    Description: The user pool's hosted sign-in; Google's OAuth client redirects to <this>/oauth2/idpresponse
+    Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'

@@ -35,7 +35,7 @@ const _token = (): string => Buffer.from(crypto.getRandomValues(new Uint8Array(2
 export class RealtimeService {
   constructor(private readonly deps: Deps) {}
 
-  /** A one-use pass for the WebSocket, issued behind the HTTP API's Google authorizer. */
+  /** A one-use pass for the WebSocket, issued by the HTTP API to a person it verified. */
   async ticket(caller: Caller, contentId: string) {
     const { gate, content } = await this.deps.drawGate.openDocument(caller, contentId, 'read')
     const now = this.deps.clock.now()

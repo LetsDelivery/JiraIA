@@ -22,7 +22,7 @@ const HOOK = 'https://erp.counterparty.test/jiraia'
 const config = {
   DATABASE_URL: 'unused',
   AWS_REGION: 'us-east-1',
-  ALLOWED_EMAIL_DOMAIN: 'uselets.com',
+  ALLOWED_EMAIL_DOMAINS: ['uselets.com', 'lets.delivery'],
   ATTACHMENTS_BUCKET: 'unused',
   REALTIME_URL: 'ws://localhost/realtime'
 }

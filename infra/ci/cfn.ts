@@ -8,13 +8,6 @@ import { parse } from 'yaml'
  * declare — and never about what a `!Sub` resolves to, so every tag collapses to its argument.
  */
 export type Template = {
-  Globals?: { Function?: { Environment?: { Variables?: Record<string, unknown> } } }
-  /**
-   * CloudFormation ignores template-level `Metadata`, which is what makes it the right place for a
-   * gate to read. `jiraia.ssmTargets` is how a template names an SSM parameter it consumes through
-   * a stack parameter rather than through `{{resolve:ssm:...}}`.
-   */
-  Metadata?: { jiraia?: { ssmTargets?: Array<Record<string, string>> } }
   Resources?: Record<
     string,
     {
@@ -28,6 +21,15 @@ export type Template = {
     }
   >
 }
+
+/** The one template (ADR-0025): the whole stack, at the repository root, where the pipeline reads it. */
+export const TEMPLATE_PATH = 'template.yml'
+
+/**
+ * What the template's functions run: `work`'s package, which `infra/build/package.ts` builds into
+ * this directory and `buildspec.yml` uploads as `app.zip`.
+ */
+export const PACKAGE_SERVICE = 'work'
 
 const TAGS = [
   'Ref',

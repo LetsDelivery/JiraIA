@@ -1,6 +1,15 @@
 import { api } from '@/api/client'
 import { type Session, signIn } from '@/auth/session'
-import { ALLOWED_DOMAIN, GOOGLE_CLIENT_ID, googleIdentity, readIdToken } from '@/lib/google'
+import {
+  ALLOWED_DOMAINS,
+  COGNITO,
+  type Cognito,
+  domainsSentence,
+  finishSignIn,
+  RETURN_PATH,
+  signInError,
+  startSignIn
+} from '@/lib/cognito'
 import { html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { textField } from '@/ui/dialog'
@@ -24,10 +33,14 @@ const complete = async (value: Session): Promise<void> => {
     return
   }
   const refused = (error as { error?: { code?: string } }).error?.code === 'FORBIDDEN'
-  toast(refused ? `Só contas Google @${ALLOWED_DOMAIN} podem entrar no JiraIA.` : refusalSentence(error), 'error')
+  toast(
+    refused ? `Só contas Google ${domainsSentence(ALLOWED_DOMAINS)} podem entrar no JiraIA.` : refusalSentence(error),
+    'error'
+  )
 }
 
-const googleSignIn = html`<div class="google-button" data-google-button></div>`
+/** Through the user pool, straight to Google and back here with a code (ADR-0026). */
+const googleSignIn = html`<button type="button" class="button button-primary" data-google-sign-in>Entrar com Google</button>`
 
 /** Local development only: there is no Google, so an address stands in for it (`x-local-user`). */
 const localSignIn = html`
@@ -42,37 +55,36 @@ export const signInPage = () => html`
     <section class="sign-in-card glass" aria-labelledby="sign-in-title">
       <p class="brand">Jira<span>IA</span></p>
       <h1 id="sign-in-title">Entrar no JiraIA</h1>
-      <p class="muted">Use sua conta Google @${ALLOWED_DOMAIN}.</p>
-      ${GOOGLE_CLIENT_ID ? googleSignIn : import.meta.env.DEV ? localSignIn : html`<p class="muted">Login indisponível: falta configurar o Google.</p>`}
+      <p class="muted">Use sua conta Google ${domainsSentence(ALLOWED_DOMAINS)}.</p>
+      ${COGNITO ? googleSignIn : import.meta.env.DEV ? localSignIn : html`<p class="muted">Login indisponível: falta configurar o Google.</p>`}
     </section>
   </main>
 `
 
-const bindGoogle = async (container: HTMLElement, clientId: string): Promise<void> => {
-  const identity = await googleIdentity()
-  identity.initialize({
-    client_id: clientId,
-    // A hint that narrows Google's account chooser. The API is what enforces the domain.
-    hd: ALLOWED_DOMAIN,
-    auto_select: true,
-    callback: ({ credential }) => void complete({ ...readIdToken(credential), token: credential })
-  })
-  identity.renderButton(container, {
-    theme: 'outline',
-    size: 'large',
-    text: 'signin_with',
-    shape: 'pill',
-    locale: 'pt-BR'
-  })
-  identity.prompt()
+/** Back from Google with a code: the tokens it stands for, then the same check as every sign-in. */
+const finishGoogle = async (cognito: Cognito): Promise<void> => {
+  const refused = signInError(location.search)
+  if (refused) {
+    history.replaceState(null, '', RETURN_PATH)
+    toast(`O login com o Google não foi concluído: ${refused}`, 'error')
+    return
+  }
+  const tokens = await finishSignIn(cognito, location.search)
+  if (!tokens) {
+    return
+  }
+  // The code is spent: keep it out of the address bar and of a reload.
+  history.replaceState(null, '', RETURN_PATH)
+  await complete(tokens)
 }
 
 export const bindSignIn = (root: HTMLElement): void => {
-  const google = root.querySelector<HTMLElement>('[data-google-button]')
-  if (google && GOOGLE_CLIENT_ID) {
-    bindGoogle(google, GOOGLE_CLIENT_ID).catch(() =>
-      toast('Não foi possível carregar o login do Google. Recarregue a página.', 'error')
-    )
+  if (COGNITO) {
+    const cognito = COGNITO
+    finishGoogle(cognito).catch(() => toast('Não foi possível concluir o login com o Google. Tente de novo.', 'error'))
+    root.querySelector('[data-google-sign-in]')?.addEventListener('click', () => {
+      startSignIn(cognito).catch(() => toast('Não foi possível abrir o login do Google. Recarregue a página.', 'error'))
+    })
   }
   root.querySelector<HTMLFormElement>('[data-local-sign-in]')?.addEventListener('submit', (event) => {
     event.preventDefault()

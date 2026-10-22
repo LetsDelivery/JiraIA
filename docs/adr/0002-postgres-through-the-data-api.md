@@ -4,7 +4,9 @@ Date: 2026-10-15
 
 ## Status
 
-Accepted. Deviates from uselets ADR-0002 (one DynamoDB table per service).
+Accepted. Deviates from uselets ADR-0002 (one DynamoDB table per service). Amended by ADR-0025: the
+cluster is in the root `template.yml`, and the migrations are applied by the stack's `Deploy` custom
+resource.
 
 ## Context
 

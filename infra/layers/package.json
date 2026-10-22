@@ -15,6 +15,7 @@
     "@aws-sdk/client-sesv2": "3.1095.0",
     "@aws-sdk/s3-request-presigner": "3.1095.0",
     "drizzle-orm": "0.45.4",
+    "jose": "6.2.12",
     "pg": "8.23.1",
     "yjs": "13.6.33",
     "zod": "4.4.3"

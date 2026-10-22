@@ -12,10 +12,13 @@
  *    `import '@jiraia/core'` from `/var/task/config.js` fails with `ERR_MODULE_NOT_FOUND`. The
  *    symlink puts a `node_modules` where the resolver already looks.
  *
- * 3. The zip is built here rather than by SAM, with `zip -y`. Without `-y`, zip resolves the symlink,
- *    finds nothing at `/opt` on a build machine, and **silently drops it** — producing a package that
- *    passes every local check and dies on the first cold start. The templates therefore point
- *    `CodeUri` at this zip so nothing re-packs it.
+ * 3. The zip is built here, keeping links. Without that, zip resolves the symlink, finds nothing at
+ *    `/opt` on a build machine, and **silently drops it** — producing a package that passes every
+ *    local check and dies on the first cold start. `buildspec.yml` uploads this very zip and
+ *    `template.yml` points the function's `Code` at it, so nothing re-packs it (ADR-0025).
+ *
+ * `work` also carries the built panel, under `panel/`: the deploy publishes it from there to the
+ * bucket CloudFront serves, so the API and the panel that speaks to it ship as one artifact.
  *
  * Usage:
  *   bun run infra/build/package.ts                 # every service
@@ -57,6 +60,22 @@ const _withMigrations = async (serviceDir: string, appDir: string): Promise<void
   }
 }
 
+/** `bun run web:build` writes the panel here; `bun run build` runs it first. */
+const PANEL_DIST = join('apps', 'web', 'dist')
+
+/** The service whose deploy publishes the panel (`template.yml`, the `Deploy` custom resource). */
+const PANEL_SERVICE = 'work'
+
+const _withPanel = async (service: string, appDir: string): Promise<void> => {
+  if (service !== PANEL_SERVICE) {
+    return
+  }
+  if (!(await Bun.file(join(PANEL_DIST, 'index.html')).exists())) {
+    throw new Error(`No panel at "${PANEL_DIST}" to package with ${service}; run \`bun run web:build\` first`)
+  }
+  await cp(PANEL_DIST, join(appDir, 'panel'), { recursive: true })
+}
+
 export type PackageResult = { files: number; unzipped: number; zipped: number }
 
 export const packageService = async (service: string): Promise<PackageResult> => {
@@ -69,6 +88,7 @@ export const packageService = async (service: string): Promise<PackageResult> =>
 
   const result = await transpileTree(serviceDir, appDir)
   await _withMigrations(serviceDir, appDir)
+  await _withPanel(service, appDir)
   await _link(appDir)
   await _zip(serviceDir)
 

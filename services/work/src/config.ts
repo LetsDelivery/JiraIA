@@ -6,28 +6,46 @@ import { z } from 'zod'
  * Every environment variable this service reads, validated at cold start.
  *
  * The database is either a `DATABASE_URL` (local and tests) or the Aurora cluster, secret and
- * database name the Data API needs (AWS) — ADR-0002. `ALLOWED_EMAIL_DOMAIN` is the one Google
- * Workspace domain whose people may sign in (ADR-0005). `ATTACHMENTS_BUCKET` is the private S3 bucket
+ * database name the Data API needs (AWS) — ADR-0002. `ALLOWED_EMAIL_DOMAINS` are the Google
+ * Workspace domains whose people may sign in, comma-separated (ADR-0005, ADR-0026). `ATTACHMENTS_BUCKET` is the private S3 bucket
  * that holds the files on cards (escopo-mvp 2.9). `REALTIME_URL` is the WebSocket API pages are edited
  * through together (ADR-0009): the router hands it to browsers, the realtime Lambda posts back to it.
  * `ANTHROPIC_API_KEY` lets LET’S Draw AI draft from a prompt (pendência #8 until it exists).
  * `WEB_URL` is the panel's address, for links written into comments and Slack. `EVENT_BUS_NAME` is the
  * platform's EventBridge bus (ADR-0014); without it the dispatcher hands events to the consumers in
- * its own process, as the local harness does.
+ * its own process, as the local harness does. `COGNITO_ISSUER` and `COGNITO_CLIENT_ID` are the user
+ * pool and the panel's app client a sign-in token must come from, verified by the router itself
+ * (ADR-0025, ADR-0026); `COGNITO_DOMAIN` is where the panel sends people to sign in, and
+ * `PANEL_BUCKET` is where the deploy publishes the panel.
  */
 const configSchema = z.intersection(
   dbConfigSchema,
   z.object({
     AWS_REGION: z.string().min(1),
-    ALLOWED_EMAIL_DOMAIN: z
+    /** `uselets.com,lets.delivery`: LET'S has two Workspace domains, and either signs in. */
+    ALLOWED_EMAIL_DOMAINS: z
       .string()
       .min(3)
-      .transform((domain) => domain.toLowerCase()),
+      .transform((list) =>
+        list
+          .split(',')
+          .map((domain) => domain.trim().toLowerCase())
+          .filter(Boolean)
+      )
+      .pipe(z.array(z.string().min(3)).min(1)),
     ATTACHMENTS_BUCKET: z.string().min(3),
     REALTIME_URL: z.string().regex(/^wss?:\/\//),
     /** Claude, for "Criar com IA" (ADR-0011). Without it the draft route answers 503 in AWS. */
     ANTHROPIC_API_KEY: z.string().min(10).optional(),
     WEB_URL: z.url().optional(),
+    /** The user pool's `iss`. Without it and the client, no sign-in token is proved: every one is a 401. */
+    COGNITO_ISSUER: z.url().optional(),
+    /** The panel's app client in the pool: the audience of the ID tokens the API accepts. */
+    COGNITO_CLIENT_ID: z.string().min(1).optional(),
+    /** The pool's hosted sign-in, `https://<prefix>.auth.<region>.amazoncognito.com`; the panel reads it. */
+    COGNITO_DOMAIN: z.url().optional(),
+    /** The bucket CloudFront serves the panel from; only the deploy writes to it. */
+    PANEL_BUCKET: z.string().min(3).optional(),
     /**
      * The API's public address, as clients reach it — the OAuth issuer and the MCP resource (ADR-0021).
      * Without it, the address is read from the request's Host.

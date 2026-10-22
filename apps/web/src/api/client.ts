@@ -1,13 +1,14 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 
-import { session, signOut } from '@/auth/session'
+import { freshSession, session, signOut } from '@/auth/session'
 
 import type { paths } from './schema'
 
 /**
  * The one way this app talks to the API, typed from the contract (`bun run api:types`).
  *
- * The Google ID token goes as the bearer; API Gateway verifies it against Google (ADR-0005).
+ * The Cognito ID token of a Google sign-in goes as the bearer, renewed before it lapses; the API
+ * verifies it against the user pool (ADR-0026).
  *
  * `x-local-user` is sent beside the bearer token in `dev`: the local harness authenticates by that
  * header and ignores the token. `VITE_LOCAL_AUTH=0` turns it off, for pointing `dev` at a deployed API.
@@ -17,8 +18,8 @@ const LOCAL_AUTH = (import.meta.env.VITE_LOCAL_AUTH ?? (import.meta.env.DEV ? '1
 export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
 const authenticate: Middleware = {
-  onRequest: ({ request }) => {
-    const current = session.get()
+  onRequest: async ({ request }) => {
+    const current = await freshSession()
     if (current?.token) {
       request.headers.set('authorization', `Bearer ${current.token}`)
     }
@@ -28,8 +29,7 @@ const authenticate: Middleware = {
     return request
   },
   onResponse: ({ response }) => {
-    // A token the API no longer accepts (a Google ID token lives one hour) ends the session; the app
-    // then shows the sign-in screen, where One Tap usually signs the person straight back in.
+    // A token the API no longer accepts ends the session; the app then shows the sign-in screen.
     if (response.status === 401 && session.get()) {
       signOut()
     }

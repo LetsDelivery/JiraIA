@@ -16,7 +16,8 @@
     "bun": ">=1.4.3"
   },
   "scripts": {
-    "build": "bun run infra/build/package.ts",
+    "aws:bootstrap": "bun run infra/aws/bootstrap.ts",
+    "build": "bun run web:build && bun run infra/build/package.ts",
     "build:layer": "bun run infra/layers/build.ts",
     "check": "bunx biome check",
     "check:audit": "bun run infra/ci/audit-gate.ts",

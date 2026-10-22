@@ -127,6 +127,38 @@ describe('API tokens on /v1', () => {
   })
 })
 
+describe('a sign-in token with no authorizer in front (ADR-0025, ADR-0026)', () => {
+  const googleRouter = createRouter({
+    routes,
+    logger,
+    identity: {
+      verify: async (token) => (token === 'google-good' ? { subject: 'sub-google', emailVerified: true } : undefined)
+    }
+  })
+  const withBearer = (path: string, token?: string) => {
+    const event = apiEvent({ method: 'GET', path })
+    return { ...event, headers: { ...event.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) } }
+  }
+
+  it('admits the caller the service proved from the bearer token', async () => {
+    const result = answer(await googleRouter(withBearer(`/spaces/${id}`, 'google-good')))
+    expect(result).toEqual({ status: 200, body: { spaceId: id, subject: 'sub-google' } })
+  })
+
+  it('answers 401 for a token the service cannot prove, or none', async () => {
+    expect(answer(await googleRouter(withBearer(`/spaces/${id}`, 'google-forged'))).status).toBe(401)
+    expect(answer(await googleRouter(withBearer(`/spaces/${id}`))).status).toBe(401)
+  })
+
+  it('answers 401 for any bearer when the service verifies no sign-in tokens', async () => {
+    expect(answer(await router(withBearer(`/spaces/${id}`, 'google-good'))).status).toBe(401)
+  })
+
+  it('never verifies a token for a public route', async () => {
+    expect(answer(await googleRouter(withBearer('/spaces/archived', 'google-forged'))).status).toBe(200)
+  })
+})
+
 describe('what OAuth and MCP need of the router', () => {
   const delegatedRoutes: Route[] = [
     ...routes,

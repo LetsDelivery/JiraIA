@@ -7,7 +7,7 @@ dono: Vinicius André
 
 > **Stack alinhada ao padrão do time (`LetsDelivery/uselets`) em 2026-10-15.** Validação final
 > com Leandro Teves (Tecnologia & Dados).
-> TODO: contas AWS (dev, prd e tools) do JiraIA, com Tecnologia.
+> Contas AWS: as do Max, 761817249596 (dev) e 009485101578 (prd) (ADR-0025).
 
 ## Princípios
 1. **Nativo em IA, não "IA colada".** Agente é um tipo de membro do espaço: tem papel, aparece
@@ -28,10 +28,10 @@ dono: Vinicius André
 ```
                 ┌──────────────── Usuários (Google) ─────────────────────┐
                 ▼                                                        ▼
-        Web app (JavaScript puro)                           Claude Code / rotinas (MCP)
+        Painel (S3 + CloudFront)                            Claude Code / rotinas (MCP)
                 │                                                        │
                 ▼                                                        ▼
-   ┌──────── API JiraIA (Lambda roteadora por contexto + API Gateway) ─────────────┐
+   ┌──────── API JiraIA (uma Lambda + API Gateway ANY /{proxy+}) ──────────────────┐
    │ Espaços · Projetos · Cards · Fluxos · Campos · Páginas · Formulários          │
    │ Automações · Agentes · Propostas · Busca · Permissões · Auditoria             │
    └───────┬──────────────┬───────────────┬────────────────┬──────────────────────┘
@@ -53,15 +53,15 @@ IA da LET'S já validado pelo time de desenvolvimento. O detalhe camada a camada
 | Camada | Escolha | Origem |
 |---|---|---|
 | Monorepo e runtime | bun workspaces, Node 24, TypeScript, Biome, husky, commitlint, gitleaks | uselets |
-| API | Lambda roteadora por contexto atrás de API Gateway HTTP API, zod 4 e OpenAPI gerado | uselets |
-| Eventos, fila e agenda | EventBridge com SQS e DLQ por consumidor; `Schedule` do SAM | uselets |
-| Login e permissões | Login com Google, só contas `@uselets.com`, token validado no API Gateway; autorização decidida no serviço | JiraIA (ADR-0005; o uselets usa Cognito) |
+| API | Uma Lambda geral atrás de um API Gateway HTTP API `ANY /{proxy+}`, roteando no código, e uma Lambda dos agendadores; zod 4 e OpenAPI gerado | LET'S (ADR-0025) |
+| Eventos, fila e agenda | EventBridge com SQS e DLQ por consumidor; agenda por uma fila FIFO, um grupo por job, lida pela Lambda dos agendadores | uselets e ADR-0025 |
+| Login e permissões | Login com Google por um user pool do Cognito, só contas `@uselets.com`; o ID token do Cognito é validado no serviço, e a autorização é decidida no serviço | ADR-0005 e ADR-0026 (o uselets também usa Cognito) |
 | Arquivos | S3 com URL pré-assinada | uselets |
-| Front | JavaScript puro (sem framework), Vite, `openapi-fetch`; vidro só no que flutua | JiraIA (ADR-0006; o uselets usa React) |
-| Infra e entrega | SAM/CloudFormation, config pelo SSM, GitHub Actions no runner CodeBuild, CodePipeline | uselets |
+| Front | JavaScript puro (sem framework), Vite, `openapi-fetch`; vidro só no que flutua. Servido de S3 + CloudFront, com a API em `/api/work` na mesma origem | JiraIA (ADR-0006, ADR-0025; o uselets usa React) |
+| Infra e entrega | Um `template.yml` na raiz em CloudFormation puro e um `buildspec.yml`, implantados pelo pipeline da LET'S (`aws-cicd`): dev, aprovação, produção. CI no GitHub Actions | LET'S, como o max-core (ADR-0025) |
 | Observabilidade e e-mail | Powertools, CloudWatch, X-Ray; SES | uselets |
 | Banco | **Aurora PostgreSQL Serverless v2 + pgvector via RDS Data API**, com Drizzle | JiraIA (desvio da ADR 0002 do uselets) |
-| Tempo real | **API Gateway WebSocket + Lambda**, com Yjs | JiraIA (o uselets não tem) |
+| Tempo real | **API Gateway WebSocket**, na mesma Lambda, com Yjs | JiraIA (o uselets não tem) |
 | Editor de páginas | TipTap (MIT) | JiraIA |
 | IA e MCP | `@anthropic-ai/sdk`; `@modelcontextprotocol/sdk` numa Lambda | JiraIA |
 | Slack | Webhook de entrada | JiraIA |

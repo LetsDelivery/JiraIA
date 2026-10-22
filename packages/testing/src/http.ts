@@ -3,7 +3,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from '
 export type Call = {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   path: string
-  /** The `sub` the JWT authorizer would have verified, and nothing else. Absent: no token at all. */
+  /** The `sub` of a token already verified, as an authorizer hands it over. Absent: no token at all. */
   subject?: string
   /** Every claim, for a test about the token itself (see `googleClaims`). Wins over `subject`. */
   claims?: Record<string, string>

@@ -10,6 +10,7 @@ import type { z } from 'zod'
 
 import { anonymousCaller, type Caller, callerFromClaims } from './caller.js'
 import { compressed } from './compress.js'
+import type { IdentityVerifier } from './identity.js'
 import { matchRoute } from './match.js'
 import { noContent, ok, toResponse } from './response.js'
 import type { HttpMethod, Requirement, Route } from './route.js'
@@ -26,6 +27,12 @@ export type RouterDeps = {
   /** Proves an API token on `/v1/…` (ADR-0015); without it those paths answer 401. */
   tokens?: TokenVerifier
   /**
+   * Proves a sign-in token everywhere else: the Cognito ID token of a person who signed in with Google
+   * (ADR-0026). Without it, only the claims of a gateway authorizer admit a caller — which is how the
+   * local harness and the tests call.
+   */
+  identity?: IdentityVerifier
+  /**
    * The `WWW-Authenticate` a 401 on this path carries, if any — how an MCP client finds where to sign
    * in (ADR-0021). The path is the route's, without `/v1`.
    */
@@ -35,7 +42,7 @@ export type RouterDeps = {
 /** The service's check of an API token: the caller it stands for, or nothing when it is not valid. */
 export type TokenVerifier = { verify(token: string): Promise<Caller | undefined> }
 
-/** Where API tokens are accepted: the same routes, under this prefix, behind no Google authorizer. */
+/** Where API tokens are accepted: the same routes, under this prefix, where no sign-in token counts. */
 export const TOKEN_PATH_PREFIX = '/v1'
 
 const _parse = <TSchema extends z.ZodType>(schema: TSchema, value: unknown, where: string): z.infer<TSchema> => {
@@ -86,30 +93,43 @@ const _validate = (route: Route, event: APIGatewayProxyEventV2, params: Record<s
   query: route.schemas.query ? _parse(route.schemas.query, event.queryStringParameters ?? {}, 'query') : undefined
 })
 
-/**
- * The caller behind a request that came through the Google authorizer.
- *
- * API Gateway has already proved the token is authentic, so the claims are
- * trusted here. Their *absence* on a non-public route is not a 403 but a 401: no
- * decision could be taken, rather than a decision that came out negative.
- */
-const _resolveCaller = (event: APIGatewayProxyEventV2WithJWTAuthorizer, requirement: Requirement): Caller => {
-  if (requirement === 'public') {
-    return anonymousCaller
-  }
-
-  const claims = event.requestContext.authorizer?.jwt?.claims
-
-  if (!claims) {
-    throw new UnauthenticatedException('The request carries no verified token claims')
-  }
-
-  return callerFromClaims(claims)
+/** The bearer token of a request, or an empty string when it carries none. */
+const _bearer = (event: APIGatewayProxyEventV2): string => {
+  const header = event.headers?.authorization ?? event.headers?.Authorization ?? ''
+  return header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : ''
 }
 
 /**
- * The caller behind a request on `/v1/…`, which no authorizer saw: only an API token the service
- * verifies admits it (ADR-0015). Google claims never count here.
+ * The caller behind a request outside `/v1`: a person signed in with Google, through Cognito.
+ *
+ * Claims a gateway authorizer already verified are trusted — no client can write `requestContext`,
+ * and the local harness and the tests stand in for an authorizer that way. With none, the bearer
+ * token is verified here (ADR-0025, ADR-0026). Their *absence* on a non-public route is not a 403 but a 401:
+ * no decision could be taken, rather than a decision that came out negative.
+ */
+const _resolveCaller = async (
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  requirement: Requirement,
+  identity: IdentityVerifier | undefined
+): Promise<Caller> => {
+  if (requirement === 'public') {
+    return anonymousCaller
+  }
+  const claims = event.requestContext.authorizer?.jwt?.claims
+  if (claims) {
+    return callerFromClaims(claims)
+  }
+  const token = _bearer(event)
+  const caller = token && identity ? await identity.verify(token) : undefined
+  if (!caller) {
+    throw new UnauthenticatedException('The request carries no valid sign-in token')
+  }
+  return caller
+}
+
+/**
+ * The caller behind a request on `/v1/…`: only an API token the service verifies admits it
+ * (ADR-0015). Google claims never count here.
  */
 const _resolveTokenCaller = async (
   event: APIGatewayProxyEventV2,
@@ -119,8 +139,7 @@ const _resolveTokenCaller = async (
   if (requirement === 'public') {
     return anonymousCaller
   }
-  const header = event.headers?.authorization ?? event.headers?.Authorization ?? ''
-  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : ''
+  const token = _bearer(event)
   const caller = token && tokens ? await tokens.verify(token) : undefined
   if (!caller) {
     throw new UnauthenticatedException('The request carries no valid API token')
@@ -272,7 +291,7 @@ export const createRouter = (deps: RouterDeps) => {
   const _callerFor = async (route: Route, event: APIGatewayProxyEventV2, viaToken: boolean): Promise<Caller> => {
     const caller = viaToken
       ? await _resolveTokenCaller(event, route.requires, deps.tokens)
-      : _resolveCaller(event as APIGatewayProxyEventV2WithJWTAuthorizer, route.requires)
+      : await _resolveCaller(event as APIGatewayProxyEventV2WithJWTAuthorizer, route.requires, deps.identity)
     if (caller.via && !route.delegated) {
       throw new ForbiddenException(`An application's token does not open ${route.method} ${route.path}`, {
         path: route.path
@@ -288,11 +307,9 @@ export const createRouter = (deps: RouterDeps) => {
     const logger = deps.logger.child({ traceId, method, path })
 
     // A CORS preflight is not a request for any route, so it is answered before one is looked up
-    // and before any caller is resolved. API Gateway does not answer it on our behalf: the
-    // `$default` route catches OPTIONS, and a preflight the JWT authorizer sees is a 401 a browser
-    // reads as "CORS failed" — so the templates open OPTIONS and this answers it. The
-    // Access-Control-* headers are the gateway's, added from its CorsConfiguration to whatever the
-    // integration returns, which is why an empty 204 is the whole answer.
+    // and before any caller is resolved: `ANY /{proxy+}` hands OPTIONS to this function too. The
+    // panel calls the API on its own origin, through CloudFront (ADR-0025), so a browser rarely
+    // sends one; when it does, an empty 204 is the whole answer.
     if (isPreflight(event)) {
       return noContent()
     }

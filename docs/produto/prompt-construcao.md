@@ -75,14 +75,14 @@ TypeScript de ponta a ponta, serverless na AWS, em monorepo com **bun workspaces
 | API | TypeScript puro, sem framework. Uma **Lambda roteadora por contexto** atrás de API Gateway HTTP API, com `defineRoute` (`requires`, `schemas`, `responds`) de `packages/http`. Lambdas extras só para consumidores assíncronos |
 | Build | `tsc` gerando `.js` um por arquivo (legível no console da Lambda), `nodejs24.x`, dependências numa layer com lista explícita |
 | Contrato | zod 4. OpenAPI 3.1 gerado por `bun run contracts` (`z.toJSONSchema`). O front consome com `openapi-typescript` e `openapi-fetch` |
-| Eventos e fila | Um barramento EventBridge `jiraia-<env>` com uma fila SQS e uma DLQ **por consumidor** (`packages/events`) |
-| Agenda | Evento `Schedule` do SAM disparando Lambdas de varredura |
-| Login | **Google** (Google Identity Services). O API Gateway valida o ID token do Google; o serviço admite só e-mail verificado do Workspace `@uselets.com` (claim `hd`). Quem é do domínio entra; o convite dá papéis antes do primeiro login. Sem Cognito (ADR-0005 do repo). Local: `x-local-user: <email>` |
+| Eventos e fila | Um barramento EventBridge `jiraia` por conta, com uma fila SQS e uma DLQ **por consumidor** |
+| Agenda | Regras agendadas do EventBridge numa fila SQS FIFO, um grupo por job, lida pela Lambda dos agendadores (ADR-0025) |
+| Login | **Google**, por um user pool do Cognito federado com o Google (ADR-0026). O serviço valida o ID token do Cognito e admite só e-mail verificado do Workspace `@uselets.com` (claim `hd`, que o Cognito entrega como `custom:hd`). Quem é do domínio entra; o convite dá papéis antes do primeiro login. Local: `x-local-user: <email>` |
 | Autorização | Decidida dentro do serviço (`packages/authorization`), nunca só no gateway. Papéis são presets de permissão copiados para a conta |
 | Agentes e tokens | Agente e integração são **usuários que não são pessoas** (como na ADR 0038 do uselets) |
 | Arquivos | S3 com URL pré-assinada. Local: stub com formato de S3 |
-| Infra | SAM/CloudFormation por serviço. Base em `infra/platform`, `edge`, `web`. Config lida do SSM no deploy (`{{resolve:ssm:...}}`), nunca em tempo de execução |
-| CI e deploy | GitHub Actions no runner CodeBuild. CodePipeline: build único → dev → aprovação → produção |
+| Infra | Um único `template.yml` na raiz, em CloudFormation puro (sem SAM): Aurora, barramento, filas, o Cognito, uma Lambda geral atrás de um API Gateway HTTP `ANY /{proxy+}` e de uma API WebSocket, uma Lambda dos agendadores, e o painel em S3 + CloudFront. O que muda por conta fica no `Mappings`; segredos no Secrets Manager (ADR-0025) |
+| CI e deploy | GitHub Actions no PR. Deploy pelo pipeline da LET'S (`aws-cicd`): `buildspec.yml` → dev → aprovação → produção, como o max-core |
 | Testes | Backend: `bun test` com `*.unit.test.ts` e `*.integration.test.ts`, nunca fora do localhost, APIs externas com MSW. Front: Vitest. E2E: Playwright |
 | Qualidade | Biome 2.5.8, husky (pre-commit: biome + tsc), commitlint com escopo obrigatório, gitleaks e os gates de `test:ci` do uselets (handlers, config, timezone, zod, http, prose, contracts, audit) |
 | Observabilidade | Logger e métricas do Powertools (`packages/logger`), alarmes no CloudWatch, X-Ray |

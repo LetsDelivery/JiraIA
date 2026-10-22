@@ -4,7 +4,9 @@ Date: 2026-10-15
 
 ## Status
 
-Accepted. Amended by ADR-0005: the `identity` service is gone; Google signs people in
+Accepted. Amended by ADR-0005: the `identity` service is gone; Google signs people in Amended by
+ADR-0025: the bounded contexts stay in code, but the stack has one general Lambda, one scheduler
+Lambda and one HTTP API.
 
 ## Context
 
