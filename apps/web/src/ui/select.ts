@@ -1,3 +1,5 @@
+import { computePosition, flip, offset, shift } from '@floating-ui/dom'
+
 import { type Html, html } from '@/lib/html'
 
 import { icon } from './icons'
@@ -56,15 +58,32 @@ export const selectField = (options: {
   `
 }
 
+/**
+ * A table clips what overflows it (rounded corners, sideways scroll on small screens), so a menu
+ * opened in a row floats fixed beside its trigger instead — below it, or above when there is no room.
+ */
+const _float = (trigger: HTMLElement, menu: HTMLElement): void => {
+  menu.classList.add('is-floating')
+  menu.style.minWidth = `${trigger.offsetWidth}px`
+  void computePosition(trigger, menu, {
+    strategy: 'fixed',
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift({ padding: 8 })]
+  }).then(({ x, y }) => Object.assign(menu.style, { left: `${x}px`, top: `${y}px` }))
+}
+
 const _open = (root: HTMLElement, open: boolean): void => {
   const trigger = root.querySelector('.select-trigger') as HTMLButtonElement
   const menu = root.querySelector('[role="listbox"]') as HTMLElement
   trigger.setAttribute('aria-expanded', String(open))
   menu.hidden = !open
+  if (open && root.closest('.table, .table-scroll')) {
+    _float(trigger, menu)
+  }
   if (open) {
     const current =
       menu.querySelector<HTMLElement>('[aria-selected="true"]') ?? menu.querySelector<HTMLElement>('[role="option"]')
-    current?.focus()
+    current?.focus({ preventScroll: true })
   }
 }
 
@@ -116,6 +135,16 @@ export const bindSelects = (scope: ParentNode): void => {
   }
 }
 
+/** A floating menu stays where it opened, so scrolling or resizing closes it rather than leave it behind. */
+const _closeFloating = (event: Event): void => {
+  for (const menu of document.querySelectorAll<HTMLElement>('.select-menu.is-floating:not([hidden])')) {
+    const root = menu.closest<HTMLElement>('[data-select]')
+    if (root && !menu.contains(event.target as Node)) {
+      _open(root, false)
+    }
+  }
+}
+
 /** A click anywhere else closes whatever select is open. Installed once by the app. */
 export const closeSelectsOnOutsideClick = (): void => {
   document.addEventListener('click', (event) => {
@@ -125,4 +154,6 @@ export const closeSelectsOnOutsideClick = (): void => {
       }
     }
   })
+  document.addEventListener('scroll', _closeFloating, { capture: true, passive: true })
+  window.addEventListener('resize', _closeFloating)
 }

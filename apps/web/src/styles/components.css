@@ -677,6 +677,12 @@ td .select-trigger {
   border-radius: var(--radius-control);
 }
 
+/* Opened inside a table, which clips: placed by `select.ts` against the viewport. */
+.select-menu.is-floating {
+  position: fixed;
+  z-index: 60;
+}
+
 .select-menu [role='option'] {
   display: flex;
   flex-direction: column;

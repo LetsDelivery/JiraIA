@@ -102,3 +102,23 @@ test('a person sets their own job title on Meu perfil, and Pessoas shows it in i
   await expect(row.getByRole('cell').nth(0)).toHaveText('Rui')
   await expect(row.getByRole('cell').nth(1)).toHaveText('Coordenador de operações')
 })
+
+test('a role picker in a table row opens whole, above the rows instead of cut by the table', async ({ page }) => {
+  await signIn(page, 'admin@uselets.com')
+  await page.goto('/draw')
+  await sidebar(page)
+    .getByRole('link', { name: /Produto/ })
+    .click()
+  await sidebar(page).getByRole('button', { name: 'Mais ações do espaço' }).click()
+  await page.getByRole('menuitem', { name: 'Pessoas e papéis' }).click()
+
+  await page.getByRole('combobox', { name: 'Papel de Produto' }).click()
+  for (const name of ['Administrador', 'Membro', 'Leitor']) {
+    const option = page.getByRole('option', { name: new RegExp(`^${name}`) })
+    const topmost = await option.evaluate((element) => {
+      const box = element.getBoundingClientRect()
+      return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+    })
+    expect(topmost, `${name} is drawn, not clipped`).toBe(true)
+  }
+})
