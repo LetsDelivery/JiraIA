@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test'
+import { sql } from 'drizzle-orm'
+import { PgDialect } from 'drizzle-orm/pg-core'
 import * as Y from 'yjs'
 
-import { batchUnder } from '../content.repository.js'
+import { contents } from '../../schema.js'
+import { batchUnder, PIECE, pieceOf } from '../content.repository.js'
 import { mergeState } from '../yjs-state.js'
 
 const base64 = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64')
@@ -75,5 +78,13 @@ describe('reading updates under the Data API limit', () => {
       ['3'],
       ['4']
     ])
+  })
+})
+
+describe('pieceOf', () => {
+  it('casts its positions to int, which the Data API would otherwise bind as bigint', () => {
+    const query = new PgDialect().sqlToQuery(sql`select ${pieceOf(contents.document, 1)}`)
+    expect(query.sql).toBe('select substr("work"."contents"."document", $1::int, $2::int)')
+    expect(query.params).toEqual([1, PIECE])
   })
 })
