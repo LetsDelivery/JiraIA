@@ -1,16 +1,39 @@
 import type { Database } from '@jiraia/db'
-import { and, asc, count, desc, eq, inArray, isNull, ne, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, ne, type SQL, sql } from 'drizzle-orm'
 
 import { contents, contentUpdates, drawSpaces } from '../schema.js'
 import { contentVisits } from '../schema-intake.js'
-import type { ContentRow } from './content.schemas.js'
+import type { ContentRow, NewContentRow } from './content.schemas.js'
 
 export type ContentFields = Partial<
-  Pick<
-    ContentRow,
-    'title' | 'parentId' | 'position' | 'document' | 'contentJson' | 'contentText' | 'updatedBy' | 'deletedAt'
-  >
+  Pick<ContentRow, 'title' | 'parentId' | 'position' | 'contentJson' | 'contentText' | 'updatedBy' | 'deletedAt'>
 >
+
+/** A content's columns but its Yjs `document`, read apart (ADR-0009). */
+const { document: _document, ...contentColumns } = getTableColumns(contents)
+
+/**
+ * How much text one read brings back: well under the Data API's 1 MiB answer (ADR-0002), so a document
+ * or a run of updates of any size is read in several statements instead of failing in one.
+ */
+export const PIECE = 500_000
+
+/** Consecutive updates whose sizes add up to at most `PIECE`; one larger than that stands alone. */
+export const batchUnder = <T extends { length: number }>(items: readonly T[], limit = PIECE): T[][] => {
+  const batches: T[][] = []
+  let size = 0
+  for (const item of items) {
+    const last = batches.at(-1)
+    if (last && size + item.length <= limit) {
+      last.push(item)
+      size += item.length
+    } else {
+      batches.push([item])
+      size = item.length
+    }
+  }
+  return batches
+}
 
 /** Pages that are not deleted, of one parent — `null` for the top of the tree. */
 const _siblings = (spaceId: string, parentId: string | null): SQL | undefined =>
@@ -26,7 +49,7 @@ export class ContentRepository {
   /** The pages and whiteboards changed last across the organization's spaces (ADR-0011). */
   async recent(organizationId: string, limit: number) {
     return await this.db
-      .select({ content: contents, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
+      .select({ content: contentColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
       .from(contents)
       .innerJoin(drawSpaces, eq(drawSpaces.id, contents.spaceId))
       .where(
@@ -52,7 +75,7 @@ export class ContentRepository {
   /** The pages and whiteboards the member opened last, most recent first; those deleted since are left out. */
   async opened(memberId: string, limit: number) {
     return await this.db
-      .select({ content: contents, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
+      .select({ content: contentColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
       .from(contentVisits)
       .innerJoin(contents, eq(contents.id, contentVisits.contentId))
       .innerJoin(drawSpaces, eq(drawSpaces.id, contents.spaceId))
@@ -64,7 +87,7 @@ export class ContentRepository {
   /** The space's whole tree, siblings in their order (5.1). */
   async tree(spaceId: string): Promise<ContentRow[]> {
     return await this.db
-      .select()
+      .select(contentColumns)
       .from(contents)
       .where(and(eq(contents.spaceId, spaceId), isNull(contents.deletedAt)))
       .orderBy(asc(contents.position))
@@ -72,7 +95,7 @@ export class ContentRepository {
 
   async find(organizationId: string, id: string): Promise<ContentRow | undefined> {
     const [row] = await this.db
-      .select()
+      .select(contentColumns)
       .from(contents)
       .where(and(eq(contents.organizationId, organizationId), eq(contents.id, id), isNull(contents.deletedAt)))
     return row
@@ -80,18 +103,37 @@ export class ContentRepository {
 
   /** A page by id alone, deleted or not — for the realtime handler, which already holds a ticket. */
   async byId(id: string): Promise<ContentRow | undefined> {
-    const [row] = await this.db.select().from(contents).where(eq(contents.id, id))
+    const [row] = await this.db.select(contentColumns).from(contents).where(eq(contents.id, id))
     return row
   }
 
-  /** The page's stored document, its row locked until the transaction ends (ADR-0009). */
-  async lockDocument(tx: Database, contentId: string): Promise<string> {
-    const [row] = await tx
-      .select({ document: contents.document })
+  /** The page's stored document, read in pieces; with `tx`, its row locked until it ends (ADR-0009). */
+  async document(contentId: string, tx?: Database): Promise<string> {
+    const db = tx ?? this.db
+    const length = await this._documentLength(db, contentId, tx !== undefined)
+    let document = ''
+    for (let from = 1; from <= length; from += PIECE) {
+      const [piece] = await db
+        .select({ text: sql<string>`substr(${contents.document}, ${from}, ${PIECE})` })
+        .from(contents)
+        .where(eq(contents.id, contentId))
+      document += piece?.text ?? ''
+    }
+    return document
+  }
+
+  /** How long the stored document is, in base64 characters — what tells a bloated one apart. */
+  async documentLength(contentId: string): Promise<number> {
+    return await this._documentLength(this.db, contentId, false)
+  }
+
+  private async _documentLength(db: Database, contentId: string, lock: boolean): Promise<number> {
+    const query = db
+      .select({ length: sql<number>`length(${contents.document})` })
       .from(contents)
       .where(eq(contents.id, contentId))
-      .for('update')
-    return row?.document ?? ''
+    const [row] = lock ? await query.for('update') : await query
+    return Number(row?.length ?? 0)
   }
 
   /** Not `update`: folding changes in is no edit, so it moves neither `updatedAt` nor `updatedBy`. */
@@ -117,7 +159,7 @@ export class ContentRepository {
     return row?.total ?? 0
   }
 
-  async insert(tx: Database, row: ContentRow): Promise<void> {
+  async insert(tx: Database, row: NewContentRow): Promise<void> {
     await tx.insert(contents).values(row)
   }
 
@@ -137,13 +179,61 @@ export class ContentRepository {
     }
   }
 
-  /** The Yjs updates not yet merged into the page's document (ADR-0009). */
+  /** The Yjs updates not yet merged into the page's document, in order, read in batches (ADR-0009). */
   async updates(contentId: string): Promise<{ id: string; update: string }[]> {
-    return await this.db
-      .select({ id: contentUpdates.id, update: contentUpdates.update })
+    const sizes = await this.db
+      .select({ id: contentUpdates.id, length: sql<number>`length(${contentUpdates.update})` })
       .from(contentUpdates)
       .where(eq(contentUpdates.contentId, contentId))
-      .orderBy(asc(contentUpdates.createdAt))
+      .orderBy(asc(contentUpdates.createdAt), asc(contentUpdates.id))
+    const read: { id: string; update: string }[] = []
+    for (const batch of batchUnder(sizes.map((each) => ({ id: each.id, length: Number(each.length) })))) {
+      read.push(...(await this._updates(batch)))
+    }
+    return read
+  }
+
+  /** One batch, in the order asked; a lone update past `PIECE` is read in pieces. */
+  private async _updates(batch: readonly { id: string; length: number }[]): Promise<{ id: string; update: string }[]> {
+    const [only] = batch
+    if (batch.length === 1 && only && only.length > PIECE) {
+      return [{ id: only.id, update: await this._updateInPieces(only) }]
+    }
+    const rows = await this.db
+      .select({ id: contentUpdates.id, update: contentUpdates.update })
+      .from(contentUpdates)
+      .where(
+        inArray(
+          contentUpdates.id,
+          batch.map((each) => each.id)
+        )
+      )
+    const byId = new Map(rows.map((row) => [row.id, row.update]))
+    return batch.flatMap((each) => {
+      const update = byId.get(each.id)
+      return update === undefined ? [] : [{ id: each.id, update }]
+    })
+  }
+
+  private async _updateInPieces({ id, length }: { id: string; length: number }): Promise<string> {
+    let update = ''
+    for (let from = 1; from <= length; from += PIECE) {
+      const [piece] = await this.db
+        .select({ text: sql<string>`substr(${contentUpdates.update}, ${from}, ${PIECE})` })
+        .from(contentUpdates)
+        .where(eq(contentUpdates.id, id))
+      update += piece?.text ?? ''
+    }
+    return update
+  }
+
+  /** How many updates wait to be merged — counted, not read. */
+  async pendingCount(contentId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ total: count() })
+      .from(contentUpdates)
+      .where(eq(contentUpdates.contentId, contentId))
+    return row?.total ?? 0
   }
 
   async appendUpdate(tx: Database, row: typeof contentUpdates.$inferInsert): Promise<void> {

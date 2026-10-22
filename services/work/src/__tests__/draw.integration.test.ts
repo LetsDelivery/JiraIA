@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it } from 'bun:test'
 
 import { fixedClock, uuidGenerator } from '@jiraia/core'
 import { answer, apiEvent, type Call, googleClaims, testDatabase, truncateSchema } from '@jiraia/testing'
+import { eq, sql } from 'drizzle-orm'
 import * as Y from 'yjs'
 
 import { buildService } from '../container.js'
 import { RecordingBroadcaster } from '../draw/broadcaster.js'
 import { InMemoryFileStore } from '../files/file-store.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
+import { contents } from '../schema.js'
 
 /**
  * LET’S Draw AI (escopo-mvp 5.1–5.7, ADR-0009–0011): its own spaces, a tree of folders, pages and
@@ -238,6 +240,37 @@ describe('editing together', () => {
     await fresh.load()
     expect([...fresh.doc.getMap('shapes').keys()].sort()).toEqual(['a', 'b'])
   })
+
+  it('a board stored past the Data API’s 1 MiB still lists, opens and shrinks once opened', async () => {
+    const board = await create('Jornada', { kind: 'whiteboard' })
+    await create('Ao lado')
+    // What `Y.mergeUpdates` stored before it collected anything: every step of every drag.
+    const writer = new Y.Doc()
+    const steps: Uint8Array[] = []
+    writer.on('update', (update: Uint8Array) => steps.push(update))
+    for (let step = 0; step < 20_000; step += 1) {
+      writer.getMap('elements').set('box', { id: 'box', x: step, label: 'Entrega confirmada pelo motorista' })
+    }
+    const bloated = base64(Y.mergeUpdates(steps))
+    expect(bloated.length).toBeGreaterThan(1_048_576)
+    await db.update(contents).set({ document: bloated }).where(eq(contents.id, board.id))
+
+    const tree = (await ok(admin({ method: 'GET', path: `/draw/spaces/${produto.id}/contents` }))) as Tree
+    expect(tree.items.map((each) => each.title).sort()).toEqual(['Ao lado', 'Jornada'])
+    await ok(admin({ method: 'GET', path: '/draw/contents' }))
+    await ok(admin({ method: 'PUT', path: `/draw/contents/${board.id}/visit` }), 204)
+    await ok(admin({ method: 'GET', path: '/draw/contents/opened' }))
+    await ok(admin({ method: 'GET', path: `/draw/contents/${board.id}` }))
+
+    const reader = browser(board)
+    await reader.load()
+    expect(reader.doc.getMap('elements').get('box')).toMatchObject({ x: 19_999 })
+    const [stored] = await db
+      .select({ length: sql<number>`length(${contents.document})` })
+      .from(contents)
+      .where(eq(contents.id, board.id))
+    expect(Number(stored?.length)).toBeLessThan(bloated.length / 10)
+  }, 30_000)
 
   it('refuses an update that is not Yjs', async () => {
     const page = await create('Fechada')

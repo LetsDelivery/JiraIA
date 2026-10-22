@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { ForbiddenException, NotFoundException, UnauthenticatedException, ValidationException } from '@jiraia/core'
+import {
+  describeError,
+  ForbiddenException,
+  NotFoundException,
+  UnauthenticatedException,
+  ValidationException
+} from '@jiraia/core'
 import type { JiraiaLogger } from '@jiraia/logger'
 import type {
   APIGatewayProxyEventV2,
@@ -208,7 +214,7 @@ const _failed = (error: unknown, traceId: string, logger: JiraiaLogger): APIGate
   const response = toResponse(error, traceId)
   const log = response.statusCode && response.statusCode >= 500 ? logger.error : logger.warn
 
-  log('Request failed', { statusCode: response.statusCode, error: String(error) })
+  log('Request failed', { statusCode: response.statusCode, error: describeError(error) })
 
   return response
 }

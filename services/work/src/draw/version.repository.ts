@@ -1,8 +1,11 @@
 import type { Database } from '@jiraia/db'
-import { and, desc, eq, max } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, max } from 'drizzle-orm'
 
 import { contentVersions, members } from '../schema.js'
-import type { VersionRow, VersionWithAuthor } from './content.schemas.js'
+import type { NewVersionRow, VersionRow, VersionWithAuthor } from './content.schemas.js'
+
+/** A version's columns but its Yjs copy, which is only ever written (ADR-0009). */
+const { document: _document, ...versionColumns } = getTableColumns(contentVersions)
 
 /** A page's versions (5.4), newest first. */
 export class VersionRepository {
@@ -10,7 +13,7 @@ export class VersionRepository {
 
   private _select() {
     return this.db
-      .select({ version: contentVersions, authorName: members.name })
+      .select({ version: versionColumns, authorName: members.name })
       .from(contentVersions)
       .innerJoin(members, eq(members.id, contentVersions.createdBy))
   }
@@ -31,7 +34,7 @@ export class VersionRepository {
 
   async latest(contentId: string): Promise<VersionRow | undefined> {
     const [row] = await this.db
-      .select()
+      .select(versionColumns)
       .from(contentVersions)
       .where(eq(contentVersions.contentId, contentId))
       .orderBy(desc(contentVersions.number))
@@ -48,7 +51,7 @@ export class VersionRepository {
     return (row?.top ?? 0) + 1
   }
 
-  async insert(tx: Database, row: VersionRow): Promise<void> {
+  async insert(tx: Database, row: NewVersionRow): Promise<void> {
     await tx.insert(contentVersions).values(row)
   }
 }

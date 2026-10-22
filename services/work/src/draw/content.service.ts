@@ -13,6 +13,7 @@ import {
   type CreateContent,
   contentKindSchema,
   type MoveContent,
+  type NewContentRow,
   toContentNode
 } from './content.schemas.js'
 import type { ContentAccess, DrawAccess, DrawGate } from './draw-gate.js'
@@ -251,7 +252,7 @@ type NewContent = {
   now: Date
 }
 
-const _newContent = ({ id, gate, input, parentId, position, now }: NewContent): ContentRow => ({
+const _newContent = ({ id, gate, input, parentId, position, now }: NewContent): NewContentRow => ({
   id,
   organizationId: gate.actor.organizationId,
   spaceId: gate.space.id,
