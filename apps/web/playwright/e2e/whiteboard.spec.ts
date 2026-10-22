@@ -542,3 +542,56 @@ test('saves a named version, and the board is among what the person opened', asy
   await expect(page.getByRole('heading', { name: 'Abertos por você' })).toBeVisible()
   await expect(page.locator('.section', { hasText: 'Abertos por você' })).toContainText('Com versão')
 })
+
+test('an arrow ties where it is aimed on the outline, and with Alt it ties to nothing', async ({ page }) => {
+  await newBoard(page, 'Pontas livres')
+  await page.keyboard.press('o')
+  await drag(page, [320, 160], [480, 260])
+  const ellipse = (await shapeAt(page, 0).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }
+
+  await page.keyboard.press('a')
+  await drag(page, [750, 450], [470, 172])
+  const aimed = (await shapeAt(page, 1).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }
+  expect(aimed.y, 'the tip sits on the upper right of the outline, not the middle of its side').toBeLessThan(
+    ellipse.y + ellipse.height / 4
+  )
+
+  await page.keyboard.press('a')
+  await page.keyboard.down('Alt')
+  await drag(page, [750, 600], [482, 210])
+  await page.keyboard.up('Alt')
+  const loose = await shapeAt(page, 2).boundingBox()
+  await page.keyboard.press('Escape')
+  await drag(page, [400, 175], [400, 375])
+  await expect(shapeAt(page, 0)).toHaveCount(1)
+  expect(await shapeAt(page, 2).boundingBox(), 'the loose arrow stays where it was dropped').toEqual(loose)
+  expect((await shapeAt(page, 1).boundingBox())?.y ?? 0, 'the tied arrow follows the shape').toBeGreaterThan(
+    aimed.y + 100
+  )
+})
+
+test('a text takes its own colour, bold, italic, underline and a size typed in', async ({ page }) => {
+  await newBoard(page, 'Texto formatado')
+  await page.getByRole('button', { name: 'Retângulo' }).click()
+  await drag(page, [380, 160], [580, 260])
+  await page.keyboard.press('Enter')
+  await write(page, 'Entrega confirmada')
+  await page.getByRole('button', { name: 'Erro', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Texto Sucesso' }).click()
+  await page.getByRole('button', { name: 'Negrito' }).click()
+  await page.getByRole('button', { name: 'Itálico' }).click()
+  await page.getByRole('button', { name: 'Sublinhado' }).click()
+  await page.getByRole('spinbutton', { name: 'Tamanho da fonte' }).fill('32')
+  await page.getByRole('spinbutton', { name: 'Tamanho da fonte' }).press('Enter')
+
+  const words = page.locator('.wb-scene text', { hasText: 'Entrega' })
+  await expect(words).toHaveAttribute('fill', '#2f9e44')
+  await expect(words).toHaveAttribute('font-weight', 'bold')
+  await expect(words).toHaveAttribute('font-style', 'italic')
+  await expect(words).toHaveAttribute('text-decoration', 'underline')
+  await expect(words).toHaveAttribute('font-size', '32')
+  const outline = page.locator('.wb-scene .wb-elements .wb-element').first().locator('path[stroke="#e03131"]')
+  await expect(outline.first(), 'the shape keeps its own stroke').toBeAttached()
+  await expect(page.getByRole('button', { name: 'Negrito' })).toHaveAttribute('aria-pressed', 'true')
+})

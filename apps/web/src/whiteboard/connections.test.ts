@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { anchorPoint, bindingAt, followBindings, nearestAnchor } from './bindings'
+import { anchorAt, anchorPoint, bindingAt, followBindings, nearestAnchor } from './bindings'
 import { cloneAll, parse } from './clipboard'
 import { DEFAULT_STYLE, type Element, newFrame, newLinear, newShape } from './elements'
 import { refit } from './frames'
@@ -17,6 +17,28 @@ describe('arrows tied to shapes', () => {
     expect(anchorPoint(shape, [1, 0.5])).toEqual({ x: 106, y: 30 })
     expect(bindingAt([shape], { x: 110, y: 30 }, 'arrow', 1)).toEqual({ elementId: shape.id, anchor: [1, 0.5] })
     expect(bindingAt([shape], { x: 300, y: 30 }, 'arrow', 1)).toBeNull()
+  })
+
+  it('ties an end near the outline to the point of the outline toward it, not only to a side middle', () => {
+    const shape = rect(0, 0)
+    const [ax, ay] = anchorAt(shape, { x: 104, y: 6 }, 1)
+    expect(ax).toBe(1)
+    expect(ay).toBeLessThan(0.3)
+    expect(anchorAt(shape, { x: 104, y: 26 }, 1)).toEqual([1, 0.5])
+  })
+
+  it('ties an end dropped well inside to that very point, with no gap', () => {
+    const shape = rect(0, 0)
+    expect(anchorAt(shape, { x: 40, y: 30 }, 1)).toEqual([0.4, 0.5])
+    expect(anchorPoint(shape, [0.4, 0.5])).toEqual({ x: 40, y: 30 })
+  })
+
+  it('reaches an ellipse by its outline, not by the corners of its box', () => {
+    const ellipse = newShape('ellipse', box(0, 0, 100, 100), DEFAULT_STYLE, 1)
+    expect(bindingAt([ellipse], { x: 98, y: 2 }, 'arrow', 1)).toBeNull()
+    const near = bindingAt([ellipse], { x: 88, y: 12 }, 'arrow', 1)
+    const point = anchorPoint(ellipse, near?.anchor ?? [0, 0])
+    expect(Math.hypot(point.x - 50, point.y - 50)).toBeCloseTo(56)
   })
 
   it('turns the anchor with the shape', () => {

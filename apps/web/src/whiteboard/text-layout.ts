@@ -1,4 +1,4 @@
-import { type Element, type FontFamily, isLinear, type TextElement } from './elements'
+import { type Element, type FontFamily, isLinear, type TextElement, type TextStyle } from './elements'
 import { absolutePoints, type Vec } from './geometry'
 
 /**
@@ -11,26 +11,33 @@ export const FONT_STACK: Record<FontFamily, string> = {
   mono: "ui-monospace, 'SF Mono', Menlo, monospace"
 }
 
+/** What changes how wide the words are: the family, bold and italic. */
+export type Face = Pick<TextStyle, 'fontFamily' | 'fontWeight' | 'fontStyle'>
+
+/** A plain face of a family. */
+export const plain = (fontFamily: FontFamily): Face => ({ fontFamily, fontWeight: 'normal', fontStyle: 'normal' })
+
 /** Room between a shape's outline and the text inside it. */
 export const PADDING = 10
 
 let context: CanvasRenderingContext2D | null | undefined
 
 /** A word's width in board units; an estimate where there is no canvas (the unit tests). */
-export const measure = (text: string, fontSize: number, family: FontFamily): number => {
+export const measure = (text: string, fontSize: number, face: Face): number => {
   context ??= typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d')
   if (!context) {
-    return text.length * fontSize * (family === 'mono' ? 0.6 : 0.5)
+    const bold = face.fontWeight === 'bold' ? 1.1 : 1
+    return text.length * fontSize * (face.fontFamily === 'mono' ? 0.6 : 0.5) * bold
   }
-  context.font = `${fontSize}px ${FONT_STACK[family]}`
+  context.font = `${face.fontStyle} ${face.fontWeight} ${fontSize}px ${FONT_STACK[face.fontFamily]}`
   return context.measureText(text).width
 }
 
-const breakWord = (word: string, width: number, size: number, family: FontFamily): string[] => {
+const breakWord = (word: string, width: number, size: number, face: Face): string[] => {
   const pieces: string[] = []
   let piece = ''
   for (const char of word) {
-    if (piece && measure(piece + char, size, family) > width) {
+    if (piece && measure(piece + char, size, face) > width) {
       pieces.push(piece)
       piece = ''
     }
@@ -39,12 +46,12 @@ const breakWord = (word: string, width: number, size: number, family: FontFamily
   return [...pieces, piece]
 }
 
-const wrapParagraph = (paragraph: string, width: number, size: number, family: FontFamily): string[] => {
+const wrapParagraph = (paragraph: string, width: number, size: number, face: Face): string[] => {
   const lines: string[] = []
   let line = ''
   for (const word of paragraph.split(' ')) {
     const tried = line ? `${line} ${word}` : word
-    if (measure(tried, size, family) <= width || !line) {
+    if (measure(tried, size, face) <= width || !line) {
       line = tried
       continue
     }
@@ -52,19 +59,19 @@ const wrapParagraph = (paragraph: string, width: number, size: number, family: F
     line = word
   }
   lines.push(line)
-  return lines.flatMap((each) => (measure(each, size, family) > width ? breakWord(each, width, size, family) : [each]))
+  return lines.flatMap((each) => (measure(each, size, face) > width ? breakWord(each, width, size, face) : [each]))
 }
 
 /**
  * The lines a text breaks into at `width`; with no width, only at the line breaks typed.
  *
- * @example wrap('a b', 1, 20, 'mono')   // ['a', 'b']
+ * @example wrap('a b', 1, 20, plain('mono'))   // ['a', 'b']
  */
-export const wrap = (text: string, width: number | null, size: number, family: FontFamily): string[] =>
+export const wrap = (text: string, width: number | null, size: number, face: Face): string[] =>
   text
     .split('\n')
     .flatMap((paragraph) =>
-      width === null ? [paragraph] : wrapParagraph(paragraph, Math.max(width, size), size, family)
+      width === null ? [paragraph] : wrapParagraph(paragraph, Math.max(width, size), size, face)
     )
 
 export const lineHeightOf = (text: Pick<TextElement, 'fontSize' | 'lineHeight'>): number =>
@@ -75,8 +82,8 @@ export const measureText = (
   text: TextElement,
   width: number | null
 ): { width: number; height: number; lines: string[] } => {
-  const lines = wrap(text.text, width, text.fontSize, text.fontFamily)
-  const widest = Math.max(text.fontSize / 2, ...lines.map((line) => measure(line, text.fontSize, text.fontFamily)))
+  const lines = wrap(text.text, width, text.fontSize, text)
+  const widest = Math.max(text.fontSize / 2, ...lines.map((line) => measure(line, text.fontSize, text)))
   return { width: width ?? widest, height: Math.max(1, lines.length) * lineHeightOf(text), lines }
 }
 

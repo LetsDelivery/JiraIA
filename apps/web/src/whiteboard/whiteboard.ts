@@ -4,7 +4,7 @@ import type * as Y from 'yjs'
 import type { Surface } from '@/editor/session'
 import { html } from '@/lib/html'
 
-import { DEFAULT_STYLE, DEFAULT_TEXT, type Element, isText, type Style, type TextStyle } from './elements'
+import { DEFAULT_STYLE, DEFAULT_TEXT, type Element, INK, isText, type Style, type TextStyle } from './elements'
 import { refit } from './frames'
 import { type Box, commonBounds, contains, hits, type Vec } from './geometry'
 import type { Gesture } from './gestures'
@@ -61,10 +61,14 @@ export class Whiteboard implements Surface {
   tool: Tool = 'select'
   style: Style = { ...DEFAULT_STYLE }
   textStyle: TextStyle = { ...DEFAULT_TEXT }
+  /** The colour new words are written in, apart from the stroke of the shape they sit in. */
+  textColor = INK
   selection: string[] = []
   editing: string | null = null
   editable = false
   spaceHeld = false
+  /** Alt held while drawing or dragging an arrow's end: it lands where it is dropped, tied to nothing. */
+  altHeld = false
   grid = savedGrid()
   gesture: Gesture | undefined
   /** The alignment lines a move has caught, drawn while it lasts. */

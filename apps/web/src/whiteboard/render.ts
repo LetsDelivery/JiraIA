@@ -164,7 +164,7 @@ export const textMarkup = (element: TextElement): Html => {
   const { lines } = measureText(element, element.autoResize && !element.containerId ? null : element.width)
   const x = { left: 0, center: element.width / 2, right: element.width }[element.textAlign]
   const step = lineHeightOf(element)
-  return html`<text x="${x}" font-family="${FONT_STACK[element.fontFamily]}" font-size="${element.fontSize}" fill="${element.strokeColor}" text-anchor="${ANCHOR[element.textAlign]}" dominant-baseline="central" xml:space="preserve">${lines.map(
+  return html`<text x="${x}" font-family="${FONT_STACK[element.fontFamily]}" font-size="${element.fontSize}" font-weight="${element.fontWeight}" font-style="${element.fontStyle}" text-decoration="${element.textDecoration}" fill="${element.strokeColor}" text-anchor="${ANCHOR[element.textAlign]}" dominant-baseline="central" xml:space="preserve">${lines.map(
     (line, index) => html`<tspan x="${x}" y="${(index + 0.5) * step}">${line || ' '}</tspan>`
   )}</text>`
 }

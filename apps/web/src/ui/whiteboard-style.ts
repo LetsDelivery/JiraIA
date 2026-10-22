@@ -38,7 +38,8 @@ import { bindSelects, selectField } from './select'
  * with a drawing tool and nothing selected, the style the next element is drawn with. Changes apply as
  * they are chosen; there is nothing to confirm.
  */
-type Current = Style & TextStyle & Partial<Pick<LinearElement, 'arrowType' | 'startArrowhead' | 'endArrowhead'>>
+type Current = Style &
+  TextStyle & { textColor: string } & Partial<Pick<LinearElement, 'arrowType' | 'startArrowhead' | 'endArrowhead'>>
 
 const NUMERIC = new Set(['strokeWidth', 'roughness', 'opacity', 'roundness', 'fontSize', 'lineHeight'])
 
@@ -57,17 +58,24 @@ const choice = (
 const swatch = (key: string, color: string, current: string, label: string): Html =>
   html`<button type="button" class="wb-swatch ${color === TRANSPARENT ? 'is-transparent' : ''}" data-style="${key}" data-value="${color}" aria-pressed="${current === color}" aria-label="${label}" title="${label}" style="--swatch: ${color}"></button>`
 
-const colorRow = (key: 'strokeColor' | 'backgroundColor', current: string): Html => {
-  const colors: { color: string; label: string }[] =
-    key === 'strokeColor'
-      ? [
-          { color: INK, label: 'Traço preto' },
-          ...PALETTE.map((each) => ({ color: each.stroke, label: `Traço ${each.name}` }))
-        ]
-      : [
-          { color: TRANSPARENT, label: 'Fundo transparente' },
-          ...PALETTE.map((each) => ({ color: each.fill, label: `Fundo ${each.name}` }))
-        ]
+/** The colours offered for a stroke, the words, or a fill. */
+const COLORS: Record<'strokeColor' | 'textColor' | 'backgroundColor', { color: string; label: string }[]> = {
+  strokeColor: [
+    { color: INK, label: 'Traço preto' },
+    ...PALETTE.map((each) => ({ color: each.stroke, label: `Traço ${each.name}` }))
+  ],
+  textColor: [
+    { color: INK, label: 'Texto preto' },
+    ...PALETTE.map((each) => ({ color: each.stroke, label: `Texto ${each.name}` }))
+  ],
+  backgroundColor: [
+    { color: TRANSPARENT, label: 'Fundo transparente' },
+    ...PALETTE.map((each) => ({ color: each.fill, label: `Fundo ${each.name}` }))
+  ]
+}
+
+const colorRow = (key: keyof typeof COLORS, current: string): Html => {
+  const colors = COLORS[key]
   const custom = current !== TRANSPARENT && !colors.some((each) => each.color === current) ? current : ''
   return html`<div class="wb-swatches">
     ${colors.map((each) => swatch(key, each.color, current, each.label))}
@@ -141,6 +149,26 @@ const FAMILIES = [
   { value: 'sans', label: 'Sans-serif' },
   { value: 'mono', label: 'Monoespaçada' }
 ]
+/** Bold, italic, underline and strike: each pressed again goes back to plain. */
+const FORMATS: {
+  key: 'fontWeight' | 'fontStyle' | 'textDecoration'
+  on: string
+  off: string
+  label: string
+  icon: IconName
+}[] = [
+  { key: 'fontWeight', on: 'bold', off: 'normal', label: 'Negrito', icon: 'bold' },
+  { key: 'fontStyle', on: 'italic', off: 'normal', label: 'Itálico', icon: 'italic' },
+  { key: 'textDecoration', on: 'underline', off: 'none', label: 'Sublinhado', icon: 'underline' },
+  { key: 'textDecoration', on: 'line-through', off: 'none', label: 'Tachado', icon: 'strikethrough' }
+]
+
+const formatRow = (current: Current): Html =>
+  html`<div class="wb-choices">${FORMATS.map((each) => {
+    const pressed = current[each.key] === each.on
+    return html`<button type="button" class="wb-choice" data-style="${each.key}" data-value="${pressed ? each.off : each.on}" aria-pressed="${pressed}" aria-label="${each.label}" title="${each.label}">${icon(each.icon, 16)}</button>`
+  })}</div>`
+
 const SIZES = [
   { value: 16, label: 'P' },
   { value: 20, label: 'M' },
@@ -151,7 +179,9 @@ const SIZES = [
 const textSection = (current: Current, inside: boolean): Html =>
   section(
     'Texto',
-    html`${options('fontFamily', FAMILIES, current.fontFamily, false)}
+    html`${colorRow('textColor', current.textColor)}
+    ${formatRow(current)}
+    ${options('fontFamily', FAMILIES, current.fontFamily, false)}
     <div class="wb-row">${options('fontSize', SIZES, current.fontSize, false)}<input class="wb-number" type="number" min="4" max="400" data-style="fontSize" value="${current.fontSize}" aria-label="Tamanho da fonte" /></div>
     <div class="wb-choices">${ALIGN.map((each) => choice('textAlign', each.value, current.textAlign, each.label, icon(each.icon, 16)))}</div>
     ${inside ? html`<div class="wb-choices">${VALIGN.map((each) => choice('verticalAlign', each.value, current.verticalAlign, each.label, icon(each.icon, 16)))}</div>` : ''}
@@ -264,16 +294,26 @@ const textInside = (board: Whiteboard, element: Element | undefined): TextElemen
 /** What the panel shows from: the first selected element (its text, for a shape that holds one), or the defaults. */
 const currentOf = (board: Whiteboard, selected: readonly Element[]): Current => {
   const [first] = selected
-  const textStyle = (first && isText(first) ? first : textInside(board, first)) ?? board.textStyle
-  return { ...board.style, ...board.textStyle, ...(first ?? {}), ...pickText(textStyle) } as Current
+  const text = first && isText(first) ? first : textInside(board, first)
+  const textColor = text?.strokeColor ?? board.textColor
+  return {
+    ...board.style,
+    ...board.textStyle,
+    ...(first ?? {}),
+    ...pickText(text ?? board.textStyle),
+    textColor
+  } as Current
 }
 
-const pickText = ({ fontSize, fontFamily, textAlign, verticalAlign, lineHeight }: TextStyle): TextStyle => ({
-  fontSize,
-  fontFamily,
-  textAlign,
-  verticalAlign,
-  lineHeight
+const pickText = (style: TextStyle): TextStyle => ({
+  fontSize: style.fontSize,
+  fontFamily: style.fontFamily,
+  textAlign: style.textAlign,
+  verticalAlign: style.verticalAlign,
+  lineHeight: style.lineHeight,
+  fontWeight: style.fontWeight,
+  fontStyle: style.fontStyle,
+  textDecoration: style.textDecoration
 })
 
 /** Which sections apply: to what is selected, or to what the tool in hand will draw. */
@@ -293,6 +333,10 @@ const shows = (selected: readonly Element[], tool: string): Shows => {
 
 const colorSections = (current: Current, show: Shows): Html => {
   const fill = show.shapes && current.backgroundColor !== TRANSPARENT
+  // Words alone take their colour in the Texto section.
+  if (!show.strokes) {
+    return html``
+  }
   return html`${section('Paleta', paletteRow(current))}
     ${section('Traço', colorRow('strokeColor', current.strokeColor))}
     ${show.shapes ? section('Fundo', colorRow('backgroundColor', current.backgroundColor)) : ''}

@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_STYLE, DEFAULT_TEXT, newLinear, newShape, newText } from './elements'
-import { layoutText, wrap } from './text-layout'
+import { layoutText, measure, plain, wrap } from './text-layout'
 
 describe('text layout', () => {
   it('breaks at the width, at typed breaks, and inside a word too long for the line', () => {
-    expect(wrap('a b c', 40, 20, 'mono')).toEqual(['a b', 'c'])
-    expect(wrap('linha\nnova', null, 20, 'mono')).toEqual(['linha', 'nova'])
-    expect(wrap('abcdefgh', 40, 20, 'mono').length).toBeGreaterThan(1)
+    expect(wrap('a b c', 40, 20, plain('mono'))).toEqual(['a b', 'c'])
+    expect(wrap('linha\nnova', null, 20, plain('mono'))).toEqual(['linha', 'nova'])
+    expect(wrap('abcdefgh', 40, 20, plain('mono')).length).toBeGreaterThan(1)
+  })
+
+  it('measures bold words wider, so a bold text wraps where it is drawn', () => {
+    const regular = measure('Pedido', 20, plain('sans'))
+    expect(measure('Pedido', 20, { ...plain('sans'), fontWeight: 'bold' })).toBeGreaterThan(regular)
   })
 
   it('puts the text of a shape inside it, centred, and turns it with the shape', () => {

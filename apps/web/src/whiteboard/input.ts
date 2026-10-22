@@ -44,7 +44,7 @@ const makeText = (board: Whiteboard, box: Box, containerId: string | null) => {
   const textStyle = containerId
     ? board.textStyle
     : { ...board.textStyle, textAlign: 'left' as const, verticalAlign: 'top' as const }
-  return newText(box, { ...board.style }, textStyle, board.scene.top, containerId)
+  return newText(box, { ...board.style, strokeColor: board.textColor }, textStyle, board.scene.top, containerId)
 }
 
 /** Text inside a shape or on an arrow: the one it has, or a new one. Enter does the same. */
@@ -270,14 +270,17 @@ export const bindInput = (board: Whiteboard): void => {
     board.focus()
     noteDoublePress(board, event)
     svg.setPointerCapture(event.pointerId)
+    board.altHeld = event.altKey
     board.gesture = start(board, event)
     board.redraw()
   })
   svg.addEventListener('pointermove', (event) => {
     pointer = board.toBoard(event)
+    board.altHeld = event.altKey
     onMove(board, event)
   })
   svg.addEventListener('pointerup', (event) => {
+    board.altHeld = event.altKey
     onUp(board, event)
     if (isDoubleClick(event)) {
       onDoublePress(board, event)

@@ -20,9 +20,20 @@ export type StylePatch = Partial<
 > & {
   link?: string | null
   locked?: boolean
+  /** The colour of the words alone: a text's, or the text inside a shape — never the shape's stroke. */
+  textColor?: string
 }
 
-const TEXT_KEYS = new Set(['fontSize', 'fontFamily', 'textAlign', 'verticalAlign', 'lineHeight'])
+const TEXT_KEYS = new Set([
+  'fontSize',
+  'fontFamily',
+  'textAlign',
+  'verticalAlign',
+  'lineHeight',
+  'fontWeight',
+  'fontStyle',
+  'textDecoration'
+])
 const ARROW_KEYS = new Set(['arrowType', 'startArrowhead', 'endArrowhead'])
 const STYLE_KEYS = new Set([
   'strokeColor',
@@ -57,6 +68,7 @@ const boundTexts = (board: Whiteboard, containers: readonly Element[]): TextElem
 export const applyStyle = (board: Whiteboard, patch: StylePatch): void => {
   board.style = { ...board.style, ...pick(patch, STYLE_KEYS) }
   board.textStyle = { ...board.textStyle, ...pick(patch, TEXT_KEYS) }
+  board.textColor = patch.textColor ?? board.textColor
   if ('locked' in patch) {
     board.scene.put(...board.selected().map((element) => ({ ...element, locked: patch.locked === true })))
   }
@@ -64,7 +76,7 @@ export const applyStyle = (board: Whiteboard, patch: StylePatch): void => {
   const texts = boundTexts(board, targets.filter(canHoldText))
   const ownText = {
     ...pick(patch, TEXT_KEYS),
-    ...(patch.strokeColor ? { strokeColor: patch.strokeColor } : {}),
+    ...(patch.textColor ? { strokeColor: patch.textColor } : {}),
     ...(patch.opacity !== undefined ? { opacity: patch.opacity } : {})
   }
   board.scene.step(() =>
@@ -80,6 +92,7 @@ export const applyStyle = (board: Whiteboard, patch: StylePatch): void => {
 const ownPatch = (element: Element, patch: StylePatch) => ({
   ...pick(patch, STYLE_KEYS),
   ...(isText(element) ? pick(patch, TEXT_KEYS) : {}),
+  ...(isText(element) && patch.textColor ? { strokeColor: patch.textColor } : {}),
   ...(isLinear(element) ? pick(patch, ARROW_KEYS) : {}),
   ...('link' in patch ? { link: patch.link ?? null } : {})
 })
