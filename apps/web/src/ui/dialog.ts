@@ -1,6 +1,6 @@
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-
+import { busy, submitButton } from '@/ui/busy'
 import { icon } from './icons'
 import { bindSelects } from './select'
 import { toast } from './toast'
@@ -79,16 +79,12 @@ export const openNotice = (title: string, body: Html): void => {
 }
 
 const _save = async (form: HTMLFormElement, options: FormDialog, close: () => void): Promise<void> => {
-  const button = form.querySelector('button[type="submit"]') as HTMLButtonElement
-  button.disabled = true
   try {
-    await options.onSubmit(new FormData(form))
+    await busy(submitButton(form), () => options.onSubmit(new FormData(form)))
     toast(options.done)
     close()
   } catch (refusal) {
     toast(refusalSentence(refusal), 'error')
-  } finally {
-    button.disabled = false
   }
 }
 

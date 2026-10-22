@@ -3,7 +3,7 @@ import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { fromTokens, mentionParts, mentionQuery, toTokens } from '@/lib/relations'
-
+import { busy, submitButton } from '@/ui/busy'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -98,7 +98,9 @@ export const bindComments = (root: HTMLElement, comments: readonly Comment[], co
   bindPaste(textarea, context)
   form.addEventListener('submit', (event) => {
     event.preventDefault()
-    void run(write.comment(context.cardId, toTokens(textarea.value.trim(), context.members)), context)
+    void busy(submitButton(form), () =>
+      run(write.comment(context.cardId, toTokens(textarea.value.trim(), context.members)), context)
+    )
   })
   section.addEventListener('click', (event) => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('[data-react], [data-edit-comment]')
@@ -133,7 +135,9 @@ const startEdit = (section: HTMLElement, comments: readonly Comment[], commentId
   editor.querySelector('[data-cancel]')?.addEventListener('click', () => context.refresh())
   editor.addEventListener('submit', (event) => {
     event.preventDefault()
-    void run(write.editComment(context.cardId, commentId, toTokens(textarea.value.trim(), context.members)), context)
+    void busy(submitButton(editor), () =>
+      run(write.editComment(context.cardId, commentId, toTokens(textarea.value.trim(), context.members)), context)
+    )
   })
 }
 

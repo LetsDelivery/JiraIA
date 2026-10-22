@@ -2,10 +2,10 @@ import { type Approval, type Proposal, proposalsRead, proposalsWrite } from '@/a
 import { type Html, html } from '@/lib/html'
 import { adjustableValues, adjusted } from '@/lib/proposals'
 import { refusalSentence } from '@/lib/refusal'
+import { busy } from '@/ui/busy'
 import { openFormDialog } from '@/ui/dialog'
 import { proposalCard } from '@/ui/proposal-card'
 import { toast } from '@/ui/toast'
-
 import type { View } from './view'
 
 type Tab = 'pending' | 'decided'
@@ -87,10 +87,7 @@ const _approve = async (button: HTMLButtonElement, article: HTMLElement, proposa
     toast('Marque ao menos uma mudança para aprovar, ou recuse a proposta.', 'error')
     return
   }
-  button.disabled = true
-  const result = await proposalsWrite.approve(proposal.id, approval).finally(() => {
-    button.disabled = false
-  })
+  const result = await busy(button, () => proposalsWrite.approve(proposal.id, approval))
   const failed = result.items.filter((item) => item.status === 'failed').length
   toast(failed ? `Proposta aplicada, com ${failed} mudança(s) que falharam.` : 'Proposta aplicada.')
 }

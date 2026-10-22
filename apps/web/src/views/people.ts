@@ -94,6 +94,7 @@ const invite = () =>
 /** The organization's people. Deactivating keeps the person in history (escopo-mvp 1.4). */
 export const peopleView: View = {
   path: '/pessoas',
+  skeleton: 'table',
   title: 'Pessoas',
   render: async () => {
     const [me, members] = await Promise.all([read.me(), read.members()])

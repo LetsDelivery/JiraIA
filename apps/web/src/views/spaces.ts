@@ -73,6 +73,7 @@ const toolbar = (spaces: readonly Space[]): Html => {
  */
 export const spacesView: View = {
   path: '/espacos',
+  skeleton: 'table',
   title: 'Gerenciar espaços',
   render: async () => {
     const [me, active, archived] = await Promise.all([read.me(), read.spaces(), read.archivedSpaces()])

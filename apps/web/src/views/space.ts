@@ -126,6 +126,7 @@ const loadWork = async (spaceId: string) => {
 /** One space, addressed by its key: its board, and who holds which role (1.1, 1.3, 3.1). */
 export const spaceView: View = {
   path: '/espacos/:spaceKey',
+  skeleton: 'board',
   title: 'Espaço',
   enter: async ({ spaceKey = '' }) => await visitSpace(await idOf(spaceKey)),
   render: async ({ spaceKey = '' }) => {

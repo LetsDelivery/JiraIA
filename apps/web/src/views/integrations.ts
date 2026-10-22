@@ -40,6 +40,7 @@ const _connect = () =>
  */
 export const integrationsView: View = {
   path: '/integracoes',
+  skeleton: 'table',
   title: 'Integrações',
   render: async () => {
     const [me, channels] = await Promise.all([read.me(), intakeRead.slackChannels()])

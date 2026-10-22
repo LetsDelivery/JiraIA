@@ -65,11 +65,13 @@ export const oauthConsentView: View = {
       for (const each of root.querySelectorAll<HTMLButtonElement>('[data-consent-answer]')) {
         each.disabled = true
       }
+      button.setAttribute('aria-busy', 'true')
       void oauthWrite
         .authorize({ ...parsed.request, allow: button.dataset.consentAnswer === 'allow' })
         .then(({ redirectTo }) => location.assign(redirectTo))
         .catch((refusal: unknown) => {
           toast(refusalSentence(refusal), 'error')
+          button.removeAttribute('aria-busy')
           for (const each of root.querySelectorAll<HTMLButtonElement>('[data-consent-answer]')) {
             each.disabled = false
           }

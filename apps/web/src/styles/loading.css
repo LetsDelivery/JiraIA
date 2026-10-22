@@ -1,0 +1,175 @@
+/*
+ * What waits for the API: a screen's skeleton while it loads (ui/skeleton.ts) and a button's spinner
+ * while its action is sent (ui/busy.ts). Grey shapes, no colour: nothing here says anything yet.
+ */
+
+/* ---------- Skeleton ---------- */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+.sk {
+  display: block;
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, var(--surface-hover), var(--bg), var(--surface-hover));
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.2s var(--ease) infinite;
+}
+
+@keyframes sk-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.sk-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.sk-title {
+  width: 40%;
+  height: 28px;
+}
+
+.sk-line {
+  height: 12px;
+}
+
+.sk-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.sk-card {
+  height: 64px;
+  border-radius: var(--radius-surface);
+}
+
+.sk-toolbar {
+  width: 30%;
+  height: 32px;
+}
+
+.sk-rows,
+.sk-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-row,
+.sk-table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sk-table-row .sk-line:first-child {
+  flex: none;
+}
+
+.sk-table-row .sk-line:not(:first-child) {
+  margin-left: auto;
+}
+
+/* A board's columns keep their width and are clipped, so a phone never scrolls the page sideways. */
+.sk-board {
+  display: flex;
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+.sk-column {
+  display: flex;
+  flex: 0 0 260px;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+}
+
+.sk-document {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-6);
+}
+
+.sk-document-main,
+.sk-document-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sk-document-main .sk-title {
+  width: 50%;
+}
+
+.sk-surface {
+  height: 60vh;
+  border-radius: var(--radius-surface);
+}
+
+@media (max-width: 1100px) {
+  .sk-document {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sk-document-panel {
+    display: none;
+  }
+}
+
+/* Boards and documents use the whole width, as the screens they stand in for do. */
+.view:has(.skeleton-board),
+.view:has(.skeleton-document) {
+  max-width: none;
+}
+
+/* ---------- Busy button ---------- */
+.button[aria-busy='true'] {
+  --busy: var(--fg-secondary);
+  position: relative;
+  color: transparent;
+  opacity: 1;
+}
+
+.button-primary[aria-busy='true'] {
+  --busy: var(--on-accent);
+}
+
+.button[aria-busy='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 14px;
+  height: 14px;
+  margin: auto;
+  border: 2px solid var(--busy);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busy-spin 0.7s linear infinite;
+}
+
+@keyframes busy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .button[aria-busy='true']::after {
+    animation: none;
+  }
+}

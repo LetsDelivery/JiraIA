@@ -96,6 +96,7 @@ const byDeadline = <T extends { dueAt: string | null }>(items: readonly T[]): T[
 
 export const accessQueueView: View = {
   path: '/acessos/fila',
+  skeleton: 'table',
   title: 'Fila de acessos',
   render: async () => {
     const requests = (await governanceRead.requests()).items
@@ -114,6 +115,7 @@ export const accessQueueView: View = {
 
 export const heldAccessView: View = {
   path: '/acessos/vigentes',
+  skeleton: 'table',
   title: 'Acessos vigentes',
   render: async () => {
     const held = await governanceRead.held()
@@ -131,6 +133,7 @@ export const heldAccessView: View = {
 
 export const accessSystemsView: View = {
   path: '/acessos/sistemas',
+  skeleton: 'table',
   title: 'Sistemas',
   render: async () => html`${await tabs('/acessos/sistemas')}${await systemsSection()}`,
   bind: (root) => {
@@ -141,6 +144,7 @@ export const accessSystemsView: View = {
 
 export const accessReviewsView: View = {
   path: '/acessos/revisoes',
+  skeleton: 'table',
   title: 'Revisões de acessos',
   render: async () => html`${await tabs('/acessos/revisoes')}${await reviewsSection()}`,
   bind: (root) => {
@@ -151,6 +155,7 @@ export const accessReviewsView: View = {
 
 export const accessReportView: View = {
   path: '/acessos/relatorio',
+  skeleton: 'table',
   title: 'Relatório de acessos',
   render: async () => html`${await tabs('/acessos/relatorio')}${await reportSection()}`,
   bind: (root) => {
