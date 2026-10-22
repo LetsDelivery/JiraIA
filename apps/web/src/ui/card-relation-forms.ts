@@ -2,7 +2,7 @@ import { type Relations, write } from '@/api/requests'
 import { refusalSentence } from '@/lib/refusal'
 import { parseLinkChoice } from '@/lib/relations'
 import { cardKeyIn } from '@/lib/search'
-
+import { busy, submitButton } from '@/ui/busy'
 import { bindCardPicker } from './card-picker'
 import type { ComposeForm, RelationsContext } from './card-relations'
 import { toast } from './toast'
@@ -76,8 +76,14 @@ const _bindSubtask = (section: HTMLElement, relations: Relations, context: Relat
     const data = new FormData(form)
     const title = String(data.get('title') ?? '').trim()
     if (form.dataset.mode === 'new' && title) {
-      void run(
-        write.createCard(context.card.spaceId, { title, parentId: context.card.id, typeId: String(data.get('typeId')) })
+      void busy(submitButton(form), () =>
+        run(
+          write.createCard(context.card.spaceId, {
+            title,
+            parentId: context.card.id,
+            typeId: String(data.get('typeId'))
+          })
+        )
       )
     }
   })
@@ -114,7 +120,7 @@ const _bindLink = (section: HTMLElement, context: RelationsContext, run: Run): v
     event.preventDefault()
     const key = cardKeyIn(input.value)
     if (key) {
-      void run(write.link(context.card.id, { ...choice(), key }))
+      void busy(submitButton(form), () => run(write.link(context.card.id, { ...choice(), key })))
     }
   })
   form.querySelector('[data-create-linked]')?.addEventListener('click', () => {

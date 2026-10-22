@@ -2,7 +2,7 @@ import { type Field, type FieldKind, read, type Workflow, write } from '@/api/re
 import { parseLabels } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-
+import { busy, submitButton } from '@/ui/busy'
 import { FIELD_KIND_LABEL } from './custom-fields'
 import { icon } from './icons'
 import { bindSelects, selectField } from './select'
@@ -126,7 +126,7 @@ const bindRow = (
   })
 }
 
-const bindAdd = (dialog: HTMLDialogElement, spaceId: string, run: (change: Promise<unknown>) => unknown) => {
+const bindAdd = (dialog: HTMLDialogElement, spaceId: string, run: (change: Promise<unknown>) => Promise<unknown>) => {
   const form = dialog.querySelector<HTMLFormElement>('[data-add-field]') as HTMLFormElement
   const options = form.querySelector<HTMLInputElement>('[data-new-options]') as HTMLInputElement
   form.addEventListener('select-change', (event) => {
@@ -141,13 +141,15 @@ const bindAdd = (dialog: HTMLDialogElement, spaceId: string, run: (change: Promi
     event.preventDefault()
     const data = new FormData(form)
     const kind = String(data.get('kind')) as FieldKind
-    run(
-      write.addField(spaceId, {
-        name: String(data.get('name')).trim(),
-        kind,
-        options: isSelection(kind) ? parseLabels(String(data.get('options') ?? '')) : [],
-        typeIds: chosenTypes(form, 'new')
-      })
+    void busy(submitButton(form), () =>
+      run(
+        write.addField(spaceId, {
+          name: String(data.get('name')).trim(),
+          kind,
+          options: isSelection(kind) ? parseLabels(String(data.get('options') ?? '')) : [],
+          typeIds: chosenTypes(form, 'new')
+        })
+      )
     )
   })
 }

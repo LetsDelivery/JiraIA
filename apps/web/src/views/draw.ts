@@ -129,6 +129,7 @@ let loaded: Loaded | undefined
 /** A folder, a page or a whiteboard of a space (escopo-mvp 5.1–5.7, ADR-0011). */
 export const drawContentView: View = {
   path: '/draw/:spaceId/:contentId',
+  skeleton: 'document',
   title: 'Conteúdo',
   area: 'draw',
   sidebar: async ({ spaceId = '', contentId = '' }) => await spaceSidebar(spaceId, contentId),

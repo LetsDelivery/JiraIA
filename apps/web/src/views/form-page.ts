@@ -5,11 +5,11 @@ import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 import { spacePath } from '@/lib/space-types'
+import { busy, submitButton } from '@/ui/busy'
 import { dateField } from '@/ui/date-picker'
 import { icon } from '@/ui/icons'
 import { selectField } from '@/ui/select'
 import { toast } from '@/ui/toast'
-
 import type { View } from './view'
 
 const label = (question: FormQuestion): Html =>
@@ -119,15 +119,12 @@ export const formPageView: View = {
       })
     root.querySelector('[data-answer-form]')?.addEventListener('submit', (event) => {
       event.preventDefault()
-      void intakeRead
-        .form(formId)
-        .then(async (form) => {
-          const answers = answersOf(root, form)
-          const result = await intakeWrite.submit(formId, answers, form.space.id)
-          lastSent = { formId, card: result.card }
-          ;(root.querySelector('.form-page-body') as HTMLElement).outerHTML = sent(form, result.card).value
-        })
-        .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+      void busy(submitButton(event.target as HTMLFormElement), async () => {
+        const form = await intakeRead.form(formId)
+        const result = await intakeWrite.submit(formId, answersOf(root, form), form.space.id)
+        lastSent = { formId, card: result.card }
+        ;(root.querySelector('.form-page-body') as HTMLElement).outerHTML = sent(form, result.card).value
+      }).catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
     })
   }
 }

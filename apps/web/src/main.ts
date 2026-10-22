@@ -18,6 +18,7 @@ import './styles/whiteboard.css'
 import './styles/account.css'
 import './styles/proposals.css'
 import './styles/oauth.css'
+import './styles/loading.css'
 import './styles/responsive.css'
 import '@fontsource/caveat/400.css'
 
@@ -35,6 +36,7 @@ import { spacePath } from '@/lib/space-types'
 import { accountMenu, type ThemeChoice } from '@/ui/account-menu'
 import { openCreateCard } from '@/ui/create-card'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
+import { holdPlace, markCurrent } from '@/ui/pending'
 import { bindSelects, closeSelectsOnOutsideClick } from '@/ui/select'
 import { openCreateSpace } from '@/ui/space-dialogs'
 import { bindStars } from '@/ui/star'
@@ -105,12 +107,24 @@ let ticket = 0
 /** The screen on display and its params, so leaving it lets it clean up (an open editor, a socket). */
 let shown: { route: View; key: string } | undefined
 
-const leaveIfChanged = (route: View, params: Record<string, string>) => {
+/** Whether another screen — or the same one with other params — is going in; the old one is left. */
+const leaveIfChanged = (route: View, params: Record<string, string>): boolean => {
   const key = JSON.stringify(params)
-  if (shown && (shown.route !== route || shown.key !== key)) {
+  const changed = !shown || shown.route !== route || shown.key !== key
+  if (shown && changed) {
     shown.route.leave?.()
   }
   shown = { route, key }
+  return changed
+}
+
+/**
+ * A navigation answers at once: the menu item is marked, and a screen slow to load shows its skeleton
+ * (`holdPlace`). A re-render after a change, or a tab of the same screen, keeps what is on screen.
+ */
+const holdScreen = (route: View, path: string, mine: number) => {
+  markCurrent(app.querySelector('.sidebar'), path)
+  return holdPlace(app.querySelector('#view'), route.skeleton, () => mine === ticket)
 }
 
 const renderSignIn = () => {
@@ -126,7 +140,7 @@ const renderApp = async (path: string, entering: boolean) => {
     navigate('/', true)
     return
   }
-  leaveIfChanged(match.route, match.params)
+  const placeholder = leaveIfChanged(match.route, match.params) ? holdScreen(match.route, path, mine) : undefined
   if (entering) {
     await match.route.enter?.(match.params).catch(() => undefined)
   }
@@ -141,6 +155,7 @@ const renderApp = async (path: string, entering: boolean) => {
     noticesRead.unread().catch(() => ({ unread: 0 })),
     proposalsRead.pendingCount().catch(() => ({ pending: 0 }))
   ])
+  await placeholder?.settle()
   if (mine !== ticket) {
     return
   }

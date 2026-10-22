@@ -1,5 +1,6 @@
 import type { Database } from '@jiraia/db'
 import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, ne, type SQL, sql } from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 import { contents, contentUpdates, drawSpaces } from '../schema.js'
 import { contentVisits } from '../schema-intake.js'
@@ -17,6 +18,13 @@ const { document: _document, ...contentColumns } = getTableColumns(contents)
  * or a run of updates of any size is read in several statements instead of failing in one.
  */
 export const PIECE = 500_000
+
+/**
+ * One piece of a long text column, from the 1-based character `from`. The Data API binds a JS number
+ * as a `bigint`, and Postgres has no `substr(text, bigint, bigint)`, so both are cast to `int`.
+ */
+export const pieceOf = (column: AnyPgColumn, from: number): SQL<string> =>
+  sql<string>`substr(${column}, ${from}::int, ${PIECE}::int)`
 
 /** Consecutive updates whose sizes add up to at most `PIECE`; one larger than that stands alone. */
 export const batchUnder = <T extends { length: number }>(items: readonly T[], limit = PIECE): T[][] => {
@@ -114,7 +122,7 @@ export class ContentRepository {
     let document = ''
     for (let from = 1; from <= length; from += PIECE) {
       const [piece] = await db
-        .select({ text: sql<string>`substr(${contents.document}, ${from}, ${PIECE})` })
+        .select({ text: pieceOf(contents.document, from) })
         .from(contents)
         .where(eq(contents.id, contentId))
       document += piece?.text ?? ''
@@ -219,7 +227,7 @@ export class ContentRepository {
     let update = ''
     for (let from = 1; from <= length; from += PIECE) {
       const [piece] = await this.db
-        .select({ text: sql<string>`substr(${contentUpdates.update}, ${from}, ${PIECE})` })
+        .select({ text: pieceOf(contentUpdates.update, from) })
         .from(contentUpdates)
         .where(eq(contentUpdates.id, id))
       update += piece?.text ?? ''

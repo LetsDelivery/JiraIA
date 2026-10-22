@@ -115,6 +115,7 @@ const groupCard = (group: Group): Html => html`
 
 export const groupsView: View = {
   path: '/grupos',
+  skeleton: 'table',
   title: 'Grupos',
   render: async () => {
     const [me, groups] = await Promise.all([read.me(), accessRead.groups()])

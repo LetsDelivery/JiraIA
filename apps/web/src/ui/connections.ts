@@ -1,7 +1,7 @@
 import { type Connection, oauthWrite } from '@/api/oauth'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-
+import { busy } from '@/ui/busy'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -45,13 +45,8 @@ export const bindConnections = (root: HTMLElement): void => {
     if (!button || !id) {
       return
     }
-    button.disabled = true
-    void oauthWrite
-      .revoke(id)
+    void busy(button, () => oauthWrite.revoke(id))
       .then(() => toast('Aplicativo desconectado.'))
-      .catch((refusal: unknown) => {
-        button.disabled = false
-        toast(refusalSentence(refusal), 'error')
-      })
+      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
   })
 }

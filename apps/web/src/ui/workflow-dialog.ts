@@ -2,7 +2,7 @@ import { read, type State, type Workflow, write } from '@/api/requests'
 import { STATE_GROUP_LABEL, STATE_GROUPS } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-
+import { busy, submitButton } from '@/ui/busy'
 import { icon } from './icons'
 import { bindSelects, selectField } from './select'
 import { toast } from './toast'
@@ -92,8 +92,11 @@ const bind = (dialog: HTMLDialogElement, spaceId: string, workflow: Workflow, cl
   }
   dialog.querySelector<HTMLFormElement>('[data-add-state]')?.addEventListener('submit', (event) => {
     event.preventDefault()
-    const data = new FormData(event.target as HTMLFormElement)
-    void run(write.addState(spaceId, String(data.get('name')).trim(), String(data.get('group'))))
+    const form = event.target as HTMLFormElement
+    const data = new FormData(form)
+    void busy(submitButton(form), () =>
+      run(write.addState(spaceId, String(data.get('name')).trim(), String(data.get('group'))))
+    )
   })
 }
 

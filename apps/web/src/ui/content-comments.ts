@@ -7,7 +7,7 @@ import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { mentionParts, toTokens } from '@/lib/relations'
-
+import { busy, submitButton } from '@/ui/busy'
 import { toast } from './toast'
 
 const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
@@ -105,7 +105,7 @@ const send = (
     .comment(context.contentId, { ...input, body: toTokens(input.body, context.members) })
     .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
 
-const onSubmit = (context: CommentsContext, form: HTMLFormElement): void => {
+const onSubmit = async (context: CommentsContext, form: HTMLFormElement): Promise<void> => {
   const text = String(new FormData(form).get('body')).trim()
   if (!text) {
     return
@@ -113,11 +113,11 @@ const onSubmit = (context: CommentsContext, form: HTMLFormElement): void => {
   if (form.hasAttribute('data-inline') && pending) {
     const { anchorId, quote } = pending
     pending = undefined
-    void send(context, { body: text, anchorId, quote })
+    await send(context, { body: text, anchorId, quote })
   } else if (form.dataset.reply) {
-    void send(context, { body: text, parentId: form.dataset.reply })
+    await send(context, { body: text, parentId: form.dataset.reply })
   } else {
-    void send(context, { body: text })
+    await send(context, { body: text })
   }
 }
 
@@ -155,7 +155,8 @@ export const bindCommentsPanel = (root: HTMLElement, context: CommentsContext, r
   }
   panel?.addEventListener('submit', (event) => {
     event.preventDefault()
-    onSubmit(context, event.target as HTMLFormElement)
+    const form = event.target as HTMLFormElement
+    void busy(submitButton(form), () => onSubmit(context, form))
   })
   panel?.addEventListener('click', (event) => {
     const target = (event.target as HTMLElement).closest<HTMLElement>(

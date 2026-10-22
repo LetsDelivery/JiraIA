@@ -1,6 +1,6 @@
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-
+import { busy, submitButton } from '@/ui/busy'
 import { bindDatePickers } from './date-picker'
 import { icon } from './icons'
 import { bindSelects } from './select'
@@ -69,15 +69,11 @@ export const openEditorDialog = (options: EditorDialog): void => {
 }
 
 const _save = async (dialog: HTMLDialogElement, options: EditorDialog, close: () => void): Promise<void> => {
-  const button = dialog.querySelector('button[type="submit"]') as HTMLButtonElement
-  button.disabled = true
   try {
-    await options.onSubmit()
+    await busy(submitButton(dialog.querySelector('form')), () => options.onSubmit())
     toast(options.done)
     close()
   } catch (refusal) {
     toast(refusalSentence(refusal), 'error')
-  } finally {
-    button.disabled = false
   }
 }

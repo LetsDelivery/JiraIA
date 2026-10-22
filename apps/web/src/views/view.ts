@@ -1,5 +1,6 @@
 import type { Html } from '@/lib/html'
 import type { Params } from '@/lib/router'
+import type { SkeletonKind } from '@/ui/skeleton'
 
 /**
  * One screen: markup from data, then the listeners its markup needs.
@@ -12,6 +13,8 @@ export type View = {
   title: string
   /** The product the screen belongs to — JiraIA's cards or LET’S Draw AI's pages (ADR-0010). */
   area?: 'jiraia' | 'draw'
+  /** The shape shown while the screen loads (ui/skeleton.ts); `list` when it says none. */
+  skeleton?: SkeletonKind
   /** Runs once when the screen is navigated to — not on the re-renders that follow. */
   enter?: (params: Params) => Promise<void>
   render: (params: Params) => Promise<Html>
