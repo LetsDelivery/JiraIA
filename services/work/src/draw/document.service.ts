@@ -3,7 +3,7 @@ import type { Database } from '@jiraia/db'
 import type { Caller } from '@jiraia/http'
 
 import type { AuditTrail, Changes } from '../audit/audit.js'
-import type { ContentRepository } from './content.repository.js'
+import { type ContentRepository, PIECE } from './content.repository.js'
 import {
   type ContentRow,
   type DerivedContent,
@@ -29,6 +29,11 @@ type Deps = {
 
 /** Past this many stored updates, they are merged back into the page's document (ADR-0009). */
 const COMPACT_AFTER = 50
+/**
+ * A stored document longer than this, in base64, is merged again when the page is opened: one written
+ * before merges collected what was deleted grows with every change ever made (ADR-0009).
+ */
+const BLOATED = PIECE
 /** A save takes a new version when the last one is older than this, or someone else's (5.4). */
 const VERSION_EVERY_MS = 10 * 60_000
 
@@ -41,15 +46,19 @@ export class DocumentService {
 
   async state(caller: Caller, contentId: string): Promise<{ state: string }> {
     const { content } = await this.deps.drawGate.openDocument(caller, contentId, 'read')
+    if ((await this.deps.contents.documentLength(content.id)) > BLOATED) {
+      await this._compact(content.id)
+    }
     return { state: await this.currentState(content.id) }
   }
 
   /** Updates first, then the document: a compaction in between leaves updates in both, never neither. */
   async currentState(contentId: string): Promise<string> {
     const updates = await this.deps.contents.updates(contentId)
-    const content = await this._page(contentId)
+    await this._page(contentId)
+    const document = await this.deps.contents.document(contentId)
     return mergeState(
-      content.document,
+      document,
       updates.map((each) => each.update)
     )
   }
@@ -71,8 +80,7 @@ export class DocumentService {
       update,
       createdAt: now
     })
-    const stored = await this.deps.contents.updates(contentId)
-    if (stored.length > COMPACT_AFTER) {
+    if ((await this.deps.contents.pendingCount(contentId)) > COMPACT_AFTER) {
       await this._compact(contentId)
     }
   }
@@ -80,7 +88,7 @@ export class DocumentService {
   /** The page's row is locked, so two compactions never write over each other's document. */
   private async _compact(contentId: string): Promise<void> {
     await this.deps.db.transaction(async (tx) => {
-      const document = await this.deps.contents.lockDocument(tx, contentId)
+      const document = await this.deps.contents.document(contentId, tx)
       const updates = await this.deps.contents.updates(contentId)
       const merged = mergeState(
         document,

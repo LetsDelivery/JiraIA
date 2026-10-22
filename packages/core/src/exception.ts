@@ -124,3 +124,22 @@ export const isRetryable = (error: unknown): boolean => {
 
   return error.code === 'DEPENDENCY_UNAVAILABLE' || error.code === 'RATE_LIMITED'
 }
+
+/** How deep a chain of causes is followed: past this, a cycle or a pathological chain is cut. */
+const CAUSE_DEPTH = 5
+
+/**
+ * An error as a log line: its message and, each in turn, what caused it — where a driver such as
+ * Drizzle keeps the database's own reason behind its "Failed query".
+ *
+ * @example describeError(new Error('Failed query', { cause: new Error('size limit') }))   // 'Error: Failed query — caused by Error: size limit'
+ */
+export const describeError = (error: unknown): string => {
+  const parts: string[] = []
+  let current: unknown = error
+  while (current !== undefined && current !== null && parts.length < CAUSE_DEPTH) {
+    parts.push(String(current))
+    current = current instanceof Error ? current.cause : undefined
+  }
+  return parts.join(' — caused by ')
+}

@@ -6,7 +6,8 @@ Date: 2026-10-16
 
 Accepted. Amends ADR-0003, which expected `pages` to be its own service. Amended by ADR-0011: pages
 belong to LET’S Draw AI's own spaces, beside folders and whiteboards, and every member edits them.
-Amended by ADR-0025: the WebSocket API invokes the stack's general function.
+Amended by ADR-0025: the WebSocket API invokes the stack's general function. Amended by ADR-0027:
+the state is merged by applying it to a `Y.Doc`, read in pieces, and sent by the browser in batches.
 
 ## Context
 

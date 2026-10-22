@@ -4,6 +4,8 @@ import * as Y from 'yjs'
 import { drawRead, drawWrite } from '@/api/draw'
 import { fromBase64, toBase64 } from '@/lib/base64'
 
+import { UpdateBatcher } from './batcher'
+
 export type ProviderStatus = 'connecting' | 'online' | 'offline'
 
 /** Below API Gateway's 128 KB per message, with room for the JSON around the update. */
@@ -13,9 +15,10 @@ const RETRY_MS = [1000, 2000, 5000, 10_000]
 type Message = { type: 'update' | 'awareness'; update: string } | { type: 'reload' }
 
 /**
- * A page's or whiteboard's Y.Doc, kept in step with everyone else's (ADR-0009). The state is loaded over HTTP; each
- * local change goes out on the realtime WebSocket and each remote one comes in. A change made while
- * the socket is down waits, and the page is loaded again when it comes back, so nothing is lost.
+ * A page's or whiteboard's Y.Doc, kept in step with everyone else's (ADR-0009). The state is loaded over HTTP; local
+ * changes go out on the realtime WebSocket, gathered into one update every `BATCH_MS`, and each remote
+ * one comes in. A change made while the socket is down waits, and the page is loaded again when it
+ * comes back, so nothing is lost.
  */
 export class ContentProvider {
   readonly awareness: Awareness
@@ -23,6 +26,7 @@ export class ContentProvider {
   private pending: Uint8Array[] = []
   private attempt = 0
   private stopped = false
+  private readonly batcher: UpdateBatcher
 
   constructor(
     private readonly options: {
@@ -33,6 +37,11 @@ export class ContentProvider {
     }
   ) {
     this.awareness = new Awareness(options.doc)
+    this.batcher = new UpdateBatcher(
+      options.doc,
+      (update) => this.sendUpdate(update),
+      () => this.socket?.readyState === WebSocket.OPEN
+    )
     options.doc.on('update', this.onDocUpdate)
     this.awareness.on('update', this.onAwarenessUpdate)
   }
@@ -44,6 +53,8 @@ export class ContentProvider {
   }
 
   destroy(): void {
+    this.batcher.flush()
+    this.batcher.destroy()
     this.stopped = true
     removeAwarenessStates(this.awareness, [this.options.doc.clientID], 'local')
     this.socket?.close()
@@ -55,7 +66,7 @@ export class ContentProvider {
   private async load(): Promise<void> {
     const { state } = await drawRead.document(this.options.contentId)
     if (state) {
-      Y.applyUpdate(this.options.doc, fromBase64(state), this)
+      this.batcher.receive(() => Y.applyUpdate(this.options.doc, fromBase64(state), this))
     }
   }
 
@@ -77,6 +88,7 @@ export class ContentProvider {
     this.attempt = 0
     this.options.onStatus('online')
     await this.load()
+    this.batcher.flush()
     if (this.pending.length > 0) {
       this.sendUpdate(Y.mergeUpdates(this.pending.splice(0)))
     }
@@ -101,20 +113,16 @@ export class ContentProvider {
     if (message.type === 'reload') {
       void this.load()
     } else if (message.type === 'update') {
-      Y.applyUpdate(this.options.doc, fromBase64(message.update), this)
+      this.batcher.receive(() => Y.applyUpdate(this.options.doc, fromBase64(message.update), this))
     } else {
       applyAwarenessUpdate(this.awareness, fromBase64(message.update), this)
     }
   }
 
-  private readonly onDocUpdate = (update: Uint8Array, origin: unknown): void => {
-    if (origin === this || !this.options.canWrite) {
-      return
-    }
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.sendUpdate(update)
-    } else {
-      this.pending.push(update)
+  /** A local change waits for the batch; one made offline goes out when the socket opens again. */
+  private readonly onDocUpdate = (_update: Uint8Array, origin: unknown): void => {
+    if (origin !== this && this.options.canWrite) {
+      this.batcher.changed()
     }
   }
 

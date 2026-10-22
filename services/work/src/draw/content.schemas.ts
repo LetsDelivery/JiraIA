@@ -3,8 +3,14 @@ import { z } from 'zod'
 
 import type { contentComments, contents, contentVersions } from '../schema.js'
 
-export type ContentRow = typeof contents.$inferSelect
-export type VersionRow = typeof contentVersions.$inferSelect
+/**
+ * A content or a version as it is read: never its Yjs `document`, which may pass the Data API's 1 MiB
+ * on its own and is read apart, in pieces (ADR-0009). Written whole, as the `New…` rows.
+ */
+export type ContentRow = Omit<typeof contents.$inferSelect, 'document'>
+export type NewContentRow = typeof contents.$inferInsert
+export type VersionRow = Omit<typeof contentVersions.$inferSelect, 'document'>
+export type NewVersionRow = typeof contentVersions.$inferInsert
 export type ContentCommentRow = typeof contentComments.$inferSelect
 
 const titleSchema = z.string().trim().min(1).max(255)

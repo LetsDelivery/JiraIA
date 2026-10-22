@@ -547,10 +547,12 @@ test('an arrow ties where it is aimed on the outline, and with Alt it ties to no
   await newBoard(page, 'Pontas livres')
   await page.keyboard.press('o')
   await drag(page, [320, 160], [480, 260])
+  await expect(shapeAt(page, 0)).toBeVisible()
   const ellipse = (await shapeAt(page, 0).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }
 
   await page.keyboard.press('a')
   await drag(page, [750, 450], [470, 172])
+  await expect(shapeAt(page, 1)).toBeVisible()
   const aimed = (await shapeAt(page, 1).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }
   expect(aimed.y, 'the tip sits on the upper right of the outline, not the middle of its side').toBeLessThan(
     ellipse.y + ellipse.height / 4
@@ -560,14 +562,16 @@ test('an arrow ties where it is aimed on the outline, and with Alt it ties to no
   await page.keyboard.down('Alt')
   await drag(page, [750, 600], [482, 210])
   await page.keyboard.up('Alt')
+  await expect(shapeAt(page, 2)).toBeVisible()
   const loose = await shapeAt(page, 2).boundingBox()
   await page.keyboard.press('Escape')
   await drag(page, [400, 175], [400, 375])
-  await expect(shapeAt(page, 0)).toHaveCount(1)
-  expect(await shapeAt(page, 2).boundingBox(), 'the loose arrow stays where it was dropped').toEqual(loose)
-  expect((await shapeAt(page, 1).boundingBox())?.y ?? 0, 'the tied arrow follows the shape').toBeGreaterThan(
-    aimed.y + 100
-  )
+  await expect
+    .poll(async () => await shapeAt(page, 2).boundingBox(), { message: 'the loose arrow stays where it was dropped' })
+    .toEqual(loose)
+  await expect
+    .poll(async () => (await shapeAt(page, 1).boundingBox())?.y ?? 0, { message: 'the tied arrow follows the shape' })
+    .toBeGreaterThan(aimed.y + 100)
 })
 
 test('a text takes its own colour, bold, italic, underline and a size typed in', async ({ page }) => {

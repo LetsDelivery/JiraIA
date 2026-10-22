@@ -1,4 +1,4 @@
-import { JiraiaException } from '@jiraia/core'
+import { describeError, JiraiaException } from '@jiraia/core'
 import type { JiraiaLogger } from '@jiraia/logger'
 import type { APIGatewayProxyResultV2, APIGatewayProxyWebsocketEventV2 } from 'aws-lambda'
 
@@ -30,7 +30,7 @@ export const handleRealtime = async (
     return { statusCode: 200 }
   } catch (error) {
     const statusCode = error instanceof JiraiaException ? error.status : 500
-    logger.warn('Realtime event refused', { routeKey, connectionId, statusCode, error: String(error) })
+    logger.warn('Realtime event refused', { routeKey, connectionId, statusCode, error: describeError(error) })
     return { statusCode }
   }
 }

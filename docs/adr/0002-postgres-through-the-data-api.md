@@ -6,7 +6,8 @@ Date: 2026-10-15
 
 Accepted. Deviates from uselets ADR-0002 (one DynamoDB table per service). Amended by ADR-0025: the
 cluster is in the root `template.yml`, and the migrations are applied by the stack's `Deploy` custom
-resource.
+resource. Amended by ADR-0027: no row is read with a Yjs document, and the local `pg` wire refuses a
+result over the Data API's 1 MiB.
 
 ## Context
 

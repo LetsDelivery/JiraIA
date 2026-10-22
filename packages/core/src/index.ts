@@ -3,6 +3,7 @@ export { readEnv } from './env.js'
 export {
   ConflictException,
   DependencyUnavailableException,
+  describeError,
   type FailureCode,
   type FailureDetails,
   ForbiddenException,
