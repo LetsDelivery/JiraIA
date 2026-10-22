@@ -6,22 +6,19 @@ import type { Whiteboard } from './whiteboard'
 
 /**
  * Drawing and reshaping lines and arrows (Etapa 4d-b, ADR-0017). An end dropped on or near a shape ties
- * to the nearest middle of its sides, and the shape is lit while the end is over it; a point dragged in
- * the middle reshapes the line, and the small handle between two points adds one.
+ * to it where it is dropped (see `bindings.ts`), and the shape is lit while the end is over it; with Alt
+ * held it ties to nothing. A point dragged in the middle reshapes the line, and the small handle between
+ * two points adds one.
  */
 export type LinearGesture = { kind: 'linear'; id: string; from: Vec; start: Binding | null; end: Binding | null }
 export type PointGesture = { kind: 'point'; id: string; index: number; end: Binding | null }
 
 const CLICK = 4
 
-/** Where an end goes: on the anchor of the shape under it, or where the pointer is. */
+/** Where an end goes: on the anchor of the shape under it, or where the pointer is — always, with Alt. */
 const endAt = (board: Whiteboard, at: Vec, skip: string, avoid?: string): { point: Vec; binding: Binding | null } => {
-  const binding = bindingAt(
-    board.hittable().filter((element) => element.id !== avoid),
-    at,
-    skip,
-    board.zoom
-  )
+  const candidates = board.altHeld ? [] : board.hittable().filter((element) => element.id !== avoid)
+  const binding = bindingAt(candidates, at, skip, board.zoom)
   const target = binding ? board.scene.get(binding.elementId) : undefined
   board.hover = target?.id ?? null
   return { point: target && binding ? anchorPoint(target, binding.anchor) : pointToGrid(at, board.grid), binding }

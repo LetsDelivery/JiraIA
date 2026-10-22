@@ -19,6 +19,9 @@ export type StrokeStyle = 'solid' | 'dashed' | 'dotted'
 export type FontFamily = 'hand' | 'sans' | 'mono'
 export type TextAlign = 'left' | 'center' | 'right'
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
+export type FontWeight = 'normal' | 'bold'
+export type FontStyle = 'normal' | 'italic'
+export type TextDecoration = 'none' | 'underline' | 'line-through'
 export type Arrowhead =
   | 'arrow'
   | 'triangle'
@@ -58,6 +61,9 @@ export type TextStyle = {
   textAlign: TextAlign
   verticalAlign: VerticalAlign
   lineHeight: number
+  fontWeight: FontWeight
+  fontStyle: FontStyle
+  textDecoration: TextDecoration
 }
 
 export type ElementBase = Style & {
@@ -146,7 +152,10 @@ export const DEFAULT_TEXT: TextStyle = {
   fontFamily: 'hand',
   textAlign: 'center',
   verticalAlign: 'middle',
-  lineHeight: 1.25
+  lineHeight: 1.25,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textDecoration: 'none'
 }
 
 export const newSeed = (): number => Math.floor(Math.random() * 2 ** 31)
@@ -308,6 +317,9 @@ const cleanText = (raw: Raw) => ({
   textAlign: oneOf(raw.textAlign, ['left', 'center', 'right'], 'left'),
   verticalAlign: oneOf(raw.verticalAlign, ['top', 'middle', 'bottom'], 'top'),
   lineHeight: Math.min(4, Math.max(0.8, num(raw.lineHeight, 1.25))),
+  fontWeight: oneOf(raw.fontWeight, ['normal', 'bold'], 'normal'),
+  fontStyle: oneOf(raw.fontStyle, ['normal', 'italic'], 'normal'),
+  textDecoration: oneOf(raw.textDecoration, ['none', 'underline', 'line-through'], 'none'),
   containerId: typeof raw.containerId === 'string' ? raw.containerId : null,
   autoResize: raw.autoResize !== false
 })

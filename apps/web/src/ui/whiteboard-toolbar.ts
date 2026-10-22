@@ -10,14 +10,14 @@ import { openExport, openImport, openSaveVersion } from './whiteboard-file'
  * The whiteboard's tools (Etapa 4d, ADR-0017), floating over the top of the canvas, and the zoom and
  * history over its bottom corner. Every button says what it does and its key.
  */
-const TOOLS: { tool: Tool; label: string; icon: IconName }[] = [
+const TOOLS: { tool: Tool; label: string; icon: IconName; hint?: string }[] = [
   { tool: 'hand', label: 'Mão: arrastar o quadro', icon: 'handStop' },
   { tool: 'select', label: 'Selecionar e mover', icon: 'pointer' },
   { tool: 'rectangle', label: 'Retângulo', icon: 'square' },
   { tool: 'diamond', label: 'Losango', icon: 'squareRotated' },
   { tool: 'ellipse', label: 'Elipse', icon: 'circle' },
-  { tool: 'arrow', label: 'Seta', icon: 'arrowNarrowRight' },
-  { tool: 'line', label: 'Linha', icon: 'line' },
+  { tool: 'arrow', label: 'Seta', icon: 'arrowNarrowRight', hint: 'segure Alt para não conectar' },
+  { tool: 'line', label: 'Linha', icon: 'line', hint: 'segure Alt para não conectar' },
   { tool: 'freedraw', label: 'Caneta', icon: 'pencil' },
   { tool: 'text', label: 'Texto', icon: 'typography' },
   { tool: 'image', label: 'Imagem', icon: 'photo' },
@@ -31,11 +31,11 @@ const keysOf = (tool: Tool): string =>
     .map(([key]) => key.toUpperCase())
     .join(' ou ')
 
-const toolButton = (board: Whiteboard, { tool, label, icon: name }: (typeof TOOLS)[number]): Html => {
+const toolButton = (board: Whiteboard, { tool, label, icon: name, hint }: (typeof TOOLS)[number]): Html => {
   const usable = board.editable || tool === 'select' || tool === 'hand'
   const keys = keysOf(tool)
   return html`<button type="button" class="wb-tool" data-tool="${tool}" aria-pressed="${board.tool === tool}" aria-label="${label}"
-    title="${label}${keys ? ` (${keys})` : ''}" ${usable ? '' : html`disabled`}>${icon(name, 18)}</button>`
+    title="${label}${keys ? ` (${keys})` : ''}${hint ? ` — ${hint}` : ''}" ${usable ? '' : html`disabled`}>${icon(name, 18)}</button>`
 }
 
 const MOD = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'
