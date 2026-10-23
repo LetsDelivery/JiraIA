@@ -51,10 +51,20 @@ test('a mention reaches the bell, opens the card, and is archived', async ({ pag
 test('a person chooses what reaches them by e-mail', async ({ page }) => {
   await signIn(page, 'ana@uselets.com')
   await page.goto('/notificacoes?aba=preferencias')
+  await expect(page.getByRole('combobox', { name: 'Como avisar: Comentários' })).toContainText('JiraIA e e-mail')
   await page.getByRole('combobox', { name: 'Como avisar: Comentários' }).click()
-  await page.getByRole('option', { name: 'JiraIA e e-mail diário' }).click()
+  await page.getByRole('option', { name: 'Só no JiraIA' }).click()
   await expect(page.getByText('Preferência salva.')).toBeVisible()
 
+  // The last row's menu floats and closes on scroll, so it is answered with the keyboard, as a listbox is.
+  const weekly = page.getByRole('combobox', { name: 'Como avisar: Resumo semanal' })
+  await weekly.scrollIntoViewIfNeeded()
+  await weekly.click()
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['Receber por e-mail', 'Não receber'])
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+
   await page.reload()
-  await expect(page.getByRole('combobox', { name: 'Como avisar: Comentários' })).toContainText('JiraIA e e-mail diário')
+  await expect(page.getByRole('combobox', { name: 'Como avisar: Comentários' })).toContainText('Só no JiraIA')
+  await expect(page.getByRole('combobox', { name: 'Como avisar: Resumo semanal' })).toContainText('Não receber')
 })

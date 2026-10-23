@@ -127,8 +127,10 @@ export type Overrides = {
   writer?: DraftWriter
   /** Where committed events go (ADR-0014): EventBridge in AWS; the suites may hold them instead. */
   publisher?: EventPublisher
-  /** Who sends the daily summary: SES in AWS, a folder locally, a list in the suites. */
+  /** Who sends the e-mails: SES in AWS, a folder locally, a list in the suites. */
   mailer?: Mailer
+  /** How long a card's changes gather before their e-mail goes; the harness and the suites pass 0. */
+  mailWindowMs?: number
   /** Who delivers outgoing webhooks: the shared client, the harness's printer, or MSW in the suites. */
   webhookHttp?: HttpClient
   /** Who posts to Slack: incoming webhooks through the shared client, or a suite's own. */
@@ -279,7 +281,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...services,
     ...intake,
     notifications: notices.notifications,
-    digest: notices.digest,
+    mail: notices.mail,
     tokens: outward.tokens,
     webhooks: outward.webhooks,
     webhookSender: outward.sender,

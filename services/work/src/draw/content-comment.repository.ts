@@ -27,6 +27,12 @@ export class ContentCommentRepository {
     return row
   }
 
+  /** A comment by its id alone — a notice reads it from an event, which names only the comment. */
+  async byId(commentId: string): Promise<ContentCommentRow | undefined> {
+    const [row] = await this.db.select().from(contentComments).where(eq(contentComments.id, commentId))
+    return row
+  }
+
   async insert(tx: Database, row: ContentCommentRow): Promise<void> {
     await tx.insert(contentComments).values(row)
   }

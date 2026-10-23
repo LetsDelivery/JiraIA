@@ -1,5 +1,5 @@
 import type { CardWithPeople } from '../cards/schemas.js'
-import { type SummaryLine, summaryLine } from '../notifications/email-copy.js'
+import { type SummaryLine, summaryLine } from '../notifications/notice-copy.js'
 import type { NotificationWithActor } from '../notifications/notification.repository.js'
 import type { Block } from './slack-api.js'
 

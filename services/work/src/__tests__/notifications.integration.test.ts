@@ -5,11 +5,10 @@ import { answer, apiEvent, type Call, googleClaims, testDatabase, truncateSchema
 
 import { buildService } from '../container.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
-import { InMemoryMailer } from '../notifications/mailer.js'
 
 /**
- * Etapa 5b (escopo-mvp 4.6): who gets a notice for what, the inbox and its boxes, the preferences,
- * and the daily summary — through the API, with `drain()` standing in for the bus.
+ * Etapa 5b (escopo-mvp 4.6): who gets a notice for what, the inbox and its boxes and the
+ * preferences — through the API, with `drain()` standing in for the bus. The e-mails: mail.integration.test.ts.
  */
 const db = await testDatabase('services/work/drizzle')
 const config = {
@@ -25,7 +24,6 @@ type Notice = { id: string; kind: string; actor: { name: string }; data: Record<
 type Inbox = { items: Notice[]; unread: number }
 
 let service: ReturnType<typeof buildService>
-let mailer: InMemoryMailer
 let spaceId: string
 let states: { id: string; name: string }[]
 const people: Record<string, string> = {}
@@ -62,8 +60,7 @@ const newCard = async (title: string, by = admin) =>
 
 beforeEach(async () => {
   await truncateSchema(db, 'work')
-  mailer = new InMemoryMailer()
-  service = buildService(config, { db, mailer })
+  service = buildService(config, { db })
   await bootstrapOrganization(
     { db, clock: { now: () => new Date('2026-10-17T12:00:00Z') }, ids: uuidGenerator },
     { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
@@ -194,51 +191,5 @@ describe('the inbox', () => {
   it('keeps each inbox its owner’s', async () => {
     const id = await mentionGil()
     expect((await ana({ method: 'PATCH', path: `/me/notifications/${id}`, body: { read: true } })).status).toBe(404)
-  })
-})
-
-describe('the daily summary', () => {
-  it('mails each person what they chose by e-mail and have not read, once', async () => {
-    const card = await newCard('Rastreio')
-    await ok(
-      ana({
-        method: 'POST',
-        path: `/cards/${card.id}/comments`,
-        body: { body: `<@${people['gil@uselets.com']}> revisa` }
-      }),
-      201
-    )
-    await service.drain()
-
-    expect(await service.digest.run()).toEqual({ sent: 1, failed: 0 })
-    expect(mailer.sent).toEqual([
-      expect.objectContaining({
-        to: 'gil@uselets.com',
-        subject: 'JiraIA: 1 novidade para você',
-        text: expect.stringContaining(`Ana mencionou você em ${card.key}`)
-      })
-    ])
-    expect(mailer.sent[0]?.html).toContain(`https://jiraia.test/espacos/PRD?card=${card.key}`)
-    expect(await service.digest.run()).toEqual({ sent: 0, failed: 0 })
-  })
-
-  it('does not mail what was read first, nor what the person keeps to the panel', async () => {
-    await ok(
-      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'commented', channel: 'in_app' } })
-    )
-    const card = await newCard('Cotação')
-    await ok(
-      ana({
-        method: 'POST',
-        path: `/cards/${card.id}/comments`,
-        body: { body: `<@${people['gil@uselets.com']}> revisa` }
-      }),
-      201
-    )
-    await service.drain()
-    await ok(gil({ method: 'POST', path: '/me/notifications/read-all' }))
-
-    expect(await service.digest.run()).toEqual({ sent: 0, failed: 0 })
-    expect(mailer.sent).toEqual([])
   })
 })

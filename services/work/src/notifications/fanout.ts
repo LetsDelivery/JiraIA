@@ -2,9 +2,10 @@ import type { Clock, IdGenerator } from '@jiraia/core'
 
 import type { CardRepository } from '../cards/card.repository.js'
 import type { CommentRepository } from '../cards/comment.repository.js'
+import type { CardWithPeople } from '../cards/schemas.js'
 import type { WatcherRepository } from '../cards/watcher.repository.js'
 import type { WorkflowRepository } from '../cards/workflow.repository.js'
-import type { Consumer, DomainEvent } from '../events/event.js'
+import { type Consumer, type DomainEvent, detailType } from '../events/event.js'
 import { ENTITLEMENT_ACTIONS } from '../governance/notices.js'
 import type { GrantRepository } from '../grants/grant.repository.js'
 import type { GroupRepository } from '../groups/group.repository.js'
@@ -12,8 +13,11 @@ import type { MemberRepository } from '../members/member.repository.js'
 import type { ProposalRepository } from '../proposals/proposal.repository.js'
 import type { AccessRequestRepository } from '../requests/request.repository.js'
 import type { SpaceRepository } from '../spaces/space.repository.js'
+import { cardChanges, trackedFields } from './card-changes.js'
+import { DRAW_EVENTS } from './draw-notices.js'
+import { excerpt } from './excerpt.js'
 import type { NotificationRepository, NotificationWithActor } from './notification.repository.js'
-import type { Channel, NotificationData, NotificationKind } from './schemas.js'
+import type { CardChange, Channel, NotificationData, NotificationKind } from './schemas.js'
 
 type Deps = {
   clock: Clock
@@ -31,6 +35,8 @@ type Deps = {
   proposals: ProposalRepository
   /** Who hears about an entitlement request (ADR-0024). */
   entitlements?: { notices(event: DomainEvent): Promise<Notice[]> }
+  /** Who hears about a Draw page (Etapa 5f). */
+  draw?: { notices(event: DomainEvent): Promise<Notice[]> }
   /** Sends the notices a person asked to get in Slack (Etapa 5e). */
   slack?: { deliver(organizationId: string, notices: readonly NotificationWithActor[]): Promise<void> }
 }
@@ -46,9 +52,6 @@ export type Notice = {
 
 const CARD_ACTIONS = new Set(['created', 'updated', 'moved', 'commented'])
 const REQUEST_ACTIONS = new Set(['requested', 'approved', 'declined'])
-
-/** A mention is written `<@memberId>`; a notice shows the name. */
-const MENTION = /<@([0-9a-f-]{36})>/g
 
 /**
  * The notifications consumer (escopo-mvp 4.6). From each event it works out who should know —
@@ -66,7 +69,8 @@ export class NotificationFanout implements Consumer {
       (event.entityType === 'access_request' && REQUEST_ACTIONS.has(event.action)) ||
       (event.entityType === 'proposal' && event.action === 'proposed') ||
       (event.entityType === 'entitlement_request' && ENTITLEMENT_ACTIONS.has(event.action)) ||
-      (event.entityType === 'access_review' && event.action === 'opened')
+      (event.entityType === 'access_review' && event.action === 'opened') ||
+      DRAW_EVENTS.has(detailType(event))
     )
   }
 
@@ -77,6 +81,9 @@ export class NotificationFanout implements Consumer {
   private async _notices(event: DomainEvent): Promise<Notice[]> {
     if (event.entityType === 'card') {
       return await this._card(event)
+    }
+    if (DRAW_EVENTS.has(detailType(event))) {
+      return (await this.deps.draw?.notices(event)) ?? []
     }
     if (event.entityType === 'entitlement_request' || event.entityType === 'access_review') {
       return (await this.deps.entitlements?.notices(event)) ?? []
@@ -89,17 +96,42 @@ export class NotificationFanout implements Consumer {
     if (!card) {
       return []
     }
-    const base = {
-      cardId: card.id,
-      spaceId: card.spaceId,
-      data: { cardKey: `${card.spaceKey}-${card.number}`, cardTitle: card.title }
-    }
+    const base = { cardId: card.id, spaceId: card.spaceId, data: await this._cardData(event, card) }
     const watchers = (await this.deps.watchers.list(card.id)).map((watcher) => watcher.id)
     return [
       ...(await this._commented(event, base, watchers)),
       ..._assigned(event).map((memberId) => ({ ...base, memberId, kind: 'assigned' as const })),
-      ...(await this._moved(event, base, watchers))
+      ..._changed(event, base, watchers)
     ]
+  }
+
+  /** What every notice of a card event says: the card, its space, and the fields it changed. */
+  private async _cardData(event: DomainEvent, card: CardWithPeople): Promise<NotificationData> {
+    const [space, changes] = await Promise.all([
+      this.deps.spaces.find(event.organizationId, card.spaceId),
+      this._changes(event, card.spaceId)
+    ])
+    const data = {
+      cardKey: `${card.spaceKey}-${card.number}`,
+      cardTitle: card.title,
+      spaceName: space?.name ?? card.spaceKey
+    }
+    return changes.length > 0 ? { ...data, changes } : data
+  }
+
+  private async _changes(event: DomainEvent, spaceId: string): Promise<CardChange[]> {
+    if (trackedFields(event).length === 0) {
+      return []
+    }
+    const [states, members] = await Promise.all([
+      this.deps.workflows.states(spaceId),
+      this.deps.members.list(event.organizationId)
+    ])
+    const names = {
+      states: new Map(states.map((state) => [state.id, state.name])),
+      members: new Map(members.map((member) => [member.id, member.name]))
+    }
+    return cardChanges(event, names)
   }
 
   private async _commented(
@@ -120,20 +152,6 @@ export class NotificationFanout implements Consumer {
         .filter((id) => !mentioned.includes(id))
         .map((memberId) => ({ ...base, data, memberId, kind: 'commented' as const }))
     ]
-  }
-
-  private async _moved(
-    event: DomainEvent,
-    base: Omit<Notice, 'memberId' | 'kind'>,
-    watchers: readonly string[]
-  ): Promise<Notice[]> {
-    const change = event.changes.stateId
-    if (event.action === 'created' || !change || change.before === change.after) {
-      return []
-    }
-    const state = (await this.deps.workflows.states(base.spaceId ?? '')).find((each) => each.id === change.after)
-    const data = { ...base.data, stateName: state?.name ?? '' }
-    return watchers.map((memberId) => ({ ...base, data, memberId, kind: 'state_changed' as const }))
   }
 
   /** A request to edit reaches whoever runs the space; the answer reaches who asked. */
@@ -214,14 +232,8 @@ export class NotificationFanout implements Consumer {
     ]
   }
 
-  /** The first 140 characters of a comment, with mentions as names. */
   private async _excerpt(organizationId: string, body: string): Promise<string> {
-    const names = new Map((await this.deps.members.list(organizationId)).map((member) => [member.id, member.name]))
-    const text = body
-      .replace(MENTION, (_, id: string) => `@${names.get(id) ?? 'alguém'}`)
-      .replace(/\s+/g, ' ')
-      .trim()
-    return text.length > 140 ? `${text.slice(0, 139)}…` : text
+    return await excerpt(this.deps.members, organizationId, body)
   }
 
   /** One notice per person and event, to active people only, minus the actor and who chose none. */
@@ -266,6 +278,25 @@ export class NotificationFanout implements Consumer {
     const preferences = await this.deps.notifications.preferences(memberIds)
     return new Map(preferences.map((each) => [`${each.memberId}:${each.kind}`, each.channel as Channel]))
   }
+}
+
+/**
+ * Watchers hear about the fields that changed: a move as `state_changed` — its own preference, as
+ * before Etapa 5f — and any other tracked field as `card_updated`.
+ */
+const _changed = (
+  event: DomainEvent,
+  base: Omit<Notice, 'memberId' | 'kind'>,
+  watchers: readonly string[]
+): Notice[] => {
+  const changes = base.data.changes ?? []
+  if (changes.length === 0) {
+    return []
+  }
+  const moved = trackedFields(event).includes('stateId')
+  const data = moved ? { ...base.data, stateName: String(changes[0]?.after ?? '') } : base.data
+  const kind = moved ? ('state_changed' as const) : ('card_updated' as const)
+  return watchers.map((memberId) => ({ ...base, data, memberId, kind }))
 }
 
 /** Who was given the card by this event — on creation or by a change, as the trail recorded it. */

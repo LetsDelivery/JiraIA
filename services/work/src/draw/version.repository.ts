@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, desc, eq, getTableColumns, max } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, gt, inArray, max } from 'drizzle-orm'
 
 import { contentVersions, members } from '../schema.js'
 import type { NewVersionRow, VersionRow, VersionWithAuthor } from './content.schemas.js'
@@ -40,6 +40,30 @@ export class VersionRepository {
       .orderBy(desc(contentVersions.number))
       .limit(1)
     return row
+  }
+
+  /** Everyone who saved a version of the content: the people who helped write it (Etapa 5f). */
+  async authors(contentId: string): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ memberId: contentVersions.createdBy })
+      .from(contentVersions)
+      .where(eq(contentVersions.contentId, contentId))
+    return rows.map((row) => row.memberId)
+  }
+
+  /** Who saved a version of each content after `since`, by name — the morning summary's "fez alterações". */
+  async editorsSince(
+    contentIds: readonly string[],
+    since: Date
+  ): Promise<{ contentId: string; memberId: string; name: string }[]> {
+    if (contentIds.length === 0) {
+      return []
+    }
+    return await this.db
+      .selectDistinct({ contentId: contentVersions.contentId, memberId: members.id, name: members.name })
+      .from(contentVersions)
+      .innerJoin(members, eq(members.id, contentVersions.createdBy))
+      .where(and(inArray(contentVersions.contentId, [...contentIds]), gt(contentVersions.createdAt, since)))
   }
 
   /** The next number, read inside the writing transaction; the unique index catches a race. */

@@ -98,7 +98,7 @@ bun run up
 | API | http://localhost:8280 |
 | Dev database | `postgres://jiraia:jiraia@127.0.0.1:8200/jiraia` |
 | Test database / e2e database | :8210 / :8220 (never touch your dev data) |
-| E-mails "sent" / attachments | `.local-mail/` / `.local-files/` |
+| E-mails "sent" (`bun run local:email-preview` renders every template) / attachments | `.local-mail/` / `.local-files/` |
 
 ### Signing in locally
 

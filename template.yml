@@ -52,8 +52,8 @@ Mappings:
       GoogleClientId: '721914026671-reh4ebrbphkvo02t5i2lmqarln2a8pjb.apps.googleusercontent.com'
       # Where CRITICAL alarms are delivered. Empty: alarms go to the topic only.
       AlarmEmail: ''
-      # The verified SES sender of the daily summary (pendência #11). Empty holds the summaries.
-      MailFrom: ''
+      # The verified SES sender of the e-mails (pendência #11). Empty holds them.
+      MailFrom: 'jiraia@uselets.com'
       # The Slack app's client id (pendência #10). When set, the secret jiraia/slack must hold
       # client_secret, signing_secret and token_key.
       SlackClientId: ''
@@ -574,7 +574,7 @@ Resources:
         - Key: project
           Value: JiraIA
 
-  # The scheduler's: the database, the bus it dispatches to, the summary it mails, the jobs queue.
+  # The scheduler's: the database, the bus it dispatches to, the e-mails it sends, the jobs queue.
   SchedulerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -732,7 +732,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: jiraia-scheduler
-      Description: JiraIA jobs - dispatch, daily summary, webhook retries, access clock
+      Description: JiraIA jobs - dispatch, e-mails, summaries, webhook retries, access clock
       Code:
         S3Bucket: !Ref ArtifactBucket
         S3Key: !Ref ArtifactPackage
@@ -741,7 +741,7 @@ Resources:
       Runtime: nodejs24.x
       Architectures: [arm64]
       MemorySize: 512
-      # The slowest job, the daily summary.
+      # The slowest jobs, the summaries.
       Timeout: 300
       Role: !GetAtt SchedulerRole.Arn
       Layers:
@@ -1167,20 +1167,50 @@ Resources:
               at: $.time
             InputTemplate: '{"job": "dispatch", "at": "<at>"}'
 
-  # The daily summary (escopo-mvp 4.6): 11:00 UTC is 08:00 in São Paulo.
-  DigestSchedule:
+  # The e-mails that are due (Etapa 5f): mentions and access at once, a card's changes after 10 minutes.
+  MailSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      Targets:
+        - Id: mail
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: mail
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "mail", "at": "<at>"}'
+
+  # The LET'S Draw AI morning summary (Etapa 5f): 11:00 UTC is 08:00 in São Paulo.
+  MorningSchedule:
     Type: AWS::Events::Rule
     Properties:
       ScheduleExpression: cron(0 11 * * ? *)
       Targets:
-        - Id: digest
+        - Id: morning
           Arn: !GetAtt JobsQueue.Arn
           SqsParameters:
-            MessageGroupId: digest
+            MessageGroupId: morning
           InputTransformer:
             InputPathsMap:
               at: $.time
-            InputTemplate: '{"job": "digest", "at": "<at>"}'
+            InputTemplate: '{"job": "morning", "at": "<at>"}'
+
+  # The weekly summary (Etapa 5f): Mondays at 08:00 in São Paulo.
+  WeeklySchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: cron(0 11 ? * MON *)
+      Targets:
+        - Id: weekly
+          Arn: !GetAtt JobsQueue.Arn
+          SqsParameters:
+            MessageGroupId: weekly
+          InputTransformer:
+            InputPathsMap:
+              at: $.time
+            InputTemplate: '{"job": "weekly", "at": "<at>"}'
 
   # The webhook retry sweep (escopo-mvp 4.7): pending deliveries whose next try is due.
   WebhookRetrySchedule:
@@ -1227,7 +1257,9 @@ Resources:
               ArnEquals:
                 aws:SourceArn:
                   - !GetAtt DispatchSchedule.Arn
-                  - !GetAtt DigestSchedule.Arn
+                  - !GetAtt MailSchedule.Arn
+                  - !GetAtt MorningSchedule.Arn
+                  - !GetAtt WeeklySchedule.Arn
                   - !GetAtt WebhookRetrySchedule.Arn
                   - !GetAtt AccessClockSchedule.Arn
 

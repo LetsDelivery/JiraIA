@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { sentence, snoozeUntil, target } from './notifications'
+import { channelsOf, sentence, snoozeUntil, target } from './notifications'
 
 const actor = { id: 'a', name: 'Ana' }
 
@@ -51,5 +51,23 @@ describe('access review notices', () => {
     const data = { reviewId: 'v1', systemName: 'AWS' }
     expect(sentence({ kind: 'access_review_opened', actor, data })).toBe('Revisão de acessos aberta: AWS')
     expect(target({ kind: 'access_review_opened', data, spaceId: null })).toBe('/acessos/revisoes')
+  })
+})
+
+describe('LET’S Draw AI notices', () => {
+  it('say who mentioned or changed which page, and open it', () => {
+    const data = { product: 'draw' as const, contentId: 'c1', contentTitle: 'SLAs' }
+    expect(sentence({ kind: 'draw_mentioned', actor: { id: 'a', name: 'Ana' }, data })).toBe(
+      'Ana mencionou você em SLAs'
+    )
+    expect(sentence({ kind: 'content_changed', actor: { id: 'a', name: 'Ana' }, data })).toBe('Ana alterou SLAs')
+    expect(target({ kind: 'content_changed', data, spaceId: 's1' })).toBe('/draw/s1/c1')
+  })
+})
+
+describe('the weekly summary preference', () => {
+  it('comes by e-mail or not at all', () => {
+    expect(channelsOf('weekly_summary')).toEqual(['email', 'none'])
+    expect(channelsOf('mentioned')).toContain('slack')
   })
 })

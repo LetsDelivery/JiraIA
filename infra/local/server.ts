@@ -60,6 +60,8 @@ const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } :
   files,
   broadcaster,
   mailer: new LocalMailbox(LOCAL_MAIL_DIR),
+  // A card's changes gather for a minute here, not ten, so a demo does not wait (Etapa 5f).
+  mailWindowMs: 60_000,
   ...(process.env.LOCAL_WEBHOOKS === '1' ? {} : { webhookHttp: new PrintedWebhooks() }),
   slack: new PrintedSlack(
     process.env.LOCAL_SLACK === '1'
@@ -81,6 +83,8 @@ setInterval(
       .catch((error: unknown) => console.error('  access clock failed:', error)),
   60_000
 )
+// The e-mails that are due, as the mail job runs in AWS; the summaries wait for `bun run local:digest`.
+setInterval(() => void work.mail.sendDue().catch((error: unknown) => console.error('  mail failed:', error)), 60_000)
 // The webhook retry sweep, as its job runs in AWS.
 setInterval(
   () => void work.webhookSender.retryDue().catch((error: unknown) => console.error('  webhook retry failed:', error)),
