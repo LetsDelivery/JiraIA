@@ -34,6 +34,7 @@ import { findRoute, interceptLinks, navigate, onNavigate } from '@/lib/router'
 import { cardKey, spaceKeyOf } from '@/lib/search'
 import { spacePath } from '@/lib/space-types'
 import { accountMenu, type ThemeChoice } from '@/ui/account-menu'
+import { bindCardPicker } from '@/ui/card-picker'
 import { openCreateCard } from '@/ui/create-card'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { holdPlace, markCurrent } from '@/ui/pending'
@@ -128,6 +129,16 @@ const holdScreen = (route: View, path: string, mine: number) => {
   return holdPlace(app.querySelector('#view'), route.skeleton, () => mine === ticket)
 }
 
+const cardHref = (key: string): string => `${spacePath(spaceKeyOf(key))}?card=${key}`
+
+/** A card suggested under the search box opens straight away, as a typed key does. */
+const bindGlobalSearch = () => {
+  const form = app.querySelector<HTMLElement>('[data-global-search]')
+  if (form) {
+    bindCardPicker(form, { accept: () => true, onPick: (card) => navigate(cardHref(card.key)) })
+  }
+}
+
 const renderSignIn = () => {
   app.innerHTML = signInPage().value
   document.title = 'Entrar · JiraIA'
@@ -173,6 +184,7 @@ const renderApp = async (path: string, entering: boolean) => {
   document.title = `${match.route.title} · ${draw ? 'LET’S Draw AI' : 'JiraIA'}`
   const view = app.querySelector<HTMLElement>('#view') as HTMLElement
   bindSelects(view)
+  bindGlobalSearch()
   match.route.bind?.(view, match.params)
   match.route.bindSidebar?.(app.querySelector('.sidebar .nav') as HTMLElement, match.params)
 }
@@ -309,7 +321,7 @@ const setSearching = (open: boolean): void => {
 const search = async (text: string): Promise<void> => {
   const key = cardKey(text)
   const card = key ? await read.cardByKey(key).catch(() => undefined) : undefined
-  navigate(card ? `${spacePath(spaceKeyOf(card.key))}?card=${card.key}` : `/busca?q=${encodeURIComponent(text)}`)
+  navigate(card ? cardHref(card.key) : `/busca?q=${encodeURIComponent(text)}`)
 }
 
 /** `/` anywhere but in a field focuses the search box, as in Jira and GitHub. */

@@ -265,7 +265,7 @@ test('a seeded page opens with its content, typing straight away loses none of i
   await page.reload()
   await expect(editor(page)).toContainText('Itens concluídos. Revisado em outubro.')
 
-  const box = page.getByRole('searchbox', { name: 'Buscar cards ou ir para uma chave' })
+  const box = page.getByRole('combobox', { name: 'Buscar cards ou ir para uma chave' })
   await box.fill('triagem toda semana')
   await box.press('Enter')
   await expect(page.locator('.search-result').filter({ hasText: 'Requisições para Produto' })).toBeVisible()

@@ -41,3 +41,16 @@ export const MATCH_LABEL: Record<'key' | 'title' | 'description' | 'comment', st
   description: 'na descrição',
   comment: 'num comentário'
 }
+
+/**
+ * The cards whose key or title holds the text, those whose key starts with it first — what a box
+ * suggests from cards already on screen, as one types.
+ *
+ * @example cardsMatching(cards, 'prd-2')   // PRD-2, PRD-21, … before a card titled "Ver prd-2"
+ */
+export const cardsMatching = <T extends { key: string; title: string }>(cards: readonly T[], text: string): T[] => {
+  const query = text.trim().toLowerCase()
+  const found = cards.filter((card) => `${card.key} ${card.title}`.toLowerCase().includes(query))
+  const byKey = (card: T): number => (card.key.toLowerCase().startsWith(query) ? 0 : 1)
+  return query ? found.sort((a, b) => byKey(a) - byKey(b)) : []
+}

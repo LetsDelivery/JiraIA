@@ -11,6 +11,8 @@ type PickerBinding = {
   /** Which found cards may be offered — e.g. only cards of this space, never the card itself. */
   accept: (card: CardRef) => boolean
   onPick: (card: CardRef) => void
+  /** Where the cards come from; the search across every space when left out. */
+  find?: (query: string) => Promise<readonly CardRef[]>
 }
 
 /**
@@ -26,14 +28,18 @@ export const cardPicker = (picker: Picker): Html => html`
   </div>
 `
 
-const _found = async (query: string, accept: (card: CardRef) => boolean): Promise<CardRef[]> => {
+const _searched = async (query: string): Promise<CardRef[]> => {
+  const found = await read.search(query).catch(() => undefined)
+  return [...(found?.exact ? [found.exact] : []), ...(found?.items ?? []).map((item) => item.card)]
+}
+
+const _found = async (query: string, binding: PickerBinding): Promise<CardRef[]> => {
   if (query.trim().length < 2) {
     return []
   }
-  const found = await read.search(query.trim()).catch(() => undefined)
-  const all = [...(found?.exact ? [found.exact] : []), ...(found?.items ?? []).map((item) => item.card)]
+  const all = await (binding.find ?? _searched)(query.trim())
   const unique = all.filter((card, index) => all.findIndex((each) => each.id === card.id) === index)
-  return unique.filter(accept).slice(0, 8)
+  return unique.filter(binding.accept).slice(0, 8)
 }
 
 const _show = (input: HTMLInputElement, menu: HTMLElement, cards: readonly CardRef[]): void => {
@@ -46,7 +52,6 @@ const _show = (input: HTMLInputElement, menu: HTMLElement, cards: readonly CardR
 }
 
 /** Wires one picker: suggestions while typing, a click or Enter on one picks it. */
-/** Wires one picker: suggestions while typing, a click or Enter on one picks it. */
 export const bindCardPicker = (root: HTMLElement, binding: PickerBinding): void => {
   const input = root.querySelector('input') as HTMLInputElement
   const menu = root.querySelector('[role="listbox"]') as HTMLElement
@@ -55,7 +60,7 @@ export const bindCardPicker = (root: HTMLElement, binding: PickerBinding): void 
   input.addEventListener('input', () => {
     clearTimeout(timer)
     timer = setTimeout(async () => {
-      cards = await _found(input.value, binding.accept)
+      cards = await _found(input.value, binding)
       _show(input, menu, cards)
     }, 200)
   })

@@ -71,7 +71,7 @@ test('the top bar searches text across spaces and goes straight to a typed key',
     ...api,
     data: { body: 'Precisa de um parecer do jurídico sobre o frete' }
   })
-  const box = page.getByRole('searchbox', { name: 'Buscar cards ou ir para uma chave' })
+  const box = page.getByRole('combobox', { name: 'Buscar cards ou ir para uma chave' })
   await box.fill('parecer do jurídico')
   await box.press('Enter')
   await expect(page).toHaveURL(/\/busca\?q=/)
@@ -84,6 +84,19 @@ test('the top bar searches text across spaces and goes straight to a typed key',
   await expect(box).toBeFocused()
   await box.fill('prd-4')
   await box.press('Enter')
+  await expect(page).toHaveURL(/\/espacos\/PRD\?card=PRD-4/)
+  await expect(page.getByRole('dialog', { name: /^PRD-4 / })).toBeVisible()
+})
+
+test('the search box suggests cards by title as one types, and a suggestion opens its card', async ({ page }) => {
+  await signIn(page, 'admin@uselets.com')
+  const api = { headers: { 'x-local-user': 'admin@uselets.com' } }
+  const card = (await (await page.request.get('http://localhost:8290/work/cards/by-key/PRD-4', api)).json()) as {
+    title: string
+  }
+  const box = page.getByRole('combobox', { name: 'Buscar cards ou ir para uma chave' })
+  await box.fill(card.title.slice(0, 12))
+  await page.getByRole('option', { name: new RegExp(`PRD-4 `) }).click()
   await expect(page).toHaveURL(/\/espacos\/PRD\?card=PRD-4/)
   await expect(page.getByRole('dialog', { name: /^PRD-4 / })).toBeVisible()
 })

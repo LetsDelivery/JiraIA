@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cardKey, cardKeyIn, spaceKeyOf } from './search'
+import { cardKey, cardKeyIn, cardsMatching, spaceKeyOf } from './search'
 
 describe('the search box', () => {
   it('reads a key, in any case and with spaces around it', () => {
@@ -23,5 +23,25 @@ describe('the search box', () => {
 
   it('names the space of a key', () => {
     expect(spaceKeyOf('PRD-219')).toBe('PRD')
+  })
+})
+
+describe('cardsMatching', () => {
+  const cards = [
+    { key: 'REQ-9', title: 'Ver prd-2 no relatório' },
+    { key: 'PRD-21', title: 'Exportar CSV' },
+    { key: 'PRD-2', title: 'Login com Google' }
+  ]
+
+  it('puts cards whose key starts with the text before those that only mention it', () => {
+    expect(cardsMatching(cards, 'prd-2').map((card) => card.key)).toEqual(['PRD-21', 'PRD-2', 'REQ-9'])
+  })
+
+  it('finds a card by a word of its title, ignoring case', () => {
+    expect(cardsMatching(cards, 'google').map((card) => card.key)).toEqual(['PRD-2'])
+  })
+
+  it('suggests nothing for an empty box', () => {
+    expect(cardsMatching(cards, '  ')).toEqual([])
   })
 })
