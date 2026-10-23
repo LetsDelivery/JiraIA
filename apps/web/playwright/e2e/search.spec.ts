@@ -96,7 +96,7 @@ test('the search box suggests cards by title as one types, and a suggestion open
   }
   const box = page.getByRole('combobox', { name: 'Buscar cards ou ir para uma chave' })
   await box.fill(card.title.slice(0, 12))
-  await page.getByRole('option', { name: new RegExp(`PRD-4 `) }).click()
+  await page.getByRole('option', { name: /PRD-4 / }).click()
   await expect(page).toHaveURL(/\/espacos\/PRD\?card=PRD-4/)
   await expect(page.getByRole('dialog', { name: /^PRD-4 / })).toBeVisible()
 })
