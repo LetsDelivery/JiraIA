@@ -23,16 +23,19 @@ export class HttpSlackApi implements SlackApi {
     private readonly options: { apiUrl: string; clientId?: string | undefined; clientSecret?: string | undefined }
   ) {}
 
-  /** Slack answers 200 with `ok: false` for its own refusals; both kinds become one exception. */
-  private async call(method: string, body: Record<string, unknown>, token?: string): Promise<Answer> {
+  /**
+   * Slack answers 200 with `ok: false` for its own refusals; both kinds become one exception. Methods
+   * that read take form fields: `users.lookupByEmail` ignores a JSON body and answers `invalid_arguments`.
+   */
+  private async call(method: string, body: Record<string, unknown>, token?: string, form = false): Promise<Answer> {
     const response = await this.http.send({
       method: 'POST',
       url: `${this.options.apiUrl}/${method}`,
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json; charset=utf-8',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify(body)
+      body: form ? new URLSearchParams(body as Record<string, string>).toString() : JSON.stringify(body)
     })
     const answer = (response.status === 200 ? JSON.parse(response.body) : {}) as Answer
     if (!answer.ok) {
@@ -77,7 +80,9 @@ export class HttpSlackApi implements SlackApi {
   /** Nobody with that address is a normal answer, not a failure. */
   async userByEmail(token: string, email: string): Promise<string | null> {
     try {
-      const answer = (await this.call('users.lookupByEmail', { email }, token)) as Answer & { user?: { id: string } }
+      const answer = (await this.call('users.lookupByEmail', { email }, token, true)) as Answer & {
+        user?: { id: string }
+      }
       return answer.user?.id ?? null
     } catch (error) {
       if (String((error as Error).message).includes('users_not_found')) {
