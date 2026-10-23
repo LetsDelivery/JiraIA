@@ -1,14 +1,25 @@
-import { type Card, type Field, type Member, read, type State, type Workflow, write } from '@/api/requests'
+import {
+  type Card,
+  type CardRef,
+  type Field,
+  type Member,
+  read,
+  type State,
+  type Workflow,
+  write
+} from '@/api/requests'
 import { invalidate } from '@/lib/cache'
 import { dropIndex, initials, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
-import { type CardFilter, isEmpty } from '@/lib/filters'
+import { assignableIds, type CardFilter, isEmpty } from '@/lib/filters'
 import { type Html, html } from '@/lib/html'
 import { LANE_BY, LANE_FIELD, LANE_LABEL, type Lane, type LaneBy, lanesOf } from '@/lib/lanes'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
+import { cardsMatching } from '@/lib/search'
 import { spacePath } from '@/lib/space-types'
 import { persistedStore } from '@/lib/store'
 import { openCardDetail } from '@/ui/card-detail'
+import { bindCardPicker } from '@/ui/card-picker'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { openFieldsEditor } from '@/ui/fields-dialog'
 import { icon } from '@/ui/icons'
@@ -23,6 +34,8 @@ export type BoardContext = {
   cards: readonly Card[]
   fields: readonly Field[]
   members: readonly Member[]
+  /** Who the Responsável filter offers: the space's people, not the whole organization (`assignableIds`). */
+  assignable: ReadonlySet<string>
   meId: string
   canWrite: boolean
   manages: boolean
@@ -104,10 +117,12 @@ export const board = (context: BoardContext): Html => {
   const names = { types: context.workflow.types, cards: context.cards }
   return html`
     <div class="toolbar">
-      <label class="search">
-        <span class="sr-only">Pesquisar cards</span>
-        <input type="search" class="input" data-board-search placeholder="Pesquisar por título ou chave" />
-      </label>
+      <div class="search card-picker" data-board-search-box>
+        <label class="sr-only" for="board-search">Pesquisar cards</label>
+        <input id="board-search" type="search" class="input" data-board-search placeholder="Pesquisar por título ou chave"
+          autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="board-search-list" aria-expanded="false" />
+        <ul class="select-menu glass card-picker-menu" role="listbox" id="board-search-list" hidden></ul>
+      </div>
       <button type="button" class="button button-secondary" data-only-mine aria-pressed="false">${icon('user', 16)}Só os meus</button>
       ${selectField({ name: 'lanes', label: 'Raias', visibleLabel: false, options: LANE_OPTIONS, value: by, attributes: html`data-lanes` })}
       ${context.manages ? html`<button type="button" class="button button-secondary" data-configure>${icon('adjustments', 16)}Configurar fluxo</button>` : ''}
@@ -127,6 +142,7 @@ let refocus: string | undefined
 
 export const bindBoard = (root: HTMLElement, context: BoardContext): void => {
   bindFilters(root, context.meId)
+  bindBoardSearch(root, context)
   bindDragAndDrop(root, context)
   bindQuickAdd(root, context.spaceId)
   bindOpenCards(root, context)
@@ -189,6 +205,30 @@ const bindFilters = (root: HTMLElement, meId: string): void => {
   mine?.addEventListener('click', () => {
     mine.setAttribute('aria-pressed', String(mine.getAttribute('aria-pressed') !== 'true'))
     apply()
+  })
+}
+
+/** A board card as the card picker lists it, its state named from the workflow. */
+const refOf = (card: Card, states: readonly State[]): CardRef => {
+  const state = states.find((each) => each.id === card.stateId)
+  return { ...card, state: { name: state?.name ?? '', group: state?.group ?? 'not_started' } }
+}
+
+/** While the board narrows to what is typed, the cards that match are suggested; one picked opens. */
+const bindBoardSearch = (root: HTMLElement, context: BoardContext): void => {
+  const box = root.querySelector<HTMLElement>('[data-board-search-box]')
+  if (!box) {
+    return
+  }
+  bindCardPicker(box, {
+    accept: () => true,
+    find: async (query) => cardsMatching(context.cards, query).map((card) => refOf(card, context.workflow.states)),
+    onPick: (ref) => {
+      const card = context.cards.find((each) => each.id === ref.id)
+      if (card) {
+        openCardDetail(card, context)
+      }
+    }
   })
 }
 
@@ -309,14 +349,20 @@ const createCard = (context: BoardContext): void =>
       })
   })
 
-/** Everything the board, the list and the backlog need, read together. */
-/** The space's workflow, people and fields, and its cards — those the filter lets through, when there is one. */
+/**
+ * Everything the board, the list and the backlog need, read together: the space's workflow, people and
+ * fields, and its cards — those the filter lets through, when there is one. Every card is read too, so
+ * the people a filter hides stay offered in it.
+ */
 export const loadBoard = async (spaceId: string, filter: CardFilter = {}) => {
-  const [workflow, cards, members, fields] = await Promise.all([
+  const [workflow, cards, every, members, roles, fields] = await Promise.all([
     read.workflow(spaceId),
     isEmpty(filter) ? read.cards(spaceId) : read.filteredCards(spaceId, filter),
+    read.cards(spaceId),
     read.members(),
+    read.spaceRoles(spaceId),
     read.fields(spaceId)
   ])
-  return { workflow, cards: cards.items, members: members.items, fields: fields.items }
+  const assignable = assignableIds(roles.items, every.items, filter)
+  return { workflow, cards: cards.items, members: members.items, assignable, fields: fields.items }
 }

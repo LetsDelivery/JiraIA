@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  assignableIds,
   conditionCount,
   dueChoice,
   dueRange,
@@ -65,5 +66,16 @@ describe('comparing filters', () => {
 
   it('drops the spaces a view looked across', () => {
     expect(withoutSpaces({ spaceIds: ['s'], labelsAny: ['x'] })).toEqual({ labelsAny: ['x'] })
+  })
+})
+
+describe('assignableIds', () => {
+  it('offers role holders and the people cards are assigned to, not the rest of the organization', () => {
+    const ids = assignableIds([{ memberId: 'ana' }], [{ assignee: { id: 'bia' } }, { assignee: null }], {})
+    expect([...ids].sort()).toEqual(['ana', 'bia'])
+  })
+
+  it('keeps someone the filter already names, so the chip can still be turned off', () => {
+    expect(assignableIds([], [], { assignees: ['caio'] }).has('caio')).toBe(true)
   })
 })

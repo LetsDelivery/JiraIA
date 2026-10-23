@@ -26,6 +26,7 @@ export type FilterContext = {
   spaceId: string
   workflow: Workflow
   members: readonly Member[]
+  assignable: ReadonlySet<string>
   fields: readonly Field[]
   filter: CardFilter
 }
@@ -59,7 +60,7 @@ const people = (context: FilterContext) => [
   { value: 'me', label: 'Eu' },
   { value: 'none', label: 'Sem responsável' },
   ...context.members
-    .filter((member) => member.status === 'active' && member.kind === 'person')
+    .filter((member) => member.status === 'active' && member.kind === 'person' && context.assignable.has(member.id))
     .map((member) => ({ value: member.id, label: member.name }))
 ]
 

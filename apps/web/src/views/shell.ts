@@ -84,14 +84,19 @@ const spacesGroup = (me: Me, mine: MySpaces, all: readonly Space[], path: string
 /** JiraIA spaces are created by organization admins and space managers (ADR-0012). */
 export const canCreateSpaces = (me: Me): boolean => me.isOrgAdmin || me.isSpaceManager
 
-/** Search everything, or type a key to go straight to the card (escopo-mvp 3.6). `/` focuses it. */
+/**
+ * Search everything, or type a key to go straight to the card (escopo-mvp 3.6). `/` focuses it; cards
+ * whose key or title hold what is typed are suggested under it (`bindCardPicker`).
+ */
 const globalSearch = (path: string) => html`
   <form class="global-search" role="search" data-global-search>
     <label class="sr-only" for="global-search">Buscar cards ou ir para uma chave</label>
     <span class="global-search-icon" aria-hidden="true">${icon('search', 16)}</span>
     <input id="global-search" type="search" class="input" name="q" autocomplete="off" placeholder="Pesquisar"
+      role="combobox" aria-autocomplete="list" aria-controls="global-search-list" aria-expanded="false"
       value="${path === '/busca' ? (new URLSearchParams(location.search).get('q') ?? '') : ''}" />
     <kbd class="kbd" aria-hidden="true">/</kbd>
+    <ul class="select-menu glass card-picker-menu global-search-menu" role="listbox" id="global-search-list" hidden></ul>
     <button type="button" class="button button-ghost button-icon topbar-search-close" data-close-search aria-label="Fechar a busca">${icon('x')}</button>
   </form>
 `

@@ -148,3 +148,20 @@ export const withCondition = <K extends keyof CardFilter>(
   const rest = Object.fromEntries(Object.entries(filter).filter(([each]) => each !== key)) as CardFilter
   return value === undefined ? clean(rest) : clean({ ...rest, [key]: value })
 }
+
+/**
+ * Who the Responsável filter offers in a space: whoever holds a role in it and whoever a card of it is
+ * assigned to, plus anyone the filter already names — not every person of the organization.
+ *
+ * @example assignableIds([{ memberId: 'ana' }], [{ assignee: { id: 'bia' } }], {})   // Set { 'ana', 'bia' }
+ */
+export const assignableIds = (
+  roles: readonly { memberId: string }[],
+  cards: readonly { assignee: { id: string } | null }[],
+  filter: CardFilter
+): Set<string> =>
+  new Set([
+    ...roles.map((role) => role.memberId),
+    ...cards.flatMap((card) => (card.assignee ? [card.assignee.id] : [])),
+    ...(filter.assignees ?? [])
+  ])
