@@ -50,14 +50,25 @@ const slack = setupServer(
         })
       : HttpResponse.json({ ok: false, error: 'invalid_code' })
   }),
+  // Like Slack, it reads only form fields: a JSON body leaves the e-mail missing.
+  http.post(`${SLACK}/users.lookupByEmail`, async ({ request }) => {
+    const form = new URLSearchParams(await request.text())
+    const email = form.get('email')
+    sent.push({
+      method: 'users.lookupByEmail',
+      body: Object.fromEntries(form),
+      auth: request.headers.get('authorization')
+    })
+    if (!email) {
+      return HttpResponse.json({ ok: false, error: 'invalid_arguments' })
+    }
+    return email === 'nobody@uselets.com'
+      ? HttpResponse.json({ ok: false, error: 'users_not_found' })
+      : HttpResponse.json({ ok: true, user: { id: `U-${email.split('@')[0]}` } })
+  }),
   http.post(`${SLACK}/:method`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
     sent.push({ method: String(params.method), body, auth: request.headers.get('authorization') })
-    if (params.method === 'users.lookupByEmail') {
-      return body.email === 'nobody@uselets.com'
-        ? HttpResponse.json({ ok: false, error: 'users_not_found' })
-        : HttpResponse.json({ ok: true, user: { id: `U-${String(body.email).split('@')[0]}` } })
-    }
     return HttpResponse.json({ ok: true })
   })
 )
