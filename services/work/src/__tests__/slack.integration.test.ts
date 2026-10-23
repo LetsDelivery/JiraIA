@@ -224,17 +224,34 @@ describe('what Slack sends', () => {
 
   it('previews a shared JiraIA link to a card, escaping what people wrote', async () => {
     const url = 'https://jiraia.counterparty.test/espacos/PRD?card=PRD-1'
+    // As Slack sends it: the message is `message_ts`; there is no `ts`.
     const event = {
       type: 'link_shared',
       channel: 'C1',
       message_ts: '1.1',
-      ts: '1.1',
       links: [{ url }, { url: 'https://elsewhere.test/?card=PRD-1' }]
     }
     await service.slackEvents.handle(fromSlack({ type: 'event_callback', team_id: 'T1', event }))
     const [unfurl] = sent.filter((each) => each.method === 'chat.unfurl')
+    expect(unfurl?.body).toMatchObject({ channel: 'C1', ts: '1.1' })
     expect(Object.keys(unfurl?.body.unfurls as object)).toEqual([url])
     expect(JSON.stringify(unfurl?.body)).toContain('Rastreio &lt;script&gt;')
+  })
+
+  it('previews a link in a message still being written, by the id Slack gave it', async () => {
+    const url = 'https://jiraia.counterparty.test/espacos/PRD?card=PRD-1'
+    const event = {
+      type: 'link_shared',
+      channel: 'COMPOSER',
+      message_ts: 'U1-draft',
+      unfurl_id: 'UNF-1',
+      source: 'composer',
+      links: [{ url }]
+    }
+    await service.slackEvents.handle(fromSlack({ type: 'event_callback', team_id: 'T1', event }))
+    const [unfurl] = sent.filter((each) => each.method === 'chat.unfurl')
+    expect(unfurl?.body).toMatchObject({ unfurl_id: 'UNF-1', source: 'composer' })
+    expect(unfurl?.body).not.toHaveProperty('channel')
   })
 
   it('answers a card key in a message with its preview in the thread, once, and never a bot', async () => {

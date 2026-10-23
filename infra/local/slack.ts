@@ -1,4 +1,4 @@
-import type { Block, Installed, SlackApi } from '../../services/work/src/slack/slack-api.js'
+import type { Block, Installed, SlackApi, UnfurlTarget } from '../../services/work/src/slack/slack-api.js'
 
 /**
  * Slack, locally (Etapa 5e): until the Slack app exists (pendência #10), connecting a workspace in
@@ -18,13 +18,9 @@ export class LocalSlackApi implements SlackApi {
     console.error(`  slack → ${message.channel}: ${message.text}`)
   }
 
-  async unfurl(
-    _token: string,
-    channel: string,
-    _ts: string,
-    unfurls: Record<string, { blocks: Block[] }>
-  ): Promise<void> {
-    console.error(`  slack preview → ${channel}: ${Object.keys(unfurls).join(', ')}`)
+  async unfurl(_token: string, target: UnfurlTarget, unfurls: Record<string, { blocks: Block[] }>): Promise<void> {
+    const where = 'channel' in target ? target.channel : target.source
+    console.error(`  slack preview → ${where}: ${Object.keys(unfurls).join(', ')}`)
   }
 }
 

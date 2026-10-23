@@ -7,12 +7,17 @@ import type { HttpClient } from '@jiraia/http'
  */
 export type Installed = { teamId: string; teamName: string; botUserId: string; token: string }
 export type Block = Record<string, unknown>
+/**
+ * Where a preview goes: the message by channel and `ts`, or Slack's own id for the link, which also
+ * reaches a message still being written (`source: 'composer'`).
+ */
+export type UnfurlTarget = { channel: string; ts: string } | { unfurl_id: string; source: string }
 
 export type SlackApi = {
   exchange(code: string, redirectUri: string): Promise<Installed>
   userByEmail(token: string, email: string): Promise<string | null>
   post(token: string, message: { channel: string; text: string; blocks?: Block[]; threadTs?: string }): Promise<void>
-  unfurl(token: string, channel: string, ts: string, unfurls: Record<string, { blocks: Block[] }>): Promise<void>
+  unfurl(token: string, target: UnfurlTarget, unfurls: Record<string, { blocks: Block[] }>): Promise<void>
 }
 
 type Answer = Record<string, unknown> & { ok?: boolean; error?: string }
@@ -104,12 +109,7 @@ export class HttpSlackApi implements SlackApi {
     )
   }
 
-  async unfurl(
-    token: string,
-    channel: string,
-    ts: string,
-    unfurls: Record<string, { blocks: Block[] }>
-  ): Promise<void> {
-    await this.call('chat.unfurl', { channel, ts, unfurls }, token)
+  async unfurl(token: string, target: UnfurlTarget, unfurls: Record<string, { blocks: Block[] }>): Promise<void> {
+    await this.call('chat.unfurl', { ...target, unfurls }, token)
   }
 }

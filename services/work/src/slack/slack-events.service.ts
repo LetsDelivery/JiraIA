@@ -7,7 +7,7 @@ import type { WorkflowRepository } from '../cards/workflow.repository.js'
 import { keyInUrl, keysInText } from './card-keys.js'
 import type { SlackSecrets } from './secrets.js'
 import type { SlackRepository, WorkspaceRow } from './slack.repository.js'
-import type { Block, SlackApi } from './slack-api.js'
+import type { Block, SlackApi, UnfurlTarget } from './slack-api.js'
 import { cardPreview } from './slack-copy.js'
 
 /** A request from Slack as it arrived: the raw body (the signature is over it) and the headers. */
@@ -29,6 +29,10 @@ type Event = {
   type?: string
   channel?: string
   ts?: string
+  /** `link_shared` names its message by `message_ts`, never `ts`. */
+  message_ts?: string
+  unfurl_id?: string
+  source?: string
   thread_ts?: string
   text?: string
   subtype?: string
@@ -42,6 +46,14 @@ const MAX_AGE_S = 300
 const KEYS_PER_MESSAGE = 3
 
 const ok: SlackReply = { statusCode: 200, body: '' }
+
+/** Slack's id for the link when it sent one, so a preview also reaches a message being written. */
+const unfurlTarget = (event: Event): UnfurlTarget | undefined => {
+  if (event.unfurl_id && event.source) {
+    return { unfurl_id: event.unfurl_id, source: event.source }
+  }
+  return event.channel && event.message_ts ? { channel: event.channel, ts: event.message_ts } : undefined
+}
 
 /**
  * What Slack tells JiraIA (Etapa 5e, ADR-0018): a JiraIA link shared in a channel gets the card's
@@ -99,8 +111,9 @@ export class SlackEventsService {
         unfurls[url] = { blocks }
       }
     }
-    if (Object.keys(unfurls).length && event.channel && event.ts) {
-      await this.deps.api.unfurl(token, event.channel, event.ts, unfurls)
+    const target = unfurlTarget(event)
+    if (Object.keys(unfurls).length && target) {
+      await this.deps.api.unfurl(token, target, unfurls)
     }
   }
 
