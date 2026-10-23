@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { summaryEmail, summaryLine } from '../email-copy.js'
+import { summaryLine } from '../notice-copy.js'
 import type { NotificationWithActor } from '../notification.repository.js'
 
 const row = (kind: string, data: Record<string, string>): NotificationWithActor => ({
@@ -21,7 +21,7 @@ const row = (kind: string, data: Record<string, string>): NotificationWithActor 
   emailedAt: null
 })
 
-describe('the daily summary', () => {
+describe('a notice in one sentence', () => {
   it('says each notice in a sentence that links to its card', () => {
     expect(
       summaryLine(
@@ -35,15 +35,11 @@ describe('the daily summary', () => {
     })
   })
 
-  it('counts in the subject and never lets a title write markup', () => {
-    const lines = [
-      summaryLine(row('commented', { cardKey: 'PRD-4', cardTitle: '<script>x</script>' }), 'https://jiraia.test')
-    ]
-    const email = summaryEmail('Gil Souza', [...lines, ...lines], 'https://jiraia.test')
-
-    expect(email.subject).toBe('JiraIA: 2 novidades para você')
-    expect(email.html).toContain('&lt;script&gt;')
-    expect(email.html).not.toContain('<script>')
-    expect(email.html).toContain('Olá, Gil.')
+  it('opens a Draw notice on its page', () => {
+    const notice = { ...row('draw_mentioned', { contentId: 'c1', contentTitle: 'SLAs' }), spaceId: 's1' }
+    expect(summaryLine(notice, 'https://jiraia.test')).toMatchObject({
+      sentence: 'Ana mencionou você em SLAs',
+      url: 'https://jiraia.test/draw/s1/c1'
+    })
   })
 })

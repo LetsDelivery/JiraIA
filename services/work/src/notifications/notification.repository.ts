@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, or, type SQL } from 'drizzle-orm'
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, or, type SQL, sql } from 'drizzle-orm'
 
 import { members } from '../schema.js'
 import { notificationPreferences, notifications } from '../schema-intake.js'
@@ -95,13 +95,18 @@ export class NotificationRepository {
   }
 
   /** Unread notices not yet mailed, oldest first: what a daily summary may carry. */
-  async unmailed(before: Date, limit: number): Promise<NotificationWithActor[]> {
+  /**
+   * The notices of these kinds nobody has mailed or read yet, oldest first. Each one leaves this list
+   * once it is settled — mailed, or marked as not wanted by e-mail — so the batch always moves on.
+   */
+  async unmailed(kinds: readonly string[], before: Date, limit: number): Promise<NotificationWithActor[]> {
     const rows = await this.db
       .select({ notification: notifications, actorName: members.name })
       .from(notifications)
       .innerJoin(members, eq(members.id, notifications.actorId))
       .where(
         and(
+          inArray(notifications.kind, [...kinds]),
           isNull(notifications.emailedAt),
           isNull(notifications.readAt),
           isNull(notifications.archivedAt),
@@ -111,6 +116,22 @@ export class NotificationRepository {
       .orderBy(notifications.createdAt)
       .limit(limit)
     return rows.map((row) => ({ ...row.notification, actorName: row.actorName }))
+  }
+
+  /** Who already has an unread, unmailed notice of this kind about this page: one is enough. */
+  async waitingOn(kind: string, contentId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ memberId: notifications.memberId })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.kind, kind),
+          sql`${notifications.data}->>'contentId' = ${contentId}`,
+          isNull(notifications.emailedAt),
+          isNull(notifications.readAt)
+        )
+      )
+    return rows.map((row) => row.memberId)
   }
 
   async markEmailed(ids: readonly string[], at: Date): Promise<void> {

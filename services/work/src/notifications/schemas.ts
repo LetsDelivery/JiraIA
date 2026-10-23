@@ -15,30 +15,49 @@ export const notificationKindValues = [
   'entitlement_waiting',
   'entitlement_decided',
   'entitlement_overdue',
-  'access_review_opened'
+  'access_review_opened',
+  'card_updated',
+  'draw_mentioned',
+  'content_changed',
+  /** A preference only: whether the Monday summary comes. No notice is ever written with it. */
+  'weekly_summary'
 ] as const
 export const notificationKindSchema = z.enum(notificationKindValues)
 export type NotificationKind = z.infer<typeof notificationKindSchema>
 
-/** `in_app` only in the panel; `email` also in the daily summary; `none` not at all. */
-/** Where a kind of notice goes: the panel only, plus the daily e-mail, plus a Slack message (Etapa 5e), or nowhere. */
+/** Where a kind of notice goes: the panel only, plus an e-mail (Etapa 5f), plus a Slack message (Etapa 5e), or nowhere. */
 export const channelSchema = z.enum(['in_app', 'email', 'slack', 'none'])
 export type Channel = z.infer<typeof channelSchema>
 
-/** What a person gets before choosing: by e-mail what asks something of them, in the panel the rest. */
+/**
+ * What a person gets before choosing: everything by e-mail too (Etapa 5f). An e-mail about a card
+ * groups a few minutes of changes, and the Draw ones come in one morning summary, so it stays few.
+ */
 export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
   mentioned: 'email',
   assigned: 'email',
-  commented: 'in_app',
-  state_changed: 'in_app',
+  commented: 'email',
+  state_changed: 'email',
   access_requested: 'email',
   access_decided: 'email',
   proposal_received: 'email',
   entitlement_waiting: 'email',
   entitlement_decided: 'email',
   entitlement_overdue: 'email',
-  access_review_opened: 'email'
+  access_review_opened: 'email',
+  card_updated: 'email',
+  draw_mentioned: 'email',
+  content_changed: 'email',
+  weekly_summary: 'email'
 }
+
+/** A card field that changed, in the words the e-mail shows: "Estado", "Não iniciado" → "Feito". */
+export const cardChangeSchema = z.object({
+  field: z.string(),
+  before: z.string().nullable(),
+  after: z.string().nullable()
+})
+export type CardChange = z.infer<typeof cardChangeSchema>
 
 /** What the notice says, captured when it happened — a card renamed later keeps its old notice. */
 export const notificationDataSchema = z.object({
@@ -60,7 +79,13 @@ export const notificationDataSchema = z.object({
   personName: z.string().optional(),
   /** The access review an `access_review_opened` notice opens. */
   reviewId: z.string().optional(),
-  itemCount: z.number().int().optional()
+  itemCount: z.number().int().optional(),
+  /** What a card notice changed, oldest value first (Etapa 5f). */
+  changes: z.array(cardChangeSchema).optional(),
+  /** The page or whiteboard a Draw notice is about. */
+  contentId: z.string().optional(),
+  contentTitle: z.string().optional(),
+  contentKind: z.string().optional()
 })
 export type NotificationData = z.infer<typeof notificationDataSchema>
 

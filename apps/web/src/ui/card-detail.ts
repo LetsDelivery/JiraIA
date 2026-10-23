@@ -16,6 +16,7 @@ import { bindCustomFields, customFieldInputs } from './custom-fields'
 import { bindDatePickers, dateField } from './date-picker'
 import { detailPanel } from './detail-panel'
 import { openFormDialog } from './dialog'
+import { applyArrival } from './email-arrival'
 import { icon } from './icons'
 import { proposalStrip } from './proposal-strip'
 import { bindSelects, selectField } from './select'
@@ -248,6 +249,7 @@ const render = async (
   bindActivity(dialog, (chosen) => {
     dialog.dataset.activity = chosen
   })
+  applyArrival(dialog)
 }
 
 /** What the relations panels need; which composer is open lives on the dialog, across redraws. */

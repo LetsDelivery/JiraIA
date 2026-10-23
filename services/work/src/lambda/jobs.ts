@@ -11,9 +11,9 @@ import { queueOf } from './queues.js'
  * Each schedule puts `{ "job": "<name>", "at": "<time>" }` in the FIFO jobs queue, grouped by job,
  * and a FIFO group is read one message at a time: that is what keeps two passes of one job from
  * running together — which a reserved concurrency of one did when each job had its own function —
- * without the daily summary holding up the minute's dispatch.
+ * without a summary holding up the minute's dispatch.
  */
-export const JOBS = ['dispatch', 'digest', 'webhook-retry', 'access-clock'] as const
+export const JOBS = ['dispatch', 'mail', 'morning', 'weekly', 'webhook-retry', 'access-clock'] as const
 
 export type JobName = (typeof JOBS)[number]
 
@@ -22,7 +22,7 @@ export const jobMessageSchema = z.object({ job: z.enum(JOBS), at: z.string().opt
 
 type Service = ReturnType<typeof buildService>
 
-export type JobDeps = Pick<Service, 'dispatcher' | 'digest' | 'webhookSender' | 'accessClock' | 'reviews'>
+export type JobDeps = Pick<Service, 'dispatcher' | 'mail' | 'webhookSender' | 'accessClock' | 'reviews'>
 
 /** Dispatch passes until the outbox is empty or the minute is nearly over (ADR-0014). */
 const DISPATCH_BUDGET_MS = 45_000
@@ -38,11 +38,18 @@ const _dispatch = async (deps: JobDeps, logger: JiraiaLogger) => {
   return { dispatched }
 }
 
-/** Every morning at 08:00 in São Paulo, the daily summary of unread notices (escopo-mvp 4.6). */
-const _digest = async (deps: JobDeps, logger: JiraiaLogger) => {
-  const result = await deps.digest.run()
-  logger.record('SummariesSent', result.sent)
-  logger.record('SummariesFailed', result.failed)
+/** Every minute, the e-mails that are due: mentions and access now, a card's changes after their window (Etapa 5f). */
+const _mail = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.sendDue(), logger)
+
+/** Every morning at 08:00 in São Paulo, the LET’S Draw AI summary. */
+const _morning = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.morning(), logger)
+
+/** Mondays at 08:00 in São Paulo, the weekly summary: unanswered mentions and cards nobody took. */
+const _weekly = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.weekly(), logger)
+
+const _recorded = (result: { sent: number; failed: number }, logger: JiraiaLogger) => {
+  logger.record('EmailsSent', result.sent)
+  logger.record('EmailsFailed', result.failed)
   return result
 }
 
@@ -66,13 +73,15 @@ const _accessClock = async (deps: JobDeps, logger: JiraiaLogger) => {
 
 const RUNNERS: Record<JobName, (deps: JobDeps, logger: JiraiaLogger) => Promise<object>> = {
   dispatch: _dispatch,
-  digest: _digest,
+  mail: _mail,
+  morning: _morning,
+  weekly: _weekly,
   'webhook-retry': _webhookRetry,
   'access-clock': _accessClock
 }
 
 /**
- * @example await runJob(service, logger, 'digest')   // { sent: 12, failed: 0 }
+ * @example await runJob(service, logger, 'morning')   // { sent: 12, failed: 0 }
  */
 export const runJob = async (deps: JobDeps, logger: JiraiaLogger, job: JobName): Promise<object> =>
   await RUNNERS[job](deps, logger.child({ job }))

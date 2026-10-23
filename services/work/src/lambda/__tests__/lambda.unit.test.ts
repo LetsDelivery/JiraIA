@@ -57,7 +57,11 @@ class RecordingWork {
     const consumer = (name: string): Consumer => ({ name, accepts: () => true, handle: async () => undefined })
     const jobs: JobDeps = {
       dispatcher: { dispatch: this._step('dispatch', 0) },
-      digest: { run: this._step('digest', { sent: 1, failed: 0 }) },
+      mail: {
+        sendDue: this._step('mail', { sent: 1, failed: 0 }),
+        morning: this._step('morning', { sent: 1, failed: 0 }),
+        weekly: this._step('weekly', { sent: 1, failed: 0 })
+      },
       webhookSender: { retryDue: this._step('webhook-retry', 0) },
       accessClock: { sweep: this._step('access-clock', { expired: 0, overdue: 0 }) },
       reviews: { sweep: async () => ({ opened: 0, closed: 0 }) }
@@ -116,8 +120,8 @@ describe('consumeQueue', () => {
 describe('consumeJobs', () => {
   it('runs the job a schedule put in the jobs queue', async () => {
     const work = new RecordingWork()
-    const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"digest","at":"t"}'))
-    expect(work.ran).toEqual(['digest'])
+    const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"weekly","at":"t"}'))
+    expect(work.ran).toEqual(['weekly'])
     expect(result.batchItemFailures).toEqual([])
   })
 

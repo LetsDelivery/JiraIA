@@ -45,6 +45,8 @@ export class PrintedSlack implements SlackNotifier {
  * the console says where. No message leaves the machine.
  */
 export class LocalMailbox implements Mailer {
+  readonly ready = true
+
   constructor(private readonly dir: string) {}
 
   async send(email: Email): Promise<void> {

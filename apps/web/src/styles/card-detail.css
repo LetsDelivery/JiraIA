@@ -253,6 +253,14 @@
   text-decoration: underline;
 }
 
+/* What a link in an e-mail asked for (Etapa 5f): the one thing to do, ringed until it is done. */
+.detail-assign.is-asked,
+.textarea.is-asked {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
 .status-select .select-trigger,
 .status-pill {
   --status: var(--state-idle);

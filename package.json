@@ -34,6 +34,7 @@
     "db:generate": "drizzle-kit generate --config services/work/drizzle.config.ts",
     "db:migrate": "bun run infra/local/migrate.ts",
     "local:digest": "bun run infra/local/digest.ts",
+    "local:email-preview": "bun run infra/local/email-preview.ts",
     "local:down": "docker compose down",
     "local:reset": "docker compose down -v && docker compose up -d --wait && bun run infra/local/migrate.ts && bun run infra/local/seed.ts",
     "local:serve": "bun run infra/local/server.ts",

@@ -3,11 +3,16 @@ import { DependencyUnavailableException } from '@jiraia/core'
 
 export type Email = { to: string; subject: string; html: string; text: string }
 
-/** Sends one e-mail. The service owns this type; SES is one way to do it (escopo-mvp 4.6). */
-export type Mailer = { send(email: Email): Promise<void> }
+/**
+ * Sends one e-mail. The service owns this type; SES is one way to do it (escopo-mvp 4.6). `ready` is
+ * false while there is no sender, so the jobs wait instead of failing every message every minute.
+ */
+export type Mailer = { readonly ready: boolean; send(email: Email): Promise<void> }
 
 /** SES v2 from the address the domain verified (`MAIL_FROM`, pendência #11). */
 export class SesMailer implements Mailer {
+  readonly ready = true
+
   constructor(private readonly deps: { client: SESv2Client; from: string }) {}
 
   async send(email: Email): Promise<void> {
@@ -30,8 +35,10 @@ export class SesMailer implements Mailer {
   }
 }
 
-/** Without a sender address the summaries wait: notices stay unmailed until one is configured. */
+/** Without a sender address the e-mails wait: notices stay unmailed until one is configured. */
 export class UnavailableMailer implements Mailer {
+  readonly ready = false
+
   async send(email: Email): Promise<void> {
     throw new DependencyUnavailableException('SES', `no MAIL_FROM is configured; the summary for ${email.to} waits`)
   }
@@ -39,6 +46,7 @@ export class UnavailableMailer implements Mailer {
 
 /** What the suites read instead of an inbox. */
 export class InMemoryMailer implements Mailer {
+  readonly ready = true
   readonly sent: Email[] = []
 
   async send(email: Email): Promise<void> {

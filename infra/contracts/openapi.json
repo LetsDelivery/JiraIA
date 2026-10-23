@@ -33713,7 +33713,11 @@
                               "entitlement_waiting",
                               "entitlement_decided",
                               "entitlement_overdue",
-                              "access_review_opened"
+                              "access_review_opened",
+                              "card_updated",
+                              "draw_mentioned",
+                              "content_changed",
+                              "weekly_summary"
                             ]
                           },
                           "actor": {
@@ -33814,6 +33818,52 @@
                                 "type": "integer",
                                 "minimum": -9007199254740991,
                                 "maximum": 9007199254740991
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "after": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "field",
+                                    "before",
+                                    "after"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "contentId": {
+                                "type": "string"
+                              },
+                              "contentTitle": {
+                                "type": "string"
+                              },
+                              "contentKind": {
+                                "type": "string"
                               }
                             },
                             "additionalProperties": false
@@ -34111,7 +34161,11 @@
                               "entitlement_waiting",
                               "entitlement_decided",
                               "entitlement_overdue",
-                              "access_review_opened"
+                              "access_review_opened",
+                              "card_updated",
+                              "draw_mentioned",
+                              "content_changed",
+                              "weekly_summary"
                             ]
                           },
                           "channel": {
@@ -34180,7 +34234,11 @@
                       "entitlement_waiting",
                       "entitlement_decided",
                       "entitlement_overdue",
-                      "access_review_opened"
+                      "access_review_opened",
+                      "card_updated",
+                      "draw_mentioned",
+                      "content_changed",
+                      "weekly_summary"
                     ]
                   },
                   "channel": {
@@ -34227,7 +34285,11 @@
                               "entitlement_waiting",
                               "entitlement_decided",
                               "entitlement_overdue",
-                              "access_review_opened"
+                              "access_review_opened",
+                              "card_updated",
+                              "draw_mentioned",
+                              "content_changed",
+                              "weekly_summary"
                             ]
                           },
                           "channel": {

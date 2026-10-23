@@ -1,6 +1,6 @@
 import type { Channel, Notice, NoticeKind } from '@/api/notifications'
 
-import { drawSpacePath } from './draw'
+import { contentPath, drawSpacePath } from './draw'
 import { spacePath } from './space-types'
 
 /**
@@ -28,7 +28,11 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
       `Pedido de acesso ${OUTCOME[data.status ?? ''] ?? 'atualizado'}: ${data.systemName} · ${data.profileName}`,
     entitlement_overdue: () =>
       `Pedido de acesso atrasado: ${data.systemName} · ${data.profileName} para ${data.personName}`,
-    access_review_opened: () => `Revisão de acessos aberta: ${data.systemName}`
+    access_review_opened: () => `Revisão de acessos aberta: ${data.systemName}`,
+    card_updated: () => `${actor.name} atualizou ${data.cardKey}`,
+    draw_mentioned: () => `${actor.name} mencionou você em ${data.contentTitle}`,
+    content_changed: () => `${actor.name} alterou ${data.contentTitle}`,
+    weekly_summary: () => 'Resumo semanal'
   }
   return sentences[notice.kind]()
 }
@@ -39,6 +43,10 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
  */
 /** An entitlement notice opens the queue for whoever acts on it, Meus acessos for whoever asked. */
 const _accessTarget = (kind: Notice['kind']): string => (kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila')
+
+/** A Draw notice opens its page when it names one, its space otherwise. */
+const _drawTarget = (notice: Pick<Notice, 'data' | 'spaceId'>): string =>
+  notice.data.contentId ? contentPath(notice.spaceId ?? '', notice.data.contentId) : drawSpacePath(notice.spaceId ?? '')
 
 export const target = (notice: Pick<Notice, 'kind' | 'data' | 'spaceId'>): string => {
   if (notice.data.reviewId) {
@@ -54,7 +62,7 @@ export const target = (notice: Pick<Notice, 'kind' | 'data' | 'spaceId'>): strin
     return `${spacePath(notice.data.cardKey.split('-')[0] ?? '')}?card=${notice.data.cardKey}`
   }
   if (notice.data.product === 'draw') {
-    return drawSpacePath(notice.spaceId ?? '')
+    return _drawTarget(notice)
   }
   return notice.data.spaceKey ? `${spacePath(notice.data.spaceKey)}?aba=pessoas` : '/espacos'
 }
@@ -64,6 +72,10 @@ export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {
   assigned: { label: 'Atribuições', hint: 'Um card passou a ser seu.' },
   commented: { label: 'Comentários', hint: 'Comentaram num card que você observa.' },
   state_changed: { label: 'Mudanças de estado', hint: 'Um card que você observa mudou de estado.' },
+  card_updated: {
+    label: 'Mudanças em cards',
+    hint: 'Um card que você observa mudou de responsável, prioridade ou prazo.'
+  },
   access_requested: { label: 'Pedidos de acesso', hint: 'Alguém pediu para editar um espaço que você administra.' },
   access_decided: { label: 'Respostas a pedidos', hint: 'Seu pedido para editar foi aprovado ou recusado.' },
   proposal_received: {
@@ -82,12 +94,31 @@ export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {
   access_review_opened: {
     label: 'Revisões de acessos',
     hint: 'Abriu a revisão periódica de um sistema que você é dono.'
+  },
+  draw_mentioned: {
+    label: 'Menções no LET’S Draw AI',
+    hint: 'Alguém citou você com @ num comentário de página ou quadro.'
+  },
+  content_changed: {
+    label: 'Alterações no LET’S Draw AI',
+    hint: 'Outra pessoa alterou uma página ou um quadro que você ajudou a criar.'
+  },
+  weekly_summary: {
+    label: 'Resumo semanal',
+    hint: 'Toda segunda às 8h: menções sem resposta e cards sem responsável nos seus espaços.'
   }
 }
 
+/** Kinds that are a summary, not a notice: they come by e-mail or not at all. */
+export const SUMMARY_KINDS: ReadonlySet<NoticeKind> = new Set(['weekly_summary'])
+
+/** The channels a kind may choose: a summary has no panel or Slack version. */
+export const channelsOf = (kind: NoticeKind): Channel[] =>
+  SUMMARY_KINDS.has(kind) ? ['email', 'none'] : ['in_app', 'email', 'slack', 'none']
+
 export const CHANNEL_LABEL: Record<Channel, string> = {
   in_app: 'Só no JiraIA',
-  email: 'JiraIA e e-mail diário',
+  email: 'JiraIA e e-mail',
   slack: 'JiraIA e Slack',
   none: 'Não avisar'
 }

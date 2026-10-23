@@ -19,6 +19,10 @@ import type { WatcherRepository } from './cards/watcher.repository.js'
 import type { WorkflowRepository } from './cards/workflow.repository.js'
 import type { Config } from './config.js'
 import type { Overrides } from './container.js'
+import { ContentRepository } from './draw/content.repository.js'
+import { ContentCommentRepository } from './draw/content-comment.repository.js'
+import { DrawSpaceRepository } from './draw/draw-space.repository.js'
+import { VersionRepository } from './draw/version.repository.js'
 import { Dispatcher } from './events/dispatcher.js'
 import type { Consumer, EventPublisher } from './events/event.js'
 import { EventBridgePublisher, eventBridgeClient } from './events/eventbridge-publisher.js'
@@ -37,11 +41,13 @@ import { SlackService } from './integrations/slack.service.js'
 import { WebhookSlackNotifier } from './integrations/slack-notifier.js'
 import type { MemberRepository } from './members/member.repository.js'
 import { SystemActors } from './members/system-actor.js'
-import { DigestService } from './notifications/digest.js'
+import { DrawNotices } from './notifications/draw-notices.js'
 import { NotificationFanout } from './notifications/fanout.js'
+import { MailService } from './notifications/mail.service.js'
 import { type Mailer, SesMailer, sesClient, UnavailableMailer } from './notifications/mailer.js'
 import { NotificationRepository } from './notifications/notification.repository.js'
 import { NotificationService } from './notifications/notification.service.js'
+import { WeeklyRepository } from './notifications/weekly.repository.js'
 import { ProposalRepository } from './proposals/proposal.repository.js'
 import { AccessRequestRepository } from './requests/request.repository.js'
 import type { SlackDirect } from './slack/slack-direct.js'
@@ -184,7 +190,7 @@ type NoticeDeps = {
   slackDirect: SlackDirect
 }
 
-/** Etapa 5b (escopo-mvp 4.6): each member's notices, the consumer that writes them and the daily e-mail. */
+/** Etapas 5b and 5f (escopo-mvp 4.6): each member's notices, the consumer that writes them and the e-mails. */
 export const buildNotifications = ({
   db,
   clock,
@@ -199,6 +205,7 @@ export const buildNotifications = ({
   slackDirect
 }: NoticeDeps) => {
   const rows = new NotificationRepository(db)
+  const versions = new VersionRepository(db)
   return {
     notifications: new NotificationService({ clock, access, notifications: rows }),
     fanout: new NotificationFanout({
@@ -220,20 +227,34 @@ export const buildNotifications = ({
         catalog: new CatalogRepository(db),
         reviews: new ReviewRepository(db)
       }),
+      draw: new DrawNotices({
+        contents: new ContentRepository(db),
+        comments: new ContentCommentRepository(db),
+        versions,
+        spaces: new DrawSpaceRepository(db),
+        notifications: rows,
+        members
+      }),
       slack: slackDirect
     }),
-    digest: new DigestService({
+    mail: new MailService({
       clock,
-      logger: createLogger('work', 'digest'),
+      logger: createLogger('work', 'mail'),
       notifications: rows,
       members,
+      versions,
+      weekly: new WeeklyRepository(db),
       mailer: overrides.mailer ?? _mailer(config),
-      webUrl: (config.WEB_URL ?? 'http://localhost:5280').replace(/\/$/, '')
+      webUrl: (config.WEB_URL ?? 'http://localhost:5280').replace(/\/$/, ''),
+      windowMs: overrides.mailWindowMs ?? MAIL_WINDOW_MS
     })
   }
 }
 
-/** SES from the verified sender when there is one; until then summaries wait (pendência #11). */
+/** How long a card's changes gather before their e-mail goes (Etapa 5f). */
+const MAIL_WINDOW_MS = 10 * 60_000
+
+/** SES from the verified sender when there is one; until then the e-mails wait (pendência #11). */
 const _mailer = (config: Config): Mailer =>
   config.MAIL_FROM
     ? new SesMailer({ client: sesClient(config.AWS_REGION), from: config.MAIL_FROM })
