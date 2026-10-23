@@ -199,5 +199,3 @@ export const shell = (
       ${productLink('/draw', 'LET’S Draw AI', 'notebook')}
     `
   })
-
-export const loadingView = html`<p class="muted" aria-busy="true">Carregando…</p>`

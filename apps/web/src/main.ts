@@ -39,6 +39,7 @@ import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { holdPlace, markCurrent } from '@/ui/pending'
 import { bindSelects, closeSelectsOnOutsideClick } from '@/ui/select'
 import { openCreateSpace } from '@/ui/space-dialogs'
+import { splash } from '@/ui/splash'
 import { bindStars } from '@/ui/star'
 import {
   accessQueueView,
@@ -61,7 +62,7 @@ import { profileView } from '@/views/profile'
 import { proposalsView } from '@/views/proposals'
 import { searchView } from '@/views/search'
 import { settingsView } from '@/views/settings'
-import { applyTheme, appsMenu, collapsed, isDark, loadingView, shell, spacesOpen, theme } from '@/views/shell'
+import { applyTheme, appsMenu, collapsed, isDark, shell, spacesOpen, theme } from '@/views/shell'
 import { bindSignIn, signInPage } from '@/views/sign-in'
 import { slackConnectView, slackView } from '@/views/slack'
 import { spaceView } from '@/views/space'
@@ -202,7 +203,7 @@ const render = (entering = false) => {
     return
   }
   if (!app.querySelector('.shell')) {
-    app.innerHTML = loadingView.value
+    app.innerHTML = splash(path).value
   }
   renderApp(path, entering).catch(() => {
     // `/work/me` refused: an expired token was already signed out by the API client; anything else
