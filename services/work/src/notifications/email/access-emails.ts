@@ -100,6 +100,24 @@ const _proposal = (row: NotificationWithActor, data: Data): AccessCopy => ({
   reason: 'Você recebe este e-mail porque administra este espaço.'
 })
 
+const _sprintOverdue = (_: NotificationWithActor, data: Data): AccessCopy => ({
+  subject: `${data.sprintName} de ${data.spaceName} passou da data de fim`,
+  lead: ['Uma sprint do seu espaço passou da data de fim'],
+  headline: `${data.sprintName} · ${data.spaceName}`,
+  facts: [
+    [
+      'Data de fim',
+      String(data.sprintEndsOn ?? '')
+        .split('-')
+        .reverse()
+        .join('/')
+    ]
+  ],
+  status: { text: 'Atrasada', tone: 'warn' },
+  cta: 'Abrir o board',
+  reason: 'Você recebe este e-mail porque lidera este espaço.'
+})
+
 const COPY: Record<string, (row: NotificationWithActor, data: Data) => AccessCopy> = {
   entitlement_waiting: _waiting,
   entitlement_decided: _decided,
@@ -107,10 +125,11 @@ const COPY: Record<string, (row: NotificationWithActor, data: Data) => AccessCop
   access_review_opened: _review,
   access_requested: _spaceRequest,
   access_decided: _spaceDecided,
-  proposal_received: _proposal
+  proposal_received: _proposal,
+  sprint_overdue: _sprintOverdue
 }
 
-/** The notice kinds that get a message of their own, sent as they happen — access runs on a deadline. */
+/** The notice kinds that get a message of their own, sent as they happen — each runs on a deadline. */
 export const ACCESS_KINDS = new Set(Object.keys(COPY))
 
 /** One access notice as its own message: who, what, the request's facts, and where to act. */

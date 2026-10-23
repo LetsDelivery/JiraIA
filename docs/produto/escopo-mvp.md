@@ -68,6 +68,7 @@ interface de terceiros. Quem implementa trabalha a partir daqui
 | 3.8 | Ações em massa (mudar estado, label ou responsável de vários cards) | M | J |
 | 3.9 | Calendário e linha do tempo (Gantt) | D | R |
 | 3.10 | Exportar resultados para CSV/XLSX | O2 | J |
+| 3.11 | Sprints por espaço: planejar no backlog, iniciar, encerrar levando os abertos, board da sprint ativa, burndown e velocidade (ADR-0029) | M | J |
 | 3.11 | Busca semântica e "Pergunte ao JiraIA" com fontes citadas | M | N |
 | 3.12 | Visão de matriz esforço × impacto (Product Discovery) | O2 | J |
 
@@ -149,8 +150,8 @@ Os agentes iniciais reaproveitam as skills que já existem em `.claude/skills/`.
 | 8.6 | Monitoramento de erros e disponibilidade | M |
 
 ## Fora do MVP (registro para não reabrir sem motivo)
-- Ciclos e sprints com burndown, roadmap, Gantt e calendário. Voltam ao MVP se o TEC usar
-  sprint hoje (pergunta aberta no `README.md`).
+- Roadmap, Gantt e calendário. (Sprints com burndown entraram no MVP em 2026-10-23: o TEC usa
+  sprint no Jira — item 3.11, ADR-0029.)
 - Time tracking e worklog, dashboards customizados, linguagem de consulta própria.
 - Boards públicos, acesso de clientes e OLs, apps móveis.
 - Integrações com GitHub, Zendesk e outras além do Slack.

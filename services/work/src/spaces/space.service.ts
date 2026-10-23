@@ -68,6 +68,9 @@ export class SpaceService {
       type: input.type,
       leadId: lead.id,
       nextCardNumber: 1,
+      // A software team plans in sprints; any other space switches them on if it wants (ADR-0029).
+      usesSprints: input.type === 'software',
+      estimation: 'tshirt',
       lastCardActivityAt: null,
       archivedAt: null,
       createdAt: now

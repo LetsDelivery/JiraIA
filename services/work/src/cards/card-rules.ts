@@ -4,6 +4,7 @@ import type { Changes } from '../audit/audit.js'
 import type { GroupRepository } from '../groups/group.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
+import type { SprintRepository } from '../sprints/sprint.repository.js'
 import type { CardRepository } from './card.repository.js'
 import type { FieldRepository } from './field.repository.js'
 import { type FieldView, parseFieldValue, toFieldView } from './field.schemas.js'
@@ -16,6 +17,7 @@ type Deps = {
   groups: GroupRepository
   members: MemberRepository
   workflows: WorkflowRepository
+  sprints: SprintRepository
 }
 
 /** What a card's values must respect before any of them is written: they belong to its space. */
@@ -44,6 +46,22 @@ export class CardRules {
   async activeGroup(actor: MemberRow, groupId: string): Promise<void> {
     if (!(await this.deps.groups.find(actor.organizationId, groupId))) {
       throw new NotFoundException('Group', groupId)
+    }
+  }
+
+  /** The id of the space's active sprint, if one is running. */
+  async activeSprint(spaceId: string): Promise<string | undefined> {
+    return (await this.deps.sprints.list(spaceId, 'active'))[0]?.id
+  }
+
+  /** A card goes to a sprint of its own space that has not closed (ADR-0029). */
+  async assertSprint(actor: MemberRow, spaceId: string, sprintId: string): Promise<void> {
+    const sprint = await this.deps.sprints.find(actor.organizationId, sprintId)
+    if (sprint?.spaceId !== spaceId) {
+      throw new ValidationException(`Sprint "${sprintId}" is not one of this space`, { sprintId })
+    }
+    if (sprint.state === 'closed') {
+      throw new ConflictException(`Sprint "${sprint.name}" is closed`, { sprintId })
     }
   }
 

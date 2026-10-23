@@ -53,6 +53,7 @@ import { AccessRequestRepository } from './requests/request.repository.js'
 import type { SlackDirect } from './slack/slack-direct.js'
 import { SpaceRepository } from './spaces/space.repository.js'
 import type { SpaceGate } from './spaces/space-gate.js'
+import { SprintRepository } from './sprints/sprint.repository.js'
 import { TokenRepository } from './tokens/token.repository.js'
 import { TokenService } from './tokens/token.service.js'
 import { WebhookSender } from './webhooks/sender.js'
@@ -222,6 +223,7 @@ export const buildNotifications = ({
       grants: new GrantRepository(db),
       groups: new GroupRepository(db),
       proposals: new ProposalRepository(db),
+      sprints: new SprintRepository(db),
       entitlements: new EntitlementNotices({
         requests: new EntitlementRequestRepository(db),
         catalog: new CatalogRepository(db),

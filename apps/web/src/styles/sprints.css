@@ -1,0 +1,154 @@
+/*
+ * Sprints (ADR-0029): the planning sections of the backlog and the strip above a sprint's board.
+ * Solid surfaces with a 1px border, as every content surface; colour only for state — an active sprint
+ * in progress blue, a late one in the warning tone.
+ */
+
+/* ---------- Planning ---------- */
+/* The hint reads on the left, creating a sprint sits on the right. */
+.toolbar [data-create-sprint] {
+  margin-left: auto;
+}
+
+.sprint-planning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sprint-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sprint-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.sprint-title {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.sprint-title h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sprint-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sprint-goal {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-secondary);
+}
+
+.sprint-badge {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-hover);
+}
+
+.sprint-badge.sprint-active {
+  color: var(--state-progress);
+  background: color-mix(in srgb, var(--state-progress) 12%, transparent);
+}
+
+.sprint-late {
+  font-weight: 600;
+  color: var(--state-warn);
+}
+
+.backlog-empty {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* The drop marker needs room in an empty sprint, where it is the only line. */
+.backlog .backlog-empty + .drop-marker,
+.backlog .drop-marker:only-child {
+  min-height: 4px;
+}
+
+.points-chip {
+  flex: none;
+  min-width: 24px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-control);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--fg-secondary);
+  background: var(--surface-hover);
+}
+
+/* Start and end side by side in a sprint's dialog; stacked on a phone. */
+.sprint-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .sprint-dates {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Board strip ---------- */
+.sprint-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.sprint-strip .field {
+  margin: 0;
+}
+
+.sprint-strip-text {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .sprint-actions {
+    width: 100%;
+  }
+
+  .sprint-strip-text {
+    flex-basis: 100%;
+  }
+}

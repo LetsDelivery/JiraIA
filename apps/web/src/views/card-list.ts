@@ -11,6 +11,7 @@ import {
 } from '@/lib/columns'
 import { shortDate } from '@/lib/dates'
 import { type Html, html } from '@/lib/html'
+import { planning } from '@/lib/sprints'
 import { persistedStore } from '@/lib/store'
 import { bindBulkBar, bulkBar, selectionOf } from '@/ui/bulk-bar'
 import { icon } from '@/ui/icons'
@@ -114,7 +115,13 @@ const bulkContext = (context: BoardContext) => {
   for (const id of [...selected].filter((each) => !here.has(each))) {
     selected.delete(id)
   }
-  return { spaceId: context.spaceId, states: context.workflow.states, members: context.members, selected }
+  return {
+    spaceId: context.spaceId,
+    states: context.workflow.states,
+    members: context.members,
+    sprints: planning(context.sprints),
+    selected
+  }
 }
 
 /** A box per row to pick cards for a change to all of them (3.8); the head box picks every row. */

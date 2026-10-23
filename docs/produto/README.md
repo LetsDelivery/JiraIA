@@ -81,8 +81,8 @@ funcionalidade no que usamos hoje.
 - **Acesso:** login corporativo (SSO) e papéis por espaço.
 
 ### Fora (depois do MVP)
-- Ciclos e sprints com burndown, roadmap e Gantt, e analytics avançado.
-  > TODO: confirmar com Tecnologia se o TEC usa sprint no Jira hoje. Se usar, sprint entra no MVP.
+- Roadmap e Gantt, e analytics avançado. (Sprints com burndown entraram no MVP: o TEC usa sprint
+  no Jira, confirmado em 2026-10-23 — escopo-mvp 3.11.)
 - Service desk com SLA e portal externo (SDDEC).
 - Visões de Product Discovery (matriz de impacto, insights) dos projetos FIB, GB, LP e MS.
   Entram na onda 2.
@@ -150,7 +150,7 @@ Uso interno. Os "clientes" são as áreas da LET'S que usam Jira e Confluence ho
   `LetsDelivery/uselets`, com os desvios de `arquitetura.md`. Falta a validação final do
   Leandro Teves.
 - Quais contas AWS (dev, prd e tools) o JiraIA usa: as do uselets ou contas próprias?
-- O TEC usa sprint no Jira hoje?
+- ~~O TEC usa sprint no Jira hoje?~~ Sim (2026-10-23): sprints de cerca de 3 semanas e pontos de história. Sprint entrou no MVP.
 - Quanto custam hoje as licenças Atlassian e quantos usuários temos?
 - O que fazer com as automações e integrações do Atlassian que existem hoje, além da REQ → PRD?
 - Que histórico migrar: tudo ou só os itens abertos e os últimos 12 meses?

@@ -47,6 +47,8 @@ export const cardViewSchema = z.object({
   labels: z.array(z.string()),
   dueDate: z.iso.date().nullable(),
   estimate: z.string().nullable(),
+  points: z.number().nullable(),
+  sprintId: z.uuid().nullable(),
   parentId: z.uuid().nullable(),
   customFields: z.record(z.string(), z.unknown()),
   rank: z.number(),
@@ -55,7 +57,12 @@ export const cardViewSchema = z.object({
   updatedAt: z.iso.datetime()
 })
 export type CardView = z.infer<typeof cardViewSchema>
+/** A space's cards, or only those of a sprint: the active one, one by id, or none — the backlog (ADR-0029). */
+export const cardListQuerySchema = z.object({ sprint: z.union([z.enum(['active', 'none']), z.uuid()]).optional() })
 export const cardListSchema = z.object({ items: z.array(cardViewSchema) })
+
+/** Story points: Jira's 1, 2, 3, 5, 8, 13 or any other number a team uses, halves included. */
+const pointsSchema = z.number().min(0).max(1000)
 
 const labelsSchema = z.array(z.string().trim().min(1).max(60)).max(20)
 const titleSchema = z.string().trim().min(1).max(255)
@@ -69,7 +76,9 @@ export const createCardSchema = z.object({
   priority: prioritySchema.default('medium'),
   labels: labelsSchema.default([]),
   /** A subtask is created under its parent, in the same space (2.6). */
-  parentId: z.uuid().optional()
+  parentId: z.uuid().optional(),
+  /** Created from a sprint's board, it starts in that sprint (ADR-0029). */
+  sprintId: z.uuid().optional()
 })
 export type CreateCard = z.infer<typeof createCardSchema>
 
@@ -85,6 +94,9 @@ export const updateCardSchema = z
     labels: labelsSchema.optional(),
     dueDate: z.iso.date().nullable().optional(),
     estimate: z.string().trim().max(20).nullable().optional(),
+    points: pointsSchema.nullable().optional(),
+    /** The sprint the card goes to, of its own space and not closed; `null` sends it to the backlog. */
+    sprintId: z.uuid().nullable().optional(),
     parentId: z.uuid().nullable().optional(),
     /** Custom field id → value; `null` clears it (2.5). Only the fields named change. */
     customFields: z.record(z.uuid(), z.unknown()).optional()
@@ -95,8 +107,8 @@ export const updateCardSchema = z
 export type UpdateCard = z.infer<typeof updateCardSchema>
 
 /**
- * The same change to many cards at once (escopo-mvp 3.8): a state — the cards must share a space,
- * since states are a space's own — an assignee, labels to add and labels to take off.
+ * The same change to many cards at once (escopo-mvp 3.8): a state or a sprint — the cards must share
+ * a space, since both are a space's own — an assignee, labels to add and labels to take off.
  */
 export const bulkEditSchema = z.object({
   cardIds: z.array(z.uuid()).min(1).max(100),
@@ -104,6 +116,7 @@ export const bulkEditSchema = z.object({
     .object({
       stateId: z.uuid().optional(),
       assigneeId: z.uuid().nullable().optional(),
+      sprintId: z.uuid().nullable().optional(),
       addLabels: labelsSchema.min(1).optional(),
       removeLabels: labelsSchema.min(1).optional()
     })
@@ -190,6 +203,8 @@ export const toCardView = (row: CardWithPeople): CardView => ({
   labels: z.array(z.string()).parse(row.labels),
   dueDate: row.dueDate,
   estimate: row.estimate,
+  points: row.points,
+  sprintId: row.sprintId,
   parentId: row.parentId,
   customFields: z.record(z.string(), z.unknown()).parse(row.customFields),
   rank: row.rank,

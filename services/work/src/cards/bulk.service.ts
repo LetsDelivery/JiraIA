@@ -49,12 +49,12 @@ export class BulkEditService {
     if (!first) {
       return
     }
-    if (changes.stateId && opened.some((each) => each.card.spaceId !== first.card.spaceId)) {
-      const keys = opened.map((each) => `${each.card.spaceKey}-${each.card.number}`).join(', ')
-      throw new ValidationException(`State "${changes.stateId}" is one space's; cards ${keys} are in several`, changes)
-    }
+    _assertOneSpace(opened, changes)
     if (changes.stateId) {
       await this.deps.rules.placement(first.card.spaceId, undefined, changes.stateId)
+    }
+    if (changes.sprintId) {
+      await this.deps.rules.assertSprint(first.gate.actor, first.card.spaceId, changes.sprintId)
     }
     if (changes.assigneeId) {
       await this.deps.rules.activeMember(first.gate.actor, changes.assigneeId)
@@ -111,14 +111,29 @@ export class BulkEditService {
   }
 }
 
+/** A state and a sprint are a space's own: the cards that take one must share a space. */
+const _assertOneSpace = (opened: readonly CardAccess[], changes: BulkEdit['changes']): void => {
+  const named = changes.stateId ?? changes.sprintId
+  if (named && opened.some((each) => each.card.spaceId !== opened[0]?.card.spaceId)) {
+    const keys = opened.map((each) => `${each.card.spaceKey}-${each.card.number}`).join(', ')
+    throw new ValidationException(`"${named}" is one space's; cards ${keys} are in several`, changes)
+  }
+}
+
+/** A field the change names and the card does not already hold. */
+const _differs = <K extends 'stateId' | 'assigneeId' | 'sprintId'>(
+  card: CardAccess['card'],
+  changes: BulkEdit['changes'],
+  field: K
+): boolean => changes[field] !== undefined && changes[field] !== card[field]
+
 /** The fields one card changes; a state it is already in, or an assignee it already has, is no change. */
 const _fields = (card: CardAccess['card'], changes: BulkEdit['changes']): CardFields => {
   const fields: CardFields = {}
-  if (changes.stateId && changes.stateId !== card.stateId) {
-    fields.stateId = changes.stateId
-  }
-  if (changes.assigneeId !== undefined && changes.assigneeId !== card.assigneeId) {
-    fields.assigneeId = changes.assigneeId
+  for (const field of ['stateId', 'assigneeId', 'sprintId'] as const) {
+    if (_differs(card, changes, field)) {
+      Object.assign(fields, { [field]: changes[field] })
+    }
   }
   if (changes.addLabels || changes.removeLabels) {
     fields.labels = labelsAfter(card, changes.addLabels ?? [], changes.removeLabels ?? [])

@@ -22,7 +22,7 @@ export const jobMessageSchema = z.object({ job: z.enum(JOBS), at: z.string().opt
 
 type Service = ReturnType<typeof buildService>
 
-export type JobDeps = Pick<Service, 'dispatcher' | 'mail' | 'webhookSender' | 'accessClock' | 'reviews'>
+export type JobDeps = Pick<Service, 'dispatcher' | 'mail' | 'sprints' | 'webhookSender' | 'accessClock' | 'reviews'>
 
 /** Dispatch passes until the outbox is empty or the minute is nearly over (ADR-0014). */
 const DISPATCH_BUDGET_MS = 45_000
@@ -41,8 +41,12 @@ const _dispatch = async (deps: JobDeps, logger: JiraiaLogger) => {
 /** Every minute, the e-mails that are due: mentions and access now, a card's changes after their window (Etapa 5f). */
 const _mail = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.sendDue(), logger)
 
-/** Every morning at 08:00 in São Paulo, the LET’S Draw AI summary. */
-const _morning = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.morning(), logger)
+/** Every morning at 08:00 in São Paulo: sprints past their end date are marked late, then the LET’S Draw AI summary. */
+const _morning = async (deps: JobDeps, logger: JiraiaLogger) => {
+  const { late } = await deps.sprints.sweepLate()
+  logger.record('SprintsLate', late)
+  return { late, ...(await _recorded(await deps.mail.morning(), logger)) }
+}
 
 /** Mondays at 08:00 in São Paulo, the weekly summary: unanswered mentions and cards nobody took. */
 const _weekly = async (deps: JobDeps, logger: JiraiaLogger) => _recorded(await deps.mail.weekly(), logger)

@@ -4,10 +4,12 @@ import {
   type Field,
   type Member,
   read,
+  type Space,
   type State,
   type Workflow,
   write
 } from '@/api/requests'
+import { type Sprint, sprintsRead } from '@/api/sprints'
 import { invalidate } from '@/lib/cache'
 import { dropIndex, initials, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
 import { assignableIds, type CardFilter, isEmpty } from '@/lib/filters'
@@ -24,12 +26,17 @@ import { openFormDialog, textField } from '@/ui/dialog'
 import { openFieldsEditor } from '@/ui/fields-dialog'
 import { icon } from '@/ui/icons'
 import { selectField } from '@/ui/select'
+import { bindSprintStrip, type SprintScope, shownSprint, sprintStrip } from '@/ui/sprint-strip'
 import { toast } from '@/ui/toast'
 import { openWorkflowEditor } from '@/ui/workflow-dialog'
 
 export type BoardContext = {
   spaceId: string
   spaceKey: string
+  /** Whether it plans in sprints, and how it estimates (ADR-0029). */
+  space: Pick<Space, 'usesSprints' | 'estimation'>
+  /** Its sprints, none when it does not use them. */
+  sprints: readonly Sprint[]
   workflow: Workflow
   cards: readonly Card[]
   fields: readonly Field[]
@@ -111,11 +118,30 @@ const laned = (context: BoardContext, lanes: Lane<Card>[]): Html => html`
 
 const LANE_OPTIONS = LANE_BY.map((by) => ({ value: by, label: LANE_LABEL[by] }))
 
+/** The cards the board shows: the sprint on screen's, or every card of a space without sprints (ADR-0029). */
+const boardScope = (context: BoardContext): { cards: readonly Card[]; sprint: Sprint | undefined } => {
+  if (!context.space.usesSprints) {
+    return { cards: context.cards, sprint: undefined }
+  }
+  const sprint = shownSprint(context.sprints, new URLSearchParams(location.search).get('sprint'))
+  return { cards: sprint ? context.cards.filter((card) => card.sprintId === sprint.id) : context.cards, sprint }
+}
+
+const scopeOf = (context: BoardContext, cards: readonly Card[]): SprintScope => ({
+  sprints: context.sprints,
+  cards,
+  states: context.workflow.states,
+  points: context.space.estimation === 'points',
+  canWrite: context.canWrite
+})
+
 /** The kanban: one column per state, in the workflow's order, optionally in lanes (escopo-mvp 3.1). */
 export const board = (context: BoardContext): Html => {
   const by = laneOf(context.spaceId)
-  const names = { types: context.workflow.types, cards: context.cards }
+  const { cards, sprint } = boardScope(context)
+  const names = { types: context.workflow.types, cards }
   return html`
+    ${context.space.usesSprints ? sprintStrip(scopeOf(context, cards), sprint) : ''}
     <div class="toolbar">
       <div class="search card-picker" data-board-search-box>
         <label class="sr-only" for="board-search">Pesquisar cards</label>
@@ -131,8 +157,8 @@ export const board = (context: BoardContext): Html => {
     </div>
     ${
       by === 'none'
-        ? html`<div class="board">${context.workflow.states.map((state) => column(state, inState(context.cards, state), context.canWrite))}</div>`
-        : laned(context, lanesOf(context.cards, by, names))
+        ? html`<div class="board">${context.workflow.states.map((state) => column(state, inState(cards, state), context.canWrite))}</div>`
+        : laned({ ...context, cards }, lanesOf(cards, by, names))
     }
   `
 }
@@ -141,10 +167,14 @@ export const board = (context: BoardContext): Html => {
 let refocus: string | undefined
 
 export const bindBoard = (root: HTMLElement, context: BoardContext): void => {
+  if (context.space.usesSprints) {
+    const { cards, sprint } = boardScope(context)
+    bindSprintStrip(root, scopeOf(context, cards), sprint)
+  }
   bindFilters(root, context.meId)
   bindBoardSearch(root, context)
   bindDragAndDrop(root, context)
-  bindQuickAdd(root, context.spaceId)
+  bindQuickAdd(root, context)
   bindOpenCards(root, context)
   root.querySelector('[data-configure]')?.addEventListener('click', () => void openWorkflowEditor(context.spaceId))
   root.querySelector('[data-fields]')?.addEventListener('click', () => void openFieldsEditor(context.spaceId))
@@ -232,7 +262,13 @@ const bindBoardSearch = (root: HTMLElement, context: BoardContext): void => {
   })
 }
 
-const bindQuickAdd = (root: HTMLElement, spaceId: string): void => {
+/** A card created on a sprint's board starts in that sprint, so it stays on screen (ADR-0029). */
+const sprintOfBoard = (context: BoardContext): { sprintId?: string } => {
+  const sprint = boardScope(context).sprint
+  return sprint && sprint.state !== 'closed' ? { sprintId: sprint.id } : {}
+}
+
+const bindQuickAdd = (root: HTMLElement, context: BoardContext): void => {
   for (const form of root.querySelectorAll<HTMLFormElement>('[data-quick-add]')) {
     form.addEventListener('submit', (event) => {
       event.preventDefault()
@@ -244,7 +280,7 @@ const bindQuickAdd = (root: HTMLElement, spaceId: string): void => {
       refocus = form.dataset.quickAdd
       input.value = ''
       write
-        .createCard(spaceId, { title, stateId: form.dataset.quickAdd ?? '' })
+        .createCard(context.spaceId, { title, stateId: form.dataset.quickAdd ?? '', ...sprintOfBoard(context) })
         .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
     })
   }
@@ -345,7 +381,8 @@ const createCard = (context: BoardContext): void =>
       write.createCard(context.spaceId, {
         title: String(data.get('title')),
         typeId: String(data.get('typeId')),
-        stateId: String(data.get('stateId'))
+        stateId: String(data.get('stateId')),
+        ...sprintOfBoard(context)
       })
   })
 
@@ -355,14 +392,16 @@ const createCard = (context: BoardContext): void =>
  * the people a filter hides stay offered in it.
  */
 export const loadBoard = async (spaceId: string, filter: CardFilter = {}) => {
-  const [workflow, cards, every, members, roles, fields] = await Promise.all([
+  const [workflow, cards, every, members, roles, fields, space] = await Promise.all([
     read.workflow(spaceId),
     isEmpty(filter) ? read.cards(spaceId) : read.filteredCards(spaceId, filter),
     read.cards(spaceId),
     read.members(),
     read.spaceRoles(spaceId),
-    read.fields(spaceId)
+    read.fields(spaceId),
+    read.space(spaceId)
   ])
   const assignable = assignableIds(roles.items, every.items, filter)
-  return { workflow, cards: cards.items, members: members.items, assignable, fields: fields.items }
+  const sprints = space.usesSprints ? (await sprintsRead.list(spaceId)).items : []
+  return { workflow, cards: cards.items, members: members.items, assignable, fields: fields.items, space, sprints }
 }

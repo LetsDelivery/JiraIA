@@ -141,6 +141,13 @@
       "when": 1792607845452,
       "tag": "0019_access-reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792769892657,
+      "tag": "0020_sprints",
+      "breakpoints": true
     }
   ]
 }

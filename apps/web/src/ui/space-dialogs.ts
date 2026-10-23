@@ -57,6 +57,16 @@ export const openCreateSpace = async (): Promise<void> => {
   })
 }
 
+/** ADR-0029: a space plans in sprints or not, and estimates in P/M/G or in story points. */
+const SPRINT_OPTIONS = [
+  { value: 'true', label: 'Usa sprints', hint: 'Planejamento no Backlog e board da sprint ativa' },
+  { value: 'false', label: 'Não usa sprints' }
+]
+const ESTIMATION_OPTIONS = [
+  { value: 'tshirt', label: 'P/M/G' },
+  { value: 'points', label: 'Pontos', hint: '1, 2, 3, 5, 8, 13…' }
+]
+
 export const openEditSpace = async (space: Space): Promise<void> => {
   const members = await read.members()
 
@@ -69,13 +79,17 @@ export const openEditSpace = async (space: Space): Promise<void> => {
       ${selectField({ name: 'type', label: 'Tipo', options: SPACE_TYPE_OPTIONS, value: space.type })}
       ${selectField({ name: 'leadId', label: 'Líder', options: leadOptions(members.items), value: space.lead?.id ?? '', placeholder: 'Sem líder' })}
       ${textField({ name: 'description', label: 'Descrição', value: space.description })}
+      ${selectField({ name: 'usesSprints', label: 'Sprints', options: SPRINT_OPTIONS, value: String(space.usesSprints) })}
+      ${selectField({ name: 'estimation', label: 'Estimativa dos cards', options: ESTIMATION_OPTIONS, value: space.estimation })}
     `,
     onSubmit: (data) =>
       write.updateSpace(space.id, {
         name: String(data.get('name')),
         description: String(data.get('description') ?? ''),
         type: String(data.get('type')) as SpaceType,
-        leadId: String(data.get('leadId')) || null
+        leadId: String(data.get('leadId')) || null,
+        usesSprints: data.get('usesSprints') === 'true',
+        estimation: data.get('estimation') === 'points' ? 'points' : 'tshirt'
       })
   })
 }

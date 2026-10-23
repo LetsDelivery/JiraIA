@@ -104,6 +104,9 @@ import type { SlackApi } from './slack/slack-api.js'
 import { SpaceRepository } from './spaces/space.repository.js'
 import { SpaceService } from './spaces/space.service.js'
 import { SpaceGate } from './spaces/space-gate.js'
+import { sprintRoutes } from './sprints/routes.js'
+import { SprintRepository } from './sprints/sprint.repository.js'
+import { SprintService } from './sprints/sprint.service.js'
 import { tokenRoutes } from './tokens/routes.js'
 import { viewRoutes } from './views/routes.js'
 import { ViewRepository } from './views/view.repository.js'
@@ -159,7 +162,15 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const cardGate = new CardGate({ gate, cards, access })
   const fields = new FieldRepository(db)
   const watchers = new WatcherRepository(db)
-  const rules = new CardRules({ cards, fields, groups: new GroupRepository(db), members, workflows })
+  const sprintRows = new SprintRepository(db)
+  const rules = new CardRules({
+    cards,
+    fields,
+    groups: new GroupRepository(db),
+    members,
+    workflows,
+    sprints: sprintRows
+  })
   const onCards = { db, clock, ids, audit, cardGate, cards }
   const search = new SearchService({ clock, access, cards, search: new SearchRepository(db) })
   const accessParts = buildAccess({ db, clock, ids, audit, access, members })
@@ -173,6 +184,15 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     members: new MemberService({ ...shared, members, allowedDomains, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
+    sprints: new SprintService({
+      db,
+      clock,
+      ids,
+      audit,
+      gate,
+      sprints: sprintRows,
+      system: new SystemActors({ db, clock, ids, audit, members })
+    }),
     fields: new FieldService({ db, clock, ids, audit, gate, fields, workflows }),
     cards: cardService,
     links,
@@ -242,6 +262,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const routes: Route[] = [
     ...workRoutes(services),
     ...workflowRoutes(services.workflows),
+    ...sprintRoutes(services.sprints),
     ...fieldRoutes(services.fields),
     ...cardRoutes(services.cards),
     ...linkRoutes(services.links),

@@ -6,6 +6,7 @@ import { spacePathSchema } from '../spaces/schemas.js'
 import type { CardService } from './card.service.js'
 import {
   cardKeyPathSchema,
+  cardListQuerySchema,
   cardListSchema,
   cardPathSchema,
   cardViewSchema,
@@ -83,9 +84,12 @@ export const cardRoutes = (cards: CardService): Route[] => [
     method: 'GET',
     path: '/spaces/{spaceId}/cards',
     requires: 'authenticated',
-    schemas: { path: spacePathSchema },
+    schemas: { path: spacePathSchema, query: cardListQuerySchema },
     responds: cardListSchema,
-    handler: async ({ caller, path }) => ({ statusCode: 200, body: await cards.list(caller, path.spaceId) })
+    handler: async ({ caller, path, query }) => ({
+      statusCode: 200,
+      body: await cards.list(caller, path.spaceId, query.sprint)
+    })
   }),
   defineRoute({
     method: 'POST',
