@@ -167,9 +167,62 @@
   }
 }
 
+/* ---------- Splash ---------- */
+/* A tab's first wait: the brand, large and centred, with a spinner under it (ui/splash.ts). */
+.splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg);
+  animation: splash-in 0.3s var(--ease) both;
+}
+
+.splash-brand {
+  margin: 0;
+  font-size: clamp(2.75rem, 11vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-align: center;
+  animation: splash-breathe 1.6s var(--ease) infinite;
+}
+
+.splash-brand span {
+  color: var(--accent);
+}
+
+.splash-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--accent);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busy-spin 0.7s linear infinite;
+}
+
+@keyframes splash-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes splash-breathe {
+  50% {
+    opacity: 0.7;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sk,
-  .button[aria-busy='true']::after {
+  .button[aria-busy='true']::after,
+  .splash,
+  .splash-brand,
+  .splash-spinner {
     animation: none;
   }
 }
