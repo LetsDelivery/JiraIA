@@ -19,6 +19,8 @@ const FIELD_LABEL: Record<string, string> = {
   labels: 'Labels',
   dueDate: 'Data limite',
   estimate: 'Estimativa',
+  points: 'Pontos',
+  sprintId: 'Sprint',
   parentId: 'Card pai',
   key: 'Chave',
   spaceId: 'Espaço',
@@ -72,6 +74,7 @@ const nameOf = (context: HistoryContext, field: string, value: unknown): string 
     labels: () => (Array.isArray(value) ? value.join(', ') || '—' : undefined),
     description: () => 'texto alterado',
     parentId: () => context.cards.find((card) => card.id === value)?.key ?? 'outro card',
+    sprintId: () => context.sprints.find((sprint) => sprint.id === value)?.name ?? 'sprint removida',
     spaceId: () => (value === context.spaceId ? context.spaceKey : 'outro espaço'),
     link: () => _link(value)
   }

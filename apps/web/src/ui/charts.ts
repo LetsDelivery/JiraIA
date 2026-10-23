@@ -163,6 +163,59 @@ const _runs = (points: readonly Point[], at: (index: number, value: number) => s
   return runs.filter((run) => run.length > 1)
 }
 
+/** A legend for two series drawn over time: a swatch and a name each — identity is never color alone. */
+const _seriesLegend = (series: readonly { label: string; className: string }[]): Html => html`
+  <ul class="chart-legend chart-legend-inline">
+    ${series.map((each) => html`<li><span class="chart-swatch ${each.className}"></span><span class="chart-legend-label">${each.label}</span></li>`)}
+  </ul>
+`
+
+/**
+ * A sprint's burndown (ADR-0029): what was left each day as a line, and the ideal — a straight run
+ * from the starting scope to nothing on the last day — as a dashed, recessive reference.
+ */
+export const burndown = (
+  points: readonly Point[],
+  ideal: readonly number[],
+  width: number,
+  format: (value: number) => string
+): Html => {
+  // One bucket per day; the scale reaches whichever is higher that day, the remaining or the ideal.
+  const tallest = points.map((point, index) => ({ ...point, value: Math.max(point.value ?? 0, ideal[index] ?? 0) }))
+  const frame = _frame(width, tallest)
+  const at = (index: number, value: number) =>
+    `${(PAD.left + frame.band * (index + 0.5)).toFixed(1)},${_y(frame, value).toFixed(1)}`
+  const guide = html`<polyline points="${ideal.map((value, index) => at(index, value)).join(' ')}" class="chart-ideal"></polyline>`
+  const paths = _runs(points, at).map((run) => html`<polyline points="${run.join(' ')}" class="chart-line"></polyline>`)
+  const legend = _seriesLegend([
+    { label: 'Restante', className: 'chart-swatch-line' },
+    { label: 'Ideal', className: 'chart-swatch-ideal' }
+  ])
+  return html`${legend}${_svg(frame, html`${_axes(frame, points, format)}${guide}${paths}${_hits(frame, points)}`)}`
+}
+
+export type Pair = { label: string; first: number; second: number; tip: string }
+
+/** Two columns per bucket, side by side with a 2px gap: two measures of one unit, on one axis. */
+export const pairedColumns = (pairs: readonly Pair[], names: readonly [string, string], width: number): Html => {
+  const points = pairs.map((pair) => ({ label: pair.label, value: Math.max(pair.first, pair.second), tip: pair.tip }))
+  const frame = _frame(width, points)
+  const thick = Math.min(BAR_MAX, Math.max((frame.band - 8) / 2, 2))
+  const mark = (index: number, value: number, side: 0 | 1) => {
+    const x = PAD.left + frame.band * (index + 0.5) - thick - 1 + side * (thick + 2)
+    const height = _y(frame, 0) - _y(frame, value)
+    return value
+      ? html`<path d="${_column(x, _y(frame, 0), thick, height)}" class="chart-column chart-series-${side + 1}"></path>`
+      : ''
+  }
+  const marks = pairs.map((pair, index) => html`${mark(index, pair.first, 0)}${mark(index, pair.second, 1)}`)
+  const legend = _seriesLegend([
+    { label: names[0], className: 'chart-series-1' },
+    { label: names[1], className: 'chart-series-2' }
+  ])
+  return html`${legend}${_svg(frame, html`${_axes(frame, points, formatCount)}${marks}${_hits(frame, points)}`)}`
+}
+
 const _svg = (frame: Frame, body: Html): Html =>
   html`<svg class="chart-plot" width="${frame.width}" height="${HEIGHT}" viewBox="0 0 ${frame.width} ${HEIGHT}">${body}</svg>`
 

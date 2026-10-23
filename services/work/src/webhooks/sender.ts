@@ -7,6 +7,8 @@ import { toCardView } from '../cards/schemas.js'
 import { type Consumer, type DomainEvent, detailType } from '../events/event.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { ProposalRepository } from '../proposals/proposal.repository.js'
+import { toSprintView } from '../sprints/schemas.js'
+import type { SprintRepository } from '../sprints/sprint.repository.js'
 import type { DeliveryRow, WebhookRow } from './schemas.js'
 import { webhookEventValues } from './schemas.js'
 import { signature } from './signature.js'
@@ -27,6 +29,7 @@ type Deps = {
   cards: CardRepository
   members: MemberRepository
   proposals: ProposalRepository
+  sprints: SprintRepository
 }
 
 /**
@@ -127,7 +130,7 @@ export class WebhookSender implements Consumer {
   /** What the receiver gets: the event, the card or the proposal as it is now, and who did it. */
   private async _payload(event: DomainEvent) {
     const [subject, actor] = await Promise.all([
-      event.entityType === 'proposal' ? this._proposal(event) : this._card(event),
+      this._subject(event),
       this.deps.members.findById(event.organizationId, event.actorId)
     ])
     return {
@@ -138,6 +141,19 @@ export class WebhookSender implements Consumer {
       changes: event.changes,
       ...subject
     }
+  }
+
+  private async _subject(event: DomainEvent): Promise<object> {
+    if (event.entityType === 'sprint') {
+      return await this._sprint(event)
+    }
+    return event.entityType === 'proposal' ? await this._proposal(event) : await this._card(event)
+  }
+
+  /** A sprint as the API shows it: its dates, and what it committed, completed and carried. */
+  private async _sprint(event: DomainEvent) {
+    const sprint = await this.deps.sprints.find(event.organizationId, event.entityId)
+    return { sprint: sprint ? toSprintView(sprint) : { id: event.entityId } }
   }
 
   private async _card(event: DomainEvent) {

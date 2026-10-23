@@ -10,7 +10,7 @@ export type CardFilter = NonNullable<SearchBody['filter']>
 export type Range = NonNullable<CardFilter['created']>
 
 /** The conditions offered as chips: each holds a list of values, any of which matches. */
-export type ListKey = 'typeIds' | 'stateIds' | 'assignees' | 'priorities' | 'labelsAny'
+export type ListKey = 'typeIds' | 'stateIds' | 'assignees' | 'priorities' | 'labelsAny' | 'sprints'
 
 const _empty = (value: unknown): boolean =>
   value === undefined ||

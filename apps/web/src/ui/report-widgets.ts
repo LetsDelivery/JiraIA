@@ -8,12 +8,15 @@ import {
   formatCount,
   formatDays,
   GROUPING_LABEL,
+  idealLine,
   sliceLabel,
-  titleOf
+  titleOf,
+  unitText
 } from '@/lib/reports'
 import { spacePath } from '@/lib/space-types'
+import { dayMonth, period } from '@/lib/sprints'
 
-import { bars, columns, donut, line, type Point } from './charts'
+import { bars, burndown, columns, donut, line, type Point, pairedColumns } from './charts'
 import { icon } from './icons'
 
 /**
@@ -134,6 +137,48 @@ const _cards = (report: ReportOf<'cards'>): Html => {
   `
 }
 
+/** What was left each day of the sprint, against the straight run to nothing (ADR-0029). */
+const _burndown = (report: ReportOf<'burndown'>, width: number): Html => {
+  const sprint = report.sprint
+  if (!sprint) {
+    return _empty('Nenhuma sprint ativa. Inicie uma no Backlog.')
+  }
+  // A day's name takes about 56px; name only as many days as fit, always the first.
+  const every = Math.max(1, Math.ceil((report.days.length * 56) / Math.max(width - 42, 1)))
+  const points: Point[] = report.days.map((day, index) => ({
+    label: index % every ? '' : dayMonth(day.day),
+    value: day.remaining,
+    tip:
+      day.remaining === null
+        ? `${dayMonth(day.day)}: ainda não chegou`
+        : `${dayMonth(day.day)}: faltam ${unitText(day.remaining, report.unit)} de ${unitText(day.scope ?? 0, report.unit)}`
+  }))
+  const ideal = idealLine(
+    report.days.map((day) => day.day),
+    // From the first day anything was in the sprint: one started empty and planned that morning still burns down.
+    report.days.find((day) => (day.scope ?? 0) > 0)?.scope ?? 0,
+    sprint.endsOn
+  )
+  const shown = report.days.filter((day) => day.remaining !== null).at(-1)
+  const caption = shown ? `faltam ${unitText(shown.remaining ?? 0, report.unit)}` : 'começa em breve'
+  const format = (value: number) => formatCount(Math.round(value))
+  return html`<p class="widget-caption muted">${sprint.name} · ${period(sprint)} · ${caption}</p>${burndown(points, ideal, width, format)}`
+}
+
+/** Committed against completed in the last closed sprints, oldest first. */
+const _velocity = (report: ReportOf<'velocity'>, width: number): Html => {
+  if (!report.sprints.length || report.averageCompleted === null) {
+    return _empty('Nenhuma sprint encerrada ainda.')
+  }
+  const pairs = report.sprints.map((sprint) => ({
+    label: sprint.name.replace(/^Sprint\s*/i, 'S'),
+    first: sprint.committed,
+    second: sprint.completed,
+    tip: `${sprint.name}: ${unitText(sprint.committed, report.unit)} comprometidos, ${unitText(sprint.completed, report.unit)} concluídos`
+  }))
+  return html`<p class="widget-caption muted">Média de ${unitText(report.averageCompleted, report.unit)} concluídos por sprint</p>${pairedColumns(pairs, ['Comprometido', 'Concluído'], width)}`
+}
+
 type Draw = (widget: Widget, report: Report, width: number) => Html
 
 /** One drawing per kind; a widget and its report always share the kind, as the API answers them. */
@@ -143,7 +188,9 @@ const BODIES: Record<Widget['kind'], Draw> = {
   trend: (widget, report, width) => _trend(widget as WidgetOf<'trend'>, report as ReportOf<'trend'>, width),
   timing: (widget, report, width) => _timing(widget as WidgetOf<'timing'>, report as ReportOf<'timing'>, width),
   matrix: (widget, report) => _matrix(widget as WidgetOf<'matrix'>, report as ReportOf<'matrix'>),
-  cards: (_widget, report) => _cards(report as ReportOf<'cards'>)
+  cards: (_widget, report) => _cards(report as ReportOf<'cards'>),
+  burndown: (_widget, report, width) => _burndown(report as ReportOf<'burndown'>, width),
+  velocity: (_widget, report, width) => _velocity(report as ReportOf<'velocity'>, width)
 }
 
 /** The widget's body from its data; `width` is the pixels the body has, for the charts over time. */

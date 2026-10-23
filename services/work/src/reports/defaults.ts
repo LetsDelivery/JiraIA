@@ -21,3 +21,13 @@ export const DEFAULT_WIDGETS: readonly Widget[] = [
   { id: id(11), kind: 'trend', measure: 'completed', interval: 'month', days: 180, width: 'half' },
   { id: id(12), kind: 'cards', width: 'full' }
 ]
+
+/** A space that plans in sprints starts its dashboard with the sprint (ADR-0029). */
+export const SPRINT_WIDGETS: readonly Widget[] = [
+  { id: id(13), kind: 'burndown', width: 'half' },
+  { id: id(14), kind: 'velocity', sprints: 6, width: 'half' }
+]
+
+/** The default dashboard of a space, with the sprint first where it uses them. */
+export const defaultWidgets = (usesSprints: boolean): Widget[] =>
+  usesSprints ? [...SPRINT_WIDGETS, ...DEFAULT_WIDGETS] : [...DEFAULT_WIDGETS]

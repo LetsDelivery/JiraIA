@@ -22,7 +22,8 @@ const names = {
     ['s1', 'A fazer'],
     ['s2', 'Feito']
   ]),
-  members: new Map([['m1', 'Ana Lima']])
+  members: new Map([['m1', 'Ana Lima']]),
+  sprints: new Map([['sp1', 'Sprint 18']])
 }
 
 const row = (kind: string, actorId: string, data: Record<string, unknown>, minute = 0): NotificationWithActor => ({
@@ -44,19 +45,21 @@ const row = (kind: string, actorId: string, data: Record<string, unknown>, minut
 })
 
 describe('what a card event changed', () => {
-  it('names state, assignee, priority and due date in the panel’s words', () => {
+  it('names state, assignee, priority, due date and sprint in the panel’s words', () => {
     const changes = {
       stateId: { before: 's1', after: 's2' },
       assigneeId: { before: null, after: 'm1' },
       priority: { before: 'medium', after: 'highest' },
       dueDate: { before: null, after: '2026-11-30' },
+      sprintId: { before: null, after: 'sp1' },
       title: { before: 'a', after: 'b' }
     }
     expect(cardChanges(event('updated', changes), names)).toEqual([
       { field: 'Estado', before: 'A fazer', after: 'Feito' },
       { field: 'Responsável', before: null, after: 'Ana Lima' },
       { field: 'Prioridade', before: 'Média', after: 'Altíssima' },
-      { field: 'Prazo', before: null, after: '30/11/2026' }
+      { field: 'Prazo', before: null, after: '30/11/2026' },
+      { field: 'Sprint', before: null, after: 'Sprint 18' }
     ])
   })
 

@@ -32,6 +32,7 @@ export const sentence = (notice: Pick<Notice, 'kind' | 'actor' | 'data'>): strin
     card_updated: () => `${actor.name} atualizou ${data.cardKey}`,
     draw_mentioned: () => `${actor.name} mencionou você em ${data.contentTitle}`,
     content_changed: () => `${actor.name} alterou ${data.contentTitle}`,
+    sprint_overdue: () => `${data.sprintName} de ${data.spaceName} passou da data de fim`,
     weekly_summary: () => 'Resumo semanal'
   }
   return sentences[notice.kind]()
@@ -102,6 +103,10 @@ export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {
   content_changed: {
     label: 'Alterações no LET’S Draw AI',
     hint: 'Outra pessoa alterou uma página ou um quadro que você ajudou a criar.'
+  },
+  sprint_overdue: {
+    label: 'Sprints atrasadas',
+    hint: 'Uma sprint de um espaço que você lidera passou da data de fim.'
   },
   weekly_summary: {
     label: 'Resumo semanal',

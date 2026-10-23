@@ -24,6 +24,7 @@ const SENTENCE: Record<NotificationKind, (row: NotificationWithActor, data: Reco
   card_updated: (row, data) => `${row.actorName} atualizou ${data.cardKey}`,
   draw_mentioned: (row, data) => `${row.actorName} mencionou você em ${data.contentTitle}`,
   content_changed: (row, data) => `${row.actorName} alterou ${data.contentTitle}`,
+  sprint_overdue: (_, data) => `${data.sprintName} de ${data.spaceName} passou da data de fim`,
   weekly_summary: () => 'Resumo semanal'
 }
 
@@ -32,21 +33,27 @@ const OUTCOME: Record<string, string> = { approved: 'aprovado', declined: 'recus
 
 export type SummaryLine = { sentence: string; detail: string; url: string }
 
-/** Where a notice opens: its card, its proposal, the access queue or result, its Draw page, or the inbox. */
+type Place = (kind: string, data: Record<string, string>, spaceId: string | null) => string | undefined
+
+/** Where each sort of notice opens, the first that applies winning. */
+const PLACES: Place[] = [
+  (_, data) => (data.cardKey ? `/espacos/${data.cardKey.split('-')[0]}?card=${data.cardKey}` : undefined),
+  (_, data) => (data.proposalId ? `/propostas?proposta=${data.proposalId}` : undefined),
+  (_, data) => (data.reviewId ? '/acessos/revisoes' : undefined),
+  (kind, data) => (data.requestId ? (kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila') : undefined),
+  (_, data) => (data.sprintName && data.spaceKey ? `/espacos/${data.spaceKey}` : undefined),
+  (_, data, spaceId) => (data.contentId && spaceId ? `/draw/${spaceId}/${data.contentId}` : undefined)
+]
+
+/** Where a notice opens: its card, its proposal, the access queue or result, its sprint's board, its Draw page, or the inbox. */
 export const noticePath = (kind: string, data: Record<string, string>, spaceId: string | null = null): string => {
-  if (data.cardKey) {
-    return `/espacos/${data.cardKey.split('-')[0]}?card=${data.cardKey}`
+  for (const place of PLACES) {
+    const path = place(kind, data, spaceId)
+    if (path) {
+      return path
+    }
   }
-  if (data.proposalId) {
-    return `/propostas?proposta=${data.proposalId}`
-  }
-  if (data.reviewId) {
-    return '/acessos/revisoes'
-  }
-  if (data.requestId) {
-    return kind === 'entitlement_decided' ? '/acessos' : '/acessos/fila'
-  }
-  return data.contentId && spaceId ? `/draw/${spaceId}/${data.contentId}` : '/notificacoes'
+  return '/notificacoes'
 }
 
 export const summaryLine = (row: NotificationWithActor, webUrl: string): SummaryLine => {

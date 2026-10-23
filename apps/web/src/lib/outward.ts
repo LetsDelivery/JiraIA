@@ -27,7 +27,9 @@ export const EVENT_LABEL: Record<WebhookEvent, string> = {
   'proposal.proposed': 'Proposta recebida',
   'proposal.approved': 'Proposta aprovada',
   'proposal.rejected': 'Proposta recusada',
-  'proposal.reverted': 'Proposta revertida'
+  'proposal.reverted': 'Proposta revertida',
+  'sprint.started': 'Sprint iniciada',
+  'sprint.closed': 'Sprint encerrada'
 }
 
 export const DELIVERY_LABEL: Record<Delivery['status'], string> = {

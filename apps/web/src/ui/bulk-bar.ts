@@ -1,4 +1,5 @@
 import { type BulkChanges, type Member, type State, write } from '@/api/requests'
+import type { Sprint } from '@/api/sprints'
 import { parseLabels } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
@@ -10,6 +11,8 @@ export type BulkContext = {
   spaceId: string
   states: readonly State[]
   members: readonly Member[]
+  /** The sprints a card may go to, in a space that plans in them; none otherwise (ADR-0029). */
+  sprints: readonly Sprint[]
   /** The cards ticked in the list, kept across the re-renders a change causes. */
   selected: Set<string>
 }
@@ -35,7 +38,23 @@ const labelForm = (name: 'add' | 'remove', label: string, placeholder: string): 
   </form>
 `
 
-/** One change to every ticked card (escopo-mvp 3.8): a state, an assignee, labels on or off. */
+/** "Levar para a sprint…": the active and planned sprints, or the backlog. */
+const sprintSelect = (sprints: readonly Sprint[]): Html =>
+  sprints.length === 0
+    ? html``
+    : selectField({
+        name: 'bulk-sprint',
+        label: 'Levar para a sprint',
+        visibleLabel: false,
+        placeholder: 'Sprint…',
+        options: [
+          { value: 'none', label: 'Backlog' },
+          ...sprints.map((sprint) => ({ value: sprint.id, label: sprint.name }))
+        ],
+        attributes: html`data-bulk-sprint`
+      })
+
+/** One change to every ticked card (escopo-mvp 3.8): a state, an assignee, a sprint, labels on or off. */
 export const bulkBar = (context: BulkContext): Html => {
   if (context.selected.size === 0) {
     return html``
@@ -51,6 +70,7 @@ export const bulkBar = (context: BulkContext): Html => {
       <strong>${context.selected.size} selecionado${context.selected.size === 1 ? '' : 's'}</strong>
       ${selectField({ name: 'bulk-state', label: 'Mover para', visibleLabel: false, placeholder: 'Mover para…', options: context.states.map((state) => ({ value: state.id, label: state.name })), attributes: html`data-bulk-state` })}
       ${selectField({ name: 'bulk-assignee', label: 'Atribuir a', visibleLabel: false, placeholder: 'Atribuir a…', options: people, attributes: html`data-bulk-assignee` })}
+      ${sprintSelect(context.sprints)}
       ${labelForm('add', 'Adicionar labels', 'label-a, label-b')}
       ${labelForm('remove', 'Remover labels', 'label-a')}
       <button type="button" class="button button-ghost" data-bulk-clear>Limpar seleção</button>
@@ -73,6 +93,9 @@ export const bindBulkBar = (root: HTMLElement, context: BulkContext, redraw: () 
   })
   root.querySelector('[data-bulk-assignee]')?.addEventListener('select-change', (event) => {
     apply(context, { assigneeId: value(event) === 'none' ? null : value(event) })
+  })
+  root.querySelector('[data-bulk-sprint]')?.addEventListener('select-change', (event) => {
+    apply(context, { sprintId: value(event) === 'none' ? null : value(event) })
   })
   for (const form of root.querySelectorAll<HTMLFormElement>('[data-bulk-labels]')) {
     form.addEventListener('submit', (event) => {

@@ -292,4 +292,30 @@ describe('outgoing webhooks', () => {
     expect(rotated.secret).not.toBe(secret)
     expect(v1).toBe(createHmac('sha256', rotated.secret).update(`${t}.${sent.body}`).digest('hex'))
   })
+
+  it('posts a sprint started and closed, with what it committed and completed (ADR-0029)', async () => {
+    const sprintSpace = (await ok(
+      admin({ method: 'POST', path: '/spaces', body: { key: 'TEC', name: 'Delivery', type: 'software' } }),
+      201
+    )) as { id: string }
+    await ok(
+      admin({
+        method: 'POST',
+        path: `/spaces/${sprintSpace.id}/webhooks`,
+        body: { name: 'Painel', url: HOOK, events: ['sprint.started', 'sprint.closed'] }
+      }),
+      201
+    )
+    const sprint = (await ok(admin({ method: 'POST', path: `/spaces/${sprintSpace.id}/sprints`, body: {} }), 201)) as {
+      id: string
+    }
+    await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/start`, body: {} }))
+    await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/close`, body: { openCardsTo: 'backlog' } }))
+    await service.drain()
+
+    expect(received.map((each) => JSON.parse(each.body).type)).toEqual(['sprint.started', 'sprint.closed'])
+    expect(JSON.parse((received[1] as Received).body)).toMatchObject({
+      sprint: { name: 'Sprint 1', state: 'closed', committed: { cards: 0 }, completed: { cards: 0 } }
+    })
+  })
 })

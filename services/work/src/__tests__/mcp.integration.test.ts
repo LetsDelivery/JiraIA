@@ -160,6 +160,31 @@ describe('connecting', () => {
 })
 
 describe('reading', () => {
+  it('lists a space’s sprints and reads the active one with its cards and points (ADR-0029)', async () => {
+    const tec = await ok<{ id: string }>(
+      admin({ method: 'POST', path: '/spaces', body: { key: 'TEC', name: 'Delivery', type: 'software' } }),
+      201
+    )
+    const sprint = await ok<{ id: string }>(admin({ method: 'POST', path: `/spaces/${tec.id}/sprints`, body: {} }), 201)
+    const card = await ok<{ id: string }>(
+      admin({ method: 'POST', path: `/spaces/${tec.id}/cards`, body: { title: 'Rota' } }),
+      201
+    )
+    await ok(admin({ method: 'PATCH', path: `/cards/${card.id}`, body: { sprintId: sprint.id, points: 3 } }))
+    await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/start`, body: {} }))
+
+    const client = await connect(agentToken)
+    const listed = (await call(client, 'list_sprints', { space: 'TEC' })).structuredContent as {
+      items: { name: string; state: string }[]
+    }
+    expect(listed.items).toEqual([expect.objectContaining({ name: 'Sprint 1', state: 'active' })])
+    expect((await call(client, 'get_sprint', { space: 'TEC' })).structuredContent).toMatchObject({
+      sprint: { name: 'Sprint 1', committed: { cards: 1, points: 3 } },
+      cards: [{ key: 'TEC-1', points: 3, sprintId: sprint.id }]
+    })
+    expect((await call(client, 'get_sprint', { space: 'PRD' })).isError).toBe(true)
+  })
+
   it('lists spaces, describes one and finds its cards by filter and by text', async () => {
     const client = await connect(agentToken)
     const spaces = (await call(client, 'list_spaces')).structuredContent as { items: { key: string }[] }

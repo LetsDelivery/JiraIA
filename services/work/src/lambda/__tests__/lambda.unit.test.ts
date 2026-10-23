@@ -62,6 +62,7 @@ class RecordingWork {
         morning: this._step('morning', { sent: 1, failed: 0 }),
         weekly: this._step('weekly', { sent: 1, failed: 0 })
       },
+      sprints: { sweepLate: async () => ({ late: 0 }) },
       webhookSender: { retryDue: this._step('webhook-retry', 0) },
       accessClock: { sweep: this._step('access-clock', { expired: 0, overdue: 0 }) },
       reviews: { sweep: async () => ({ opened: 0, closed: 0 }) }

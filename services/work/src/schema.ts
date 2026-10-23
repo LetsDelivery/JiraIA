@@ -85,6 +85,10 @@ export const spaces = work.table(
     type: text('type').notNull(),
     leadId: uuid('lead_id').references(() => members.id),
     nextCardNumber: integer('next_card_number').notNull().default(1),
+    /** Whether the space plans its work in sprints (ADR-0029). Off hides them; nothing is deleted. */
+    usesSprints: boolean('uses_sprints').notNull().default(false),
+    /** How its cards are estimated: `tshirt` (P/M/G, in `cards.estimate`) or `points` (`cards.points`). */
+    estimation: text('estimation').notNull().default('tshirt'),
     lastCardActivityAt: timestamp('last_card_activity_at', { withTimezone: true, mode: 'date' }),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
     createdAt: createdAt()
@@ -222,6 +226,43 @@ export const cardTypes = work.table(
 )
 
 /**
+ * A sprint of a space (ADR-0029): numbered per space, `planned` → `active` → `closed`, at most one
+ * active at a time. Its dates are calendar days in São Paulo. The `committed*` columns are taken when
+ * it starts and the `completed*` and `carried*` ones when it closes — velocity reads them as they were.
+ */
+export const sprints = work.table(
+  'sprints',
+  {
+    id: uuid('id').primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id),
+    number: integer('number').notNull(),
+    name: text('name').notNull(),
+    goal: text('goal').notNull().default(''),
+    state: text('state').notNull(),
+    startsOn: date('starts_on', { mode: 'string' }).notNull(),
+    endsOn: date('ends_on', { mode: 'string' }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }),
+    closedAt: timestamp('closed_at', { withTimezone: true, mode: 'date' }),
+    /** When its space's lead was told it ran past its end date — once. */
+    lateNoticeAt: timestamp('late_notice_at', { withTimezone: true, mode: 'date' }),
+    committedCards: integer('committed_cards'),
+    committedPoints: doublePrecision('committed_points'),
+    completedCards: integer('completed_cards'),
+    completedPoints: doublePrecision('completed_points'),
+    carriedCards: integer('carried_cards'),
+    carriedPoints: doublePrecision('carried_points'),
+    createdAt: createdAt()
+  },
+  (table) => [
+    uniqueIndex('sprints_number_unique').on(table.spaceId, table.number),
+    uniqueIndex('sprints_one_active').on(table.spaceId).where(sql`state = 'active'`)
+  ]
+)
+
+/**
  * A card: `KEY-number`, its standard fields (2.4) and its place on the board.
  *
  * `rank` orders the cards of one state; a move takes the midpoint between its new neighbours, so it
@@ -256,6 +297,10 @@ export const cards = work.table(
     labels: jsonb('labels').notNull().default(sql`'[]'::jsonb`),
     dueDate: date('due_date', { mode: 'string' }),
     estimate: text('estimate'),
+    /** Story points, in a space that estimates in points (ADR-0029). */
+    points: doublePrecision('points'),
+    /** The sprint the card is in now; a done card keeps the one it was done in. */
+    sprintId: uuid('sprint_id').references(() => sprints.id),
     parentId: uuid('parent_id').references((): AnyPgColumn => cards.id),
     customFields: jsonb('custom_fields').notNull().default(sql`'{}'::jsonb`),
     rank: doublePrecision('rank').notNull(),
@@ -266,7 +311,8 @@ export const cards = work.table(
   (table) => [
     uniqueIndex('cards_number_unique').on(table.spaceId, table.number),
     index('cards_board').on(table.spaceId, table.stateId, table.rank),
-    index('cards_parent').on(table.parentId)
+    index('cards_parent').on(table.parentId),
+    index('cards_sprint').on(table.sprintId)
   ]
 )
 

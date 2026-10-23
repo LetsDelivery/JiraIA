@@ -38,16 +38,21 @@ type Deps = {
 export class CardService {
   constructor(private readonly deps: Deps) {}
 
-  async list(caller: Caller, spaceId: string): Promise<{ items: CardView[] }> {
+  async list(caller: Caller, spaceId: string, sprint?: string): Promise<{ items: CardView[] }> {
     await this.deps.gate.check(caller, spaceId, 'space:read')
     const rows = await this.deps.cards.list(spaceId)
-    return { items: rows.map(toCardView) }
+    const sprintId = sprint === 'active' ? ((await this.deps.rules.activeSprint(spaceId)) ?? '') : sprint
+    const wanted = sprintId === undefined ? rows : rows.filter((row) => (row.sprintId ?? 'none') === sprintId)
+    return { items: wanted.map(toCardView) }
   }
 
   /** Lands at the bottom of its state's column and of the backlog, numbered from the space's counter. */
   async create(caller: Caller, spaceId: string, input: CreateCard): Promise<CardView> {
     const gate = await this.deps.gate.checkWritable(caller, spaceId, 'space:write')
     await this._assertPeopleAndParent(gate, input)
+    if (input.sprintId) {
+      await this.deps.rules.assertSprint(gate.actor, spaceId, input.sprintId)
+    }
     return await this._insert(gate, input, {})
   }
 
@@ -85,7 +90,17 @@ export class CardService {
       await this.deps.watchers.add(tx, id, _involved(gate.actor.id, input.assigneeId), now)
       await this.deps.cards.touchSpace(tx, spaceId, now)
       await this._audit(tx, gate, id, 'created', {
-        ...diff({}, { title: input.title, stateId, typeId, parentId: input.parentId, assigneeId: input.assigneeId }),
+        ...diff(
+          {},
+          {
+            title: input.title,
+            stateId,
+            typeId,
+            parentId: input.parentId,
+            assigneeId: input.assigneeId,
+            sprintId: input.sprintId
+          }
+        ),
         ...(extra.formId ? { formId: { before: null, after: extra.formId } } : {})
       })
     })
@@ -178,12 +193,21 @@ export class CardService {
 
     await this.deps.db.transaction(async (tx) => {
       const number = await this.deps.cards.nextNumber(tx, target.space.id)
-      const moved = { spaceId: target.space.id, number, typeId, stateId, parentId: null, customFields: {}, rank }
+      const moved = {
+        spaceId: target.space.id,
+        number,
+        typeId,
+        stateId,
+        parentId: null,
+        sprintId: null,
+        customFields: {},
+        rank
+      }
       await this.deps.cards.insertAlias(tx, _alias(card, now))
       await this.deps.cards.update(tx, card.id, { ...moved, backlogRank: backlogRank + 1 }, now)
       await this.deps.cards.touchSpace(tx, target.space.id, now)
       await this._audit(tx, target, card.id, 'transferred', {
-        ..._changes(card, { spaceId: target.space.id, typeId, stateId, parentId: null }),
+        ..._changes(card, { spaceId: target.space.id, typeId, stateId, parentId: null, sprintId: null }),
         key: { before: `${card.spaceKey}-${card.number}`, after: `${target.space.key}-${number}` },
         ...fieldChanges(card.customFields as Record<string, unknown>, {})
       })
@@ -227,6 +251,9 @@ export class CardService {
     }
     if (input.parentId) {
       await this.deps.rules.assertParent(gate.actor, card.spaceId, input.parentId, card.id)
+    }
+    if (input.sprintId) {
+      await this.deps.rules.assertSprint(gate.actor, card.spaceId, input.sprintId)
     }
     const fields = Object.fromEntries(Object.entries(standard).filter(([, value]) => value !== undefined)) as CardFields
     if (customFields) {
@@ -319,6 +346,8 @@ const _newCard = ({
   labels: input.labels,
   dueDate: null,
   estimate: null,
+  points: null,
+  sprintId: input.sprintId ?? null,
   parentId: input.parentId ?? null,
   customFields: {},
   createdAt: now,

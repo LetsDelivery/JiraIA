@@ -21,6 +21,8 @@ export type CardFields = Partial<
     | 'labels'
     | 'dueDate'
     | 'estimate'
+    | 'points'
+    | 'sprintId'
     | 'parentId'
     | 'customFields'
     | 'rank'

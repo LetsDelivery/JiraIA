@@ -24,6 +24,10 @@ export const spaceKeySchema = z
 
 export const leadSchema = z.object({ id: z.uuid(), name: z.string() })
 
+/** How a space estimates its cards (ADR-0029): P/M/G, or story points. */
+export const estimationSchema = z.enum(['tshirt', 'points'])
+export type Estimation = z.infer<typeof estimationSchema>
+
 export const spaceViewSchema = z.object({
   id: z.uuid(),
   key: z.string(),
@@ -31,6 +35,8 @@ export const spaceViewSchema = z.object({
   description: z.string(),
   type: spaceTypeSchema,
   lead: leadSchema.nullable(),
+  usesSprints: z.boolean(),
+  estimation: estimationSchema,
   lastCardActivityAt: z.iso.datetime().nullable(),
   archivedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime()
@@ -55,7 +61,9 @@ export const updateSpaceSchema = z
     name: z.string().trim().min(1).max(80).optional(),
     description: z.string().trim().max(2000).optional(),
     type: spaceTypeSchema.optional(),
-    leadId: z.uuid().nullable().optional()
+    leadId: z.uuid().nullable().optional(),
+    usesSprints: z.boolean().optional(),
+    estimation: estimationSchema.optional()
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined), {
     message: 'Send at least one field to change'
@@ -91,6 +99,8 @@ export const toSpaceView = (row: SpaceWithLead): SpaceView => ({
   description: row.description,
   type: spaceTypeSchema.parse(row.type),
   lead: row.leadId && row.leadName ? { id: row.leadId, name: row.leadName } : null,
+  usesSprints: row.usesSprints,
+  estimation: estimationSchema.catch('tshirt').parse(row.estimation),
   lastCardActivityAt: row.lastCardActivityAt ? toIso(row.lastCardActivityAt) : null,
   archivedAt: row.archivedAt ? toIso(row.archivedAt) : null,
   createdAt: toIso(row.createdAt)

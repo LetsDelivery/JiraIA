@@ -19,6 +19,7 @@ export const notificationKindValues = [
   'card_updated',
   'draw_mentioned',
   'content_changed',
+  'sprint_overdue',
   /** A preference only: whether the Monday summary comes. No notice is ever written with it. */
   'weekly_summary'
 ] as const
@@ -48,6 +49,7 @@ export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
   card_updated: 'email',
   draw_mentioned: 'email',
   content_changed: 'email',
+  sprint_overdue: 'email',
   weekly_summary: 'email'
 }
 
@@ -85,7 +87,10 @@ export const notificationDataSchema = z.object({
   /** The page or whiteboard a Draw notice is about. */
   contentId: z.string().optional(),
   contentTitle: z.string().optional(),
-  contentKind: z.string().optional()
+  contentKind: z.string().optional(),
+  /** The sprint a `sprint_overdue` notice is about, and the day it should have ended (ADR-0029). */
+  sprintName: z.string().optional(),
+  sprintEndsOn: z.string().optional()
 })
 export type NotificationData = z.infer<typeof notificationDataSchema>
 

@@ -6,6 +6,7 @@ import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 import { spacePath } from '@/lib/space-types'
+import { POINTS, planning } from '@/lib/sprints'
 import type { BoardContext } from '@/views/board'
 
 import { type ActivityTab, activitySection, bindActivity } from './card-activity'
@@ -25,6 +26,37 @@ import { toast } from './toast'
 
 const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
 
+type Select = (name: string, label: string, options: { value: string; label: string }[], value: string) => Html
+
+/** P/M/G, or story points where the space estimates in them (ADR-0029). */
+const estimateField = (card: Card, context: BoardContext, select: Select): Html => {
+  if (context.space.estimation !== 'points') {
+    const sizes = ESTIMATES.map((size) => ({ value: size, label: size }))
+    return select('estimate', 'Estimativa', [{ value: '', label: 'Sem estimativa' }, ...sizes], card.estimate ?? '')
+  }
+  const scale = [...new Set([...POINTS, ...(card.points === null ? [] : [card.points])])].sort((a, b) => a - b)
+  const options = scale.map((points) => ({ value: String(points), label: String(points) }))
+  return select(
+    'points',
+    'Pontos',
+    [{ value: '', label: 'Sem pontos' }, ...options],
+    card.points === null ? '' : String(card.points)
+  )
+}
+
+/** The sprints a card can go to — the active and planned ones — and the closed one it was done in. */
+const sprintOptions = (card: Card, context: BoardContext) => {
+  const closed = context.sprints.find((sprint) => sprint.id === card.sprintId && sprint.state === 'closed')
+  return [
+    { value: '', label: 'Backlog' },
+    ...planning(context.sprints).map((sprint) => ({
+      value: sprint.id,
+      label: sprint.state === 'active' ? `${sprint.name} (ativa)` : sprint.name
+    })),
+    ...(closed ? [{ value: closed.id, label: `${closed.name} (encerrada)` }] : [])
+  ]
+}
+
 const fields = (card: Card, context: BoardContext): Html => {
   const canWrite = context.canWrite
   const people = [
@@ -33,7 +65,7 @@ const fields = (card: Card, context: BoardContext): Html => {
       .filter((member) => member.status === 'active' && member.kind === 'person')
       .map((member) => ({ value: member.id, label: member.name }))
   ]
-  const select = (name: string, label: string, options: { value: string; label: string }[], value: string) =>
+  const select: Select = (name, label, options, value) =>
     canWrite
       ? selectField({ name, label, options, value, attributes: html`data-field="${name}"` })
       : html`<div class="field"><span class="label">${label}</span><span>${options.find((option) => option.value === value)?.label ?? '—'}</span></div>`
@@ -54,7 +86,8 @@ const fields = (card: Card, context: BoardContext): Html => {
       PRIORITIES.map((priority) => ({ value: priority, label: PRIORITY_LABEL[priority] })),
       card.priority
     )}
-    ${select('estimate', 'Estimativa', [{ value: '', label: 'Sem estimativa' }, ...ESTIMATES.map((size) => ({ value: size, label: size }))], card.estimate ?? '')}
+    ${estimateField(card, context, select)}
+    ${context.space.usesSprints ? select('sprintId', 'Sprint', sprintOptions(card, context), card.sprintId ?? '') : ''}
     <div class="field">
       <label for="card-labels">Labels</label>
       <input id="card-labels" class="input" data-labels value="${card.labels.join(', ')}" ${canWrite ? '' : html`readonly`} placeholder="okr-saude-escala, business-form" />
@@ -345,8 +378,7 @@ const bindDetail = (dialog: HTMLDialogElement, card: Card, context: BoardContext
       return
     }
     const chosen = (event as CustomEvent<{ value: string }>).detail.value
-    const nullable = field === 'assigneeId' || field === 'estimate' || field === 'groupId'
-    void save({ [field]: nullable && !chosen ? null : chosen } as CardChanges)
+    void save(_change(field, chosen))
   })
   root.querySelector('[data-due]')?.addEventListener('date-change', (event) => {
     void save({ dueDate: (event as CustomEvent<{ value: string | null }>).detail.value })
@@ -367,6 +399,17 @@ const bindDetail = (dialog: HTMLDialogElement, card: Card, context: BoardContext
     )
   dialog.querySelector('[data-transfer]')?.addEventListener('click', () => void transfer(card, context, close))
   dialog.querySelector('[data-assign-me]')?.addEventListener('click', () => void save({ assigneeId: context.meId }))
+}
+
+/** The fields a person can empty, which the API takes as `null`. */
+const NULLABLE = new Set(['assigneeId', 'estimate', 'groupId', 'sprintId', 'points'])
+
+/** A select's choice as the change the API takes: points are a number, an emptied field is `null`. */
+const _change = (field: string, chosen: string): CardChanges => {
+  if (NULLABLE.has(field) && !chosen) {
+    return { [field]: null } as CardChanges
+  }
+  return { [field]: field === 'points' ? Number(chosen) : chosen } as CardChanges
 }
 
 /** The title wraps like text but Enter commits it, as in an input; the description offers Save once edited. */

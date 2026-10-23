@@ -7,11 +7,13 @@ import {
   countCaption,
   foldSlices,
   formatDays,
+  idealLine,
   moveWidget,
   niceScale,
   shiftWidget,
   sliceLabel,
-  titleOf
+  titleOf,
+  unitText
 } from './reports'
 
 const widget = (id: string): Widget => ({ id, kind: 'cards', width: 'full' })
@@ -71,5 +73,18 @@ describe('reports', () => {
     expect(moveWidget(widgets, 'a', null).map((each) => each.id)).toEqual(['b', 'c', 'a'])
     expect(shiftWidget(widgets, 'b', 1).map((each) => each.id)).toEqual(['a', 'c', 'b'])
     expect(shiftWidget(widgets, 'a', -1).map((each) => each.id)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('the sprint reports (ADR-0029)', () => {
+  it('draws the ideal from the first day’s scope to nothing on the last day, and nothing after', () => {
+    expect(idealLine(['10-20', '10-21', '10-22'], 8, '10-22')).toEqual([8, 4, 0])
+    expect(idealLine(['10-20', '10-21', '10-22', '10-23'], 6, '10-22')).toEqual([6, 3, 0, 0])
+  })
+
+  it('says a number in the space’s unit', () => {
+    expect(unitText(1, 'points')).toBe('1 ponto')
+    expect(unitText(12.5, 'points')).toBe('12,5 pontos')
+    expect(unitText(3, 'cards')).toBe('3 cards')
   })
 })

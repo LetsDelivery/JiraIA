@@ -46,7 +46,14 @@ export type CardChanges = NonNullable<
 >['content']['application/json']
 
 export type SpaceInput = { key: string; name: string; description: string; type: SpaceType; leadId?: string }
-export type SpaceChanges = { name: string; description: string; type: SpaceType; leadId: string | null }
+export type SpaceChanges = {
+  name: string
+  description: string
+  type: SpaceType
+  leadId: string | null
+  usesSprints?: boolean
+  estimation?: 'tshirt' | 'points'
+}
 
 /** `openapi-fetch` answers `{ data, error }`; a screen wants the data or a throw it can explain. */
 export const unwrap = async <T>(call: Promise<{ data?: T; error?: unknown }>): Promise<T> => {
@@ -151,7 +158,7 @@ export const write = {
   },
   createCard: async (
     spaceId: string,
-    body: { title: string; stateId?: string; typeId?: string; parentId?: string }
+    body: { title: string; stateId?: string; typeId?: string; parentId?: string; sprintId?: string }
   ) => {
     const card = await unwrap(api.POST('/work/spaces/{spaceId}/cards', { params: { path: { spaceId } }, body }))
     invalidate(`space:${spaceId}:cards`, 'spaces')

@@ -13,6 +13,7 @@ import type { MemberRepository } from '../members/member.repository.js'
 import type { ProposalRepository } from '../proposals/proposal.repository.js'
 import type { AccessRequestRepository } from '../requests/request.repository.js'
 import type { SpaceRepository } from '../spaces/space.repository.js'
+import type { SprintRepository } from '../sprints/sprint.repository.js'
 import { cardChanges, trackedFields } from './card-changes.js'
 import { DRAW_EVENTS } from './draw-notices.js'
 import { excerpt } from './excerpt.js'
@@ -33,6 +34,7 @@ type Deps = {
   groups: GroupRepository
   spaces: SpaceRepository
   proposals: ProposalRepository
+  sprints: SprintRepository
   /** Who hears about an entitlement request (ADR-0024). */
   entitlements?: { notices(event: DomainEvent): Promise<Notice[]> }
   /** Who hears about a Draw page (Etapa 5f). */
@@ -70,7 +72,8 @@ export class NotificationFanout implements Consumer {
       (event.entityType === 'proposal' && event.action === 'proposed') ||
       (event.entityType === 'entitlement_request' && ENTITLEMENT_ACTIONS.has(event.action)) ||
       (event.entityType === 'access_review' && event.action === 'opened') ||
-      DRAW_EVENTS.has(detailType(event))
+      DRAW_EVENTS.has(detailType(event)) ||
+      (event.entityType === 'sprint' && event.action === 'overdue')
     )
   }
 
@@ -81,6 +84,9 @@ export class NotificationFanout implements Consumer {
   private async _notices(event: DomainEvent): Promise<Notice[]> {
     if (event.entityType === 'card') {
       return await this._card(event)
+    }
+    if (event.entityType === 'sprint') {
+      return await this._sprintOverdue(event)
     }
     if (DRAW_EVENTS.has(detailType(event))) {
       return (await this.deps.draw?.notices(event)) ?? []
@@ -123,13 +129,15 @@ export class NotificationFanout implements Consumer {
     if (trackedFields(event).length === 0) {
       return []
     }
-    const [states, members] = await Promise.all([
+    const [states, members, sprints] = await Promise.all([
       this.deps.workflows.states(spaceId),
-      this.deps.members.list(event.organizationId)
+      this.deps.members.list(event.organizationId),
+      this.deps.sprints.list(spaceId)
     ])
     const names = {
       states: new Map(states.map((state) => [state.id, state.name])),
-      members: new Map(members.map((member) => [member.id, member.name]))
+      members: new Map(members.map((member) => [member.id, member.name])),
+      sprints: new Map(sprints.map((sprint) => [sprint.id, sprint.name]))
     }
     return cardChanges(event, names)
   }
@@ -152,6 +160,19 @@ export class NotificationFanout implements Consumer {
         .filter((id) => !mentioned.includes(id))
         .map((memberId) => ({ ...base, data, memberId, kind: 'commented' as const }))
     ]
+  }
+
+  /** A sprint past its end date reaches its space's lead, who decides when it closes (ADR-0029). */
+  private async _sprintOverdue(event: DomainEvent): Promise<Notice[]> {
+    const [sprint, space] = await Promise.all([
+      this.deps.sprints.find(event.organizationId, event.entityId),
+      this.deps.spaces.find(event.organizationId, event.spaceId ?? '')
+    ])
+    if (!sprint || !space?.leadId) {
+      return []
+    }
+    const data = { spaceName: space.name, spaceKey: space.key, sprintName: sprint.name, sprintEndsOn: sprint.endsOn }
+    return [{ memberId: space.leadId, kind: 'sprint_overdue', cardId: null, spaceId: space.id, data }]
   }
 
   /** A request to edit reaches whoever runs the space; the answer reaches who asked. */
