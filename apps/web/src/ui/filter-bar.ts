@@ -1,4 +1,5 @@
 import type { Field, Member, SavedView, Workflow } from '@/api/requests'
+import type { Sprint } from '@/api/sprints'
 import { invalidate } from '@/lib/cache'
 import { PRIORITIES, PRIORITY_LABEL, parseLabels } from '@/lib/cards'
 import {
@@ -28,6 +29,8 @@ export type FilterContext = {
   members: readonly Member[]
   assignable: ReadonlySet<string>
   fields: readonly Field[]
+  /** The space's sprints; none where it does not use them, and then no Sprint chips (ADR-0029). */
+  sprints: readonly Sprint[]
   filter: CardFilter
 }
 
@@ -63,6 +66,16 @@ const people = (context: FilterContext) => [
     .filter((member) => member.status === 'active' && member.kind === 'person' && context.assignable.has(member.id))
     .map((member) => ({ value: member.id, label: member.name }))
 ]
+
+/** The active sprint, the backlog, and every sprint by name — newest first. */
+const sprintOptions = (sprints: readonly Sprint[]) =>
+  sprints.length === 0
+    ? []
+    : [
+        { value: 'active', label: 'Sprint ativa' },
+        { value: 'none', label: 'Sem sprint' },
+        ...[...sprints].sort((a, b) => b.number - a.number).map((sprint) => ({ value: sprint.id, label: sprint.name }))
+      ]
 
 const periodChips = (key: 'created' | 'updated', filter: CardFilter): Chip[] =>
   PERIODS.filter((period) => period.value).map((period) => ({
@@ -130,6 +143,7 @@ const panel = (context: FilterContext): Html => {
         )
       )}
       ${chips('Responsável', listChips(filter, 'assignees', people(context)))}
+      ${chips('Sprint', listChips(filter, 'sprints', sprintOptions(context.sprints)))}
       ${chips(
         'Prioridade',
         listChips(

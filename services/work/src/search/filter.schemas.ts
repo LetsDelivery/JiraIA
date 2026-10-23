@@ -36,6 +36,12 @@ export const cardFilterSchema = z.object({
     .max(100)
     .optional(),
   priorities: z.array(prioritySchema).min(1).optional(),
+  /** In one of these sprints; `active` is each space's running sprint, `none` the backlog (ADR-0029). */
+  sprints: z
+    .array(z.union([z.uuid(), z.enum(['active', 'none'])]))
+    .min(1)
+    .max(50)
+    .optional(),
   labelsAny: labelListSchema.optional(),
   labelsNone: labelListSchema.optional(),
   /** In the title, the description or the key (`PRD-219`). */

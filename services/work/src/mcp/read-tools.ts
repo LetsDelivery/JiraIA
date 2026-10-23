@@ -14,6 +14,7 @@ import { cardFilterSchema, cardOrderSchema } from '../search/filter.schemas.js'
 import type { SearchService } from '../search/search.service.js'
 import type { SpaceRepository } from '../spaces/space.repository.js'
 import type { SpaceService } from '../spaces/space.service.js'
+import type { SprintService } from '../sprints/sprint.service.js'
 import { cardKeySchema, defineTool, spaceKeySchema, type Tool, type ToolContext } from './tool.js'
 
 export type ReadDeps = {
@@ -28,6 +29,7 @@ export type ReadDeps = {
   contents: ContentService
   members: MemberService
   proposals: ProposalService
+  sprints: SprintService
 }
 
 /** A space the caller reads, by its key: 404 for a key that is not one, as for one they cannot read. */
@@ -54,6 +56,8 @@ const cardLine = (card: CardView) => ({
   assignee: card.assignee,
   labels: card.labels,
   dueDate: card.dueDate,
+  points: card.points,
+  sprintId: card.sprintId,
   updatedAt: card.updatedAt
 })
 
@@ -175,9 +179,42 @@ const proposalReadTools = (deps: ReadDeps): Tool[] => [
   })
 ]
 
+/** A space's sprints and what one holds (ADR-0029). Moving a card is `update_card` or a proposal, with `sprintId`. */
+const sprintTools = (deps: ReadDeps): Tool[] => [
+  defineTool({
+    name: 'list_sprints',
+    title: 'List sprints',
+    description:
+      "A space's sprints, oldest first: planned, the one active, closed — with dates, goal, and what each committed, completed and carried. A card goes to one with its sprintId.",
+    input: z.object({ space: spaceKeySchema }),
+    run: async ({ space }, context) =>
+      await deps.sprints.list(context.caller, (await spaceByKey(deps, space, context)).id)
+  }),
+  defineTool({
+    name: 'get_sprint',
+    title: 'Get a sprint',
+    description:
+      'One sprint with its cards and their points — the active one unless a sprintId is given. Cards say where they stand by stateId (describe_space names it).',
+    input: z.object({ space: spaceKeySchema, sprintId: z.uuid().optional() }),
+    run: async ({ space, sprintId }, context) => {
+      const found = await spaceByKey(deps, space, context)
+      const { items } = await deps.sprints.list(context.caller, found.id)
+      const sprint = sprintId
+        ? items.find((each) => each.id === sprintId)
+        : items.find((each) => each.state === 'active')
+      if (!sprint) {
+        throw new NotFoundException('Sprint', sprintId ?? `active in ${found.key}`)
+      }
+      const cards = await deps.cards.list(context.caller, found.id, sprint.id)
+      return { sprint, cards: cards.items.map(cardLine) }
+    }
+  })
+]
+
 /** What any member may call: reading JiraIA as their own access allows. */
 export const readTools = (deps: ReadDeps): Tool[] => [
   ...spaceTools(deps),
   ...cardTools(deps),
+  ...sprintTools(deps),
   ...proposalReadTools(deps)
 ]

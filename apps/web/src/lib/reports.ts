@@ -57,7 +57,9 @@ const TITLES: { [K in WidgetKind]: (widget: Extract<Widget, { kind: K }>) => str
   trend: (widget) => (widget.measure === 'created' ? 'Itens criados' : 'Itens concluídos'),
   timing: (widget) => (widget.measure === 'cycle' ? 'Tempo de ciclo' : 'Lead time'),
   matrix: (widget) => `Estado por ${GROUPING_LABEL[widget.by].toLowerCase()}`,
-  cards: () => 'Lista de itens'
+  cards: () => 'Lista de itens',
+  burndown: () => 'Burndown da sprint',
+  velocity: () => 'Velocidade'
 }
 
 /** The name a widget gets from what it shows. */
@@ -161,4 +163,24 @@ export const shiftWidget = (widgets: readonly Widget[], id: string, by: -1 | 1):
   const next = [...widgets]
   ;[next[index], next[target]] = [next[target] as Widget, next[index] as Widget]
   return next
+}
+
+/** "3 pontos", "1 card": a sprint report's numbers in its unit. */
+export const unitText = (value: number, unit: 'points' | 'cards'): string => {
+  const shown = formatCount(Math.round(value * 10) / 10)
+  if (unit === 'points') {
+    return `${shown} ${value === 1 ? 'ponto' : 'pontos'}`
+  }
+  return `${shown} ${value === 1 ? 'card' : 'cards'}`
+}
+
+/**
+ * The burndown's ideal: a straight run from the first day's scope to nothing on the sprint's last day,
+ * then nothing — a late sprint runs past it.
+ *
+ * @example idealLine(['10-20', '10-21', '10-22'], 8, '10-22')   // [8, 4, 0]
+ */
+export const idealLine = (days: readonly string[], scope: number, endsOn: string): number[] => {
+  const last = Math.max(days.indexOf(endsOn), 1)
+  return days.map((_, index) => Math.max(scope * (1 - index / last), 0))
 }

@@ -8,15 +8,28 @@ import { cards } from '../schema.js'
 import { filterCondition, visibleTo } from '../search/card-query.js'
 import { cardFilterSchema } from '../search/filter.schemas.js'
 import type { SpaceGate } from '../spaces/space-gate.js'
+import { sprintStateSchema } from '../sprints/schemas.js'
+import type { SprintRepository } from '../sprints/sprint.repository.js'
 import type { ViewRepository } from '../views/view.repository.js'
 import { bucketKeys, fillBuckets, windowStart } from './buckets.js'
+import { burndown } from './burndown.js'
 import { spaceViewOrFail } from './dashboard.service.js'
 import type { ReportRepository, Scope } from './report.repository.js'
 import { CARDS_PAGE, type Report, type RunReport, type WidgetOf } from './schemas.js'
+import type { SprintReportRepository } from './sprint-report.repository.js'
 
-type Deps = { clock: Clock; gate: SpaceGate; reports: ReportRepository; views: ViewRepository }
+type Deps = {
+  clock: Clock
+  gate: SpaceGate
+  reports: ReportRepository
+  views: ViewRepository
+  sprints: SprintRepository
+  sprintReports: SprintReportRepository
+}
 
 const DAY = 86_400_000
+
+type Unit = 'points' | 'cards'
 
 /**
  * A widget's data (ADR-0016), for whoever reads the space: the widget may be saved or still in the
@@ -26,7 +39,8 @@ export class ReportService {
   constructor(private readonly deps: Deps) {}
 
   async run(caller: Caller, spaceId: string, input: RunReport): Promise<Report> {
-    const { actor } = await this.deps.gate.check(caller, spaceId, 'space:read')
+    const { actor, space } = await this.deps.gate.check(caller, spaceId, 'space:read')
+    const unit = space.estimation === 'points' ? 'points' : 'cards'
     const scope = { spaceId, where: await this._where(actor, spaceId, input.widget.viewId), now: this.deps.clock.now() }
     const widget = input.widget
     switch (widget.kind) {
@@ -42,7 +56,52 @@ export class ReportService {
         return await this._matrix(scope, widget)
       case 'cards':
         return await this._cards(scope, input.page)
+      case 'burndown':
+        return await this._burndown(spaceId, actor, widget, unit)
+      case 'velocity':
+        return await this._velocity(spaceId, widget, unit)
     }
+  }
+
+  /** The sprint named, or the active one; what was left of it each day (ADR-0029). */
+  private async _burndown(
+    spaceId: string,
+    actor: MemberRow,
+    widget: WidgetOf<'burndown'>,
+    unit: Unit
+  ): Promise<Report> {
+    const named = widget.sprintId ? await this.deps.sprints.find(actor.organizationId, widget.sprintId) : undefined
+    const sprint = named?.spaceId === spaceId ? named : (await this.deps.sprints.list(spaceId, 'active'))[0]
+    if (!sprint) {
+      return { kind: 'burndown', unit, sprint: null, days: [] }
+    }
+    const cardsNow = await this.deps.sprintReports.cardsEverIn(spaceId, sprint.id)
+    const [changes, groups] = await Promise.all([
+      this.deps.sprintReports.changesOf(cardsNow.map((card) => card.id)),
+      this.deps.sprintReports.groups(spaceId)
+    ])
+    const days = burndown({ sprint, cards: cardsNow, changes, groups, unit, now: this.deps.clock.now() })
+    const { id, name, startsOn, endsOn } = sprint
+    return {
+      kind: 'burndown',
+      unit,
+      sprint: { id, name, state: sprintStateSchema.parse(sprint.state), startsOn, endsOn },
+      days
+    }
+  }
+
+  /** The last closed sprints, oldest first: what was committed at the start, what was done by the close. */
+  private async _velocity(spaceId: string, widget: WidgetOf<'velocity'>, unit: Unit): Promise<Report> {
+    const closed = (await this.deps.sprints.list(spaceId, 'closed')).slice(-widget.sprints)
+    const pick = (cards: number | null, points: number | null) => (unit === 'points' ? (points ?? 0) : (cards ?? 0))
+    const sprints = closed.map((sprint) => ({
+      id: sprint.id,
+      name: sprint.name,
+      committed: pick(sprint.committedCards, sprint.committedPoints),
+      completed: pick(sprint.completedCards, sprint.completedPoints)
+    }))
+    const total = sprints.reduce((sum, sprint) => sum + sprint.completed, 0)
+    return { kind: 'velocity', unit, sprints, averageCompleted: sprints.length ? total / sprints.length : null }
   }
 
   private async _where(actor: MemberRow, spaceId: string, viewId: string | undefined): Promise<SQL | undefined> {

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, lte, notInArray, or, type SQL, sql } from 'drizzle-orm'
 import type { PgColumn } from 'drizzle-orm/pg-core'
 
-import { auditEvents, cards, spaces, workflowStates } from '../schema.js'
+import { auditEvents, cards, spaces, sprints, workflowStates } from '../schema.js'
 import type { CardFilter, CardOrder, DayBound } from './filter.schemas.js'
 
 /**
@@ -100,6 +100,17 @@ const field = (fieldId: string, anyOf: readonly (string | number)[]): SQL => {
 const inGroups = (groups: readonly string[]): SQL =>
   sql`${cards.stateId} in (select ${workflowStates.id} from ${workflowStates} where ${workflowStates.group} in (${list(groups)}))`
 
+/** In any of the sprints named: an id, the card's space's active sprint, or none at all. */
+const inSprints = (values: readonly string[]): SQL | undefined => {
+  const ids = values.filter((value) => value !== 'active' && value !== 'none')
+  const active = sql`${cards.sprintId} in (select ${sprints.id} from ${sprints} where ${sprints.spaceId} = ${cards.spaceId} and ${sprints.state} = 'active')`
+  return or(
+    ids.length ? inArray(cards.sprintId, ids) : undefined,
+    values.includes('active') ? active : undefined,
+    values.includes('none') ? isNull(cards.sprintId) : undefined
+  )
+}
+
 type Part = (filter: CardFilter, context: QueryContext) => SQL | undefined
 
 /** One builder per condition of the filter; a condition left out builds nothing. */
@@ -110,6 +121,7 @@ const PARTS: readonly Part[] = [
   ({ notStateIds }) => notStateIds && notInArray(cards.stateId, notStateIds),
   ({ stateGroups }) => stateGroups && inGroups(stateGroups),
   ({ priorities }) => priorities && inArray(cards.priority, priorities),
+  ({ sprints: named }) => named && inSprints(named),
   ({ labelsAny }) => labelsAny && labels(labelsAny, true),
   ({ labelsNone }) => labelsNone && labels(labelsNone, false),
   ({ text }) => (text ? textCondition(text) : undefined),

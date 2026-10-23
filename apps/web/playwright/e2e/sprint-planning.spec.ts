@@ -45,6 +45,12 @@ test('a sprint is planned in the backlog, started, worked on its board and close
   await page.getByRole('dialog', { name: 'Iniciar Sprint 1' }).getByRole('button', { name: 'Iniciar sprint' }).click()
   await expect(sprint.getByText('Ativa')).toBeVisible()
 
+  await page.goto('/espacos/SPR?aba=relatorios')
+  const burndown = page.locator('.widget', { hasText: 'Burndown da sprint' })
+  await expect(burndown).toContainText('Sprint 1')
+  await expect(burndown.locator('.chart-ideal')).toHaveCount(1)
+  await expect(page.locator('.widget', { hasText: 'Velocidade' })).toContainText('Nenhuma sprint encerrada ainda.')
+
   await page.goto('/espacos/SPR')
   await expect(page.locator('.sprint-strip')).toContainText('Sprint 1')
   await expect(page.locator('.card-tile')).toHaveCount(1)

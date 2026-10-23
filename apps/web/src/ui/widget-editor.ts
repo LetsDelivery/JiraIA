@@ -70,6 +70,18 @@ export const CATALOG: readonly Entry[] = [
     description: 'Os itens, com tipo, prioridade, estado e responsável.',
     icon: 'listDetails',
     make: () => ({ id: id(), kind: 'cards', width: 'full' })
+  },
+  {
+    label: 'Burndown da sprint',
+    description: 'Quanto falta da sprint ativa, dia a dia, contra a linha ideal. Para espaços com sprints.',
+    icon: 'chartLine',
+    make: () => ({ id: id(), kind: 'burndown', width: 'half' })
+  },
+  {
+    label: 'Velocidade',
+    description: 'Comprometido e concluído nas últimas sprints encerradas, e a média. Para espaços com sprints.',
+    icon: 'chartBar',
+    make: () => ({ id: id(), kind: 'velocity', sprints: 6, width: 'half' })
   }
 ]
 
@@ -169,8 +181,19 @@ const KIND_FIELDS: { [K in Widget['kind']]: (draft: Extract<Widget, { kind: K }>
       options({ assignee: GROUPING_LABEL.assignee, squad: GROUPING_LABEL.squad, type: GROUPING_LABEL.type }),
       draft.by
     ),
-  cards: () => html``
+  cards: () => html``,
+  burndown: () => html``,
+  velocity: (draft) =>
+    select(
+      'sprints',
+      'Sprints',
+      options({ '3': 'Últimas 3', '6': 'Últimas 6', '9': 'Últimas 9', '12': 'Últimas 12' }),
+      draft.sprints
+    )
 }
+
+/** A sprint widget reads the sprint itself, never a view's cards (ADR-0029). */
+const SPRINT_KINDS = new Set<Widget['kind']>(['burndown', 'velocity'])
 
 const _form = (draft: Widget, views: readonly SavedView[]): Html => html`
   <div class="field"><label for="widget-title">Título</label>
@@ -183,10 +206,10 @@ const _form = (draft: Widget, views: readonly SavedView[]): Html => html`
     WIDTHS.map((width) => ({ value: width, label: WIDTH_LABEL[width] })),
     draft.width
   )}
-  ${select('viewId', 'Itens', [{ value: '', label: 'Todos os itens do espaço' }, ...views.map((view) => ({ value: view.id, label: `Visão: ${view.name}` }))], draft.viewId ?? '')}
+  ${SPRINT_KINDS.has(draft.kind) ? '' : select('viewId', 'Itens', [{ value: '', label: 'Todos os itens do espaço' }, ...views.map((view) => ({ value: view.id, label: `Visão: ${view.name}` }))], draft.viewId ?? '')}
 `
 
-const NUMERIC = new Set(['days'])
+const NUMERIC = new Set(['days', 'sprints'])
 
 /** A value chosen in the form, written into the draft: numbers as numbers, "none" as absent. */
 const _set = (draft: Widget, name: string, value: string) => {

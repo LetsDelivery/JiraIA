@@ -244,3 +244,101 @@ describe('a sprint past its end date', () => {
     ])
   })
 })
+
+describe('the sprint reports (Etapa 3c)', () => {
+  type Burndown = {
+    kind: 'burndown'
+    unit: string
+    sprint: { name: string } | null
+    days: { day: string; remaining: number | null; scope: number | null }[]
+  }
+  type Velocity = {
+    kind: 'velocity'
+    unit: string
+    sprints: { name: string; committed: number; completed: number }[]
+    averageCompleted: number | null
+  }
+  const run = async <T>(widget: Record<string, unknown>) =>
+    await ok<T>(
+      admin({
+        method: 'POST',
+        path: `/spaces/${spaceId}/reports/run`,
+        body: { widget: { id: '00000000-0000-4000-8000-000000000099', width: 'half', ...widget } }
+      })
+    )
+  const later = (hours: number) => {
+    now = new Date(now.getTime() + hours * 3_600_000)
+  }
+
+  it('burns the active sprint down day by day, in points, from the history', async () => {
+    const sprint = await newSprint({ startsOn: '2026-10-23', endsOn: '2026-10-27' })
+    const done = await newCard('Feito', 5)
+    await plan(done.id, sprint.id)
+    await plan((await newCard('Aberto', 3)).id, sprint.id)
+    await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/start`, body: {} }))
+    later(24)
+    await ok(admin({ method: 'PATCH', path: `/cards/${done.id}`, body: { stateId: stateIn('done').id } }))
+
+    const report = await run<Burndown>({ kind: 'burndown' })
+    expect(report.unit).toBe('points')
+    expect(report.days).toEqual([
+      { day: '2026-10-23', remaining: 8, scope: 8 },
+      { day: '2026-10-24', remaining: 3, scope: 8 },
+      { day: '2026-10-25', remaining: null, scope: null },
+      { day: '2026-10-26', remaining: null, scope: null },
+      { day: '2026-10-27', remaining: null, scope: null }
+    ])
+  })
+
+  it('filters cards by sprint: the active one, one by id, or the backlog', async () => {
+    const sprint = await newSprint()
+    const planned = await newCard('Na sprint')
+    await plan(planned.id, sprint.id)
+    const loose = await newCard('No backlog')
+    await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/start`, body: {} }))
+    const search = async (sprints: string[]) =>
+      (
+        await ok<{ items: Card[] }>(
+          admin({ method: 'POST', path: '/cards/search', body: { filter: { spaceIds: [spaceId], sprints } } })
+        )
+      ).items.map((each) => each.key)
+
+    expect(await search(['active'])).toEqual([planned.key])
+    expect(await search([sprint.id])).toEqual([planned.key])
+    expect(await search(['none'])).toEqual([loose.key])
+  })
+
+  it('says there is no sprint to burn down when none runs', async () => {
+    expect(await run<Burndown>({ kind: 'burndown' })).toMatchObject({ sprint: null, days: [] })
+  })
+
+  it('compares committed and completed over the last closed sprints, oldest first', async () => {
+    for (const [points, finish] of [
+      [5, true],
+      [8, false]
+    ] as const) {
+      const sprint = await newSprint()
+      const card = await newCard(`Card de ${points}`, points)
+      await plan(card.id, sprint.id)
+      await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/start`, body: {} }))
+      if (finish) {
+        await ok(admin({ method: 'PATCH', path: `/cards/${card.id}`, body: { stateId: stateIn('done').id } }))
+      }
+      await ok(admin({ method: 'POST', path: `/sprints/${sprint.id}/close`, body: { openCardsTo: 'backlog' } }))
+    }
+
+    const report = await run<Velocity>({ kind: 'velocity', sprints: 6 })
+    expect(report.sprints.map((each) => [each.name, each.committed, each.completed])).toEqual([
+      ['Sprint 1', 5, 5],
+      ['Sprint 2', 8, 0]
+    ])
+    expect(report.averageCompleted).toBe(2.5)
+  })
+
+  it('opens a sprint space’s default dashboard with the burndown and the velocity', async () => {
+    const dashboard = await ok<{ widgets: { kind: string }[] }>(
+      admin({ method: 'GET', path: `/spaces/${spaceId}/dashboard` })
+    )
+    expect(dashboard.widgets.slice(0, 2).map((each) => each.kind)).toEqual(['burndown', 'velocity'])
+  })
+})

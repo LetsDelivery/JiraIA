@@ -7,7 +7,7 @@ import { secretHint } from './signature.js'
 export type WebhookRow = typeof webhooks.$inferSelect
 export type DeliveryRow = typeof webhookDeliveries.$inferSelect
 
-/** The card events a webhook can ask for (escopo-mvp 4.7), and the proposal ones (ADR-0019). */
+/** The card events a webhook can ask for (escopo-mvp 4.7), the proposal ones (ADR-0019) and the sprint ones (ADR-0029). */
 export const webhookEventValues = [
   'card.created',
   'card.updated',
@@ -16,7 +16,9 @@ export const webhookEventValues = [
   'proposal.proposed',
   'proposal.approved',
   'proposal.rejected',
-  'proposal.reverted'
+  'proposal.reverted',
+  'sprint.started',
+  'sprint.closed'
 ] as const
 export const webhookEventSchema = z.enum(webhookEventValues)
 

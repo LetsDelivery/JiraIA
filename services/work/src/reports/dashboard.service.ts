@@ -10,7 +10,7 @@ import type { SpaceGate } from '../spaces/space-gate.js'
 import type { ViewRepository } from '../views/view.repository.js'
 import type { ViewWithOwner } from '../views/view.schemas.js'
 import type { DashboardRepository, DashboardRow } from './dashboard.repository.js'
-import { DEFAULT_WIDGETS } from './defaults.js'
+import { defaultWidgets } from './defaults.js'
 import { type DashboardView, type SaveDashboard, type Widget, widgetSchema } from './schemas.js'
 
 type Deps = {
@@ -24,21 +24,21 @@ type Deps = {
 
 /**
  * A space's dashboard (Etapa 5d, ADR-0016): every reader sees it, its admins save and restore it.
- * A space that never saved one shows `DEFAULT_WIDGETS`.
+ * A space that never saved one shows the default widgets, the sprint first where it uses them.
  */
 export class DashboardService {
   constructor(private readonly deps: Deps) {}
 
   async read(caller: Caller, spaceId: string): Promise<DashboardView> {
-    const { actor, access } = await this.deps.gate.check(caller, spaceId, 'space:read')
+    const { actor, access, space } = await this.deps.gate.check(caller, spaceId, 'space:read')
     const row = await this.deps.dashboards.find(actor.organizationId, spaceId)
-    return _view(spaceId, row, can(access, 'space:manage'))
+    return _view({ spaceId, usesSprints: space.usesSprints }, row, can(access, 'space:manage'))
   }
 
   async save(caller: Caller, spaceId: string, input: SaveDashboard): Promise<DashboardView> {
-    const { actor } = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
+    const { actor, space } = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
     await this._checkViews(actor, spaceId, input.widgets)
-    const before = await this._widgets(actor, spaceId)
+    const before = await this._widgets(actor, { spaceId, usesSprints: space.usesSprints })
     const row = { spaceId, organizationId: actor.organizationId, widgets: input.widgets, updatedBy: actor.id }
 
     await this.deps.db.transaction(async (tx) => {
@@ -50,18 +50,18 @@ export class DashboardService {
 
   /** Back to the default dashboard: the saved one is dropped, and the drop is audited. */
   async restore(caller: Caller, spaceId: string): Promise<DashboardView> {
-    const { actor } = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
-    const before = await this._widgets(actor, spaceId)
+    const { actor, space } = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
+    const before = await this._widgets(actor, { spaceId, usesSprints: space.usesSprints })
 
     await this.deps.db.transaction(async (tx) => {
       await this.deps.dashboards.remove(tx, spaceId)
-      await this._audit(tx, actor, spaceId, before, [...DEFAULT_WIDGETS])
+      await this._audit(tx, actor, spaceId, before, defaultWidgets(space.usesSprints))
     })
     return await this.read(caller, spaceId)
   }
 
-  private async _widgets(actor: MemberRow, spaceId: string): Promise<Widget[]> {
-    return _view(spaceId, await this.deps.dashboards.find(actor.organizationId, spaceId), false).widgets
+  private async _widgets(actor: MemberRow, space: Space): Promise<Widget[]> {
+    return _view(space, await this.deps.dashboards.find(actor.organizationId, space.spaceId), false).widgets
   }
 
   /** A widget may narrow its cards only by a view shared with the same space, so every reader sees the same. */
@@ -99,9 +99,12 @@ export const spaceViewOrFail = (view: ViewWithOwner | undefined, spaceId: string
   return view
 }
 
-const _view = (spaceId: string, row: DashboardRow | undefined, canEdit: boolean): DashboardView => ({
+/** What the default dashboard depends on: whether the space plans in sprints. */
+type Space = { spaceId: string; usesSprints: boolean }
+
+const _view = ({ spaceId, usesSprints }: Space, row: DashboardRow | undefined, canEdit: boolean): DashboardView => ({
   spaceId,
-  widgets: row ? z.array(widgetSchema).parse(row.widgets) : [...DEFAULT_WIDGETS],
+  widgets: row ? z.array(widgetSchema).parse(row.widgets) : defaultWidgets(usesSprints),
   isDefault: !row,
   canEdit,
   updatedAt: row ? toIso(row.updatedAt) : null

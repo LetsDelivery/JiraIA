@@ -129,13 +129,15 @@ export class NotificationFanout implements Consumer {
     if (trackedFields(event).length === 0) {
       return []
     }
-    const [states, members] = await Promise.all([
+    const [states, members, sprints] = await Promise.all([
       this.deps.workflows.states(spaceId),
-      this.deps.members.list(event.organizationId)
+      this.deps.members.list(event.organizationId),
+      this.deps.sprints.list(spaceId)
     ])
     const names = {
       states: new Map(states.map((state) => [state.id, state.name])),
-      members: new Map(members.map((member) => [member.id, member.name]))
+      members: new Map(members.map((member) => [member.id, member.name])),
+      sprints: new Map(sprints.map((sprint) => [sprint.id, sprint.name]))
     }
     return cardChanges(event, names)
   }

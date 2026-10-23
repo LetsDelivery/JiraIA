@@ -91,6 +91,7 @@ import { DashboardService } from './reports/dashboard.service.js'
 import { ReportRepository } from './reports/report.repository.js'
 import { ReportService } from './reports/report.service.js'
 import { reportRoutes } from './reports/routes.js'
+import { SprintReportRepository } from './reports/sprint-report.repository.js'
 import { AccessRequestRepository } from './requests/request.repository.js'
 import { AccessRequestService } from './requests/request.service.js'
 import { accessRequestRoutes } from './requests/routes.js'
@@ -211,7 +212,14 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
       dashboards: new DashboardRepository(db),
       views: viewRows
     }),
-    reports: new ReportService({ clock, gate, reports: new ReportRepository(db), views: viewRows }),
+    reports: new ReportService({
+      clock,
+      gate,
+      reports: new ReportRepository(db),
+      views: viewRows,
+      sprints: sprintRows,
+      sprintReports: new SprintReportRepository(db)
+    }),
     ...accessParts,
     ...draw
   }

@@ -66,7 +66,11 @@ export const widgetSchema = z.discriminatedUnion('kind', [
     days: daysSchema(730)
   }),
   z.object({ ...widgetBase, kind: z.literal('matrix'), by: z.enum(['assignee', 'squad', 'type']) }),
-  z.object({ ...widgetBase, kind: z.literal('cards') })
+  z.object({ ...widgetBase, kind: z.literal('cards') }),
+  /** A sprint's remaining work day by day (ADR-0029): the one named, or the active one. Ignores `viewId`. */
+  z.object({ ...widgetBase, kind: z.literal('burndown'), sprintId: z.uuid().optional() }),
+  /** Committed against completed in the space's last closed sprints. Ignores `viewId`. */
+  z.object({ ...widgetBase, kind: z.literal('velocity'), sprints: z.number().int().min(1).max(12) })
 ])
 export type Widget = z.infer<typeof widgetSchema>
 export type WidgetOf<K extends Widget['kind']> = Extract<Widget, { kind: K }>
@@ -136,6 +140,32 @@ export const reportCardSchema = z.object({
 })
 export type ReportCard = z.infer<typeof reportCardSchema>
 
+/** What a sprint report adds: points where the space estimates in them, cards otherwise. */
+const unitSchema = z.enum(['points', 'cards'])
+
+const reportSprintSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  state: z.enum(['planned', 'active', 'closed']),
+  startsOn: z.iso.date(),
+  endsOn: z.iso.date()
+})
+
+const burndownDaySchema = z.object({
+  day: z.iso.date(),
+  /** What was left at the end of the day; null for a day still ahead. */
+  remaining: z.number().nullable(),
+  /** All that was in the sprint that day, done or not. */
+  scope: z.number().nullable()
+})
+
+const velocitySprintSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  committed: z.number(),
+  completed: z.number()
+})
+
 /** A widget's data, shaped by its kind. */
 export const reportSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('count'), value: z.number().int() }),
@@ -153,6 +183,20 @@ export const reportSchema = z.discriminatedUnion('kind', [
     page: z.number().int(),
     pageSize: z.number().int(),
     items: z.array(reportCardSchema)
+  }),
+  z.object({
+    kind: z.literal('burndown'),
+    unit: unitSchema,
+    /** Null when the space has no active sprint and none was named. */
+    sprint: reportSprintSchema.nullable(),
+    days: z.array(burndownDaySchema)
+  }),
+  z.object({
+    kind: z.literal('velocity'),
+    unit: unitSchema,
+    /** Oldest first, so the chart reads left to right. */
+    sprints: z.array(velocitySprintSchema),
+    averageCompleted: z.number().nullable()
   })
 ])
 export type Report = z.infer<typeof reportSchema>

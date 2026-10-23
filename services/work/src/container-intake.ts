@@ -285,7 +285,8 @@ export const buildOutward = ({ db, clock, ids, audit, access, gate, members, car
     webhooks: rows,
     cards,
     members,
-    proposals: new ProposalRepository(db)
+    proposals: new ProposalRepository(db),
+    sprints: new SprintRepository(db)
   })
   return {
     sender,
