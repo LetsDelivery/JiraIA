@@ -56,7 +56,7 @@ Mappings:
       MailFrom: 'jiraia@uselets.com'
       # The Slack app's client id (pendência #10). When set, the secret jiraia/slack must hold
       # client_secret, signing_secret and token_key.
-      SlackClientId: ''
+      SlackClientId: '10340397365014.12393274177413'
       # Aurora capacity units: zero lets dev pause when nobody is using it.
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '4'
