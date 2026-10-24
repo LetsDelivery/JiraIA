@@ -13,7 +13,7 @@ import { toast } from './toast'
 export type CreateTarget = { spaceId: string; parentId?: string | undefined }
 
 const OPTIONS = [
-  { choice: 'ai', label: 'Criar com IA', hint: 'Descreva e a IA monta o rascunho', glyph: 'sparkles' },
+  { choice: 'ai', label: 'Criar com Laís', hint: 'Descreva e a Laís monta o rascunho', glyph: 'sparkles' },
   { choice: 'page', label: 'Página em branco', hint: 'Um documento para escrever junto', glyph: 'fileText' },
   { choice: 'whiteboard', label: 'Quadro branco', hint: 'Notas, formas e setas', glyph: 'chalkboard' },
   { choice: 'folder', label: 'Pasta', hint: 'Para organizar o conteúdo', glyph: 'folder' }

@@ -91,12 +91,12 @@ test('a space manager creates a space; folders and subfolders organise it; the s
   await expect(page.getByRole('menuitem', { name: 'Configurações do espaço' })).toBeVisible()
 })
 
-test('“Criar com IA” drafts from a prompt in a chat, and the draft becomes a page', async ({ page }) => {
+test('“Criar com Laís” drafts from a prompt in a chat, and the draft becomes a page', async ({ page }) => {
   await signIn(page, 'admin@uselets.com')
   await openProduto(page)
   await page.getByRole('button', { name: 'Criar conteúdo' }).click()
-  await page.getByRole('menuitem', { name: /Criar com IA/ }).click()
-  const ai = page.getByRole('dialog', { name: 'Criar com IA' })
+  await page.getByRole('menuitem', { name: /Criar com Laís/ }).click()
+  const ai = page.getByRole('dialog', { name: 'Criar com Laís' })
   await expect(ai.getByRole('heading', { name: 'O que você vai criar hoje?' })).toBeVisible()
   await ai.getByRole('button', { name: 'Página', exact: true }).click()
   await ai
