@@ -220,7 +220,7 @@
   font-size: var(--text-xs);
 }
 
-/* ---------- Criar com IA ---------- */
+/* ---------- Criar com Laís ---------- */
 .draw-ai {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
@@ -250,14 +250,10 @@
 }
 
 .ai-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), #8e4ec6);
-  color: #fff;
 }
 
 .ai-chat {

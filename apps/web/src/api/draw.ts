@@ -169,7 +169,7 @@ export const drawWrite = {
     await unwrap(api.PUT('/work/draw/contents/{contentId}/visit', content(contentId)))
     forget('draw:opened')
   },
-  /** "Criar com IA": the conversation so far, drafted — nothing is created yet (ADR-0011). */
+  /** "Criar com Laís": the conversation so far, drafted — nothing is created yet (ADR-0011). */
   draft: (spaceId: string, body: DraftRequest) =>
     unwrap(api.POST('/work/draw/spaces/{spaceId}/drafts', { params: { path: { spaceId } }, body }))
 }

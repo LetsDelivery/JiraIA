@@ -11,7 +11,7 @@ test('opening and starring a space fills the sidebar', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Para você' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Espaços recomendados' })).toBeVisible()
-  for (const tab of ['Trabalhados', 'Vistos', 'Atribuídos a mim', 'Marcados com estrela', 'Recomendados']) {
+  for (const tab of ['Atribuídos a mim', 'Marcados com estrela', 'Recomendados']) {
     await expect(page.getByRole('tab', { name: tab })).toBeVisible()
   }
 

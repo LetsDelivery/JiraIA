@@ -1,4 +1,5 @@
 import { type Draft, drawWrite } from '@/api/draw'
+import laisLogo from '@/assets/lais.png'
 import { contentPath } from '@/lib/draw'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
@@ -81,7 +82,7 @@ const composer = (kind: Kind, busy: boolean): Html => html`
 const body = (turns: readonly Turn[], kind: Kind, busy: boolean): Html => html`
   <button type="button" class="button button-ghost button-icon ai-close" data-close aria-label="Fechar">${icon('x')}</button>
   <div class="ai-head">
-    <span class="ai-logo" aria-hidden="true">${icon('sparkles', 28)}</span>
+    <img class="ai-logo" src="${laisLogo}" alt="" width="52" height="52" />
     <h2>O que você vai criar hoje?</h2>
   </div>
   ${turns.length ? html`<ol class="ai-chat" aria-live="polite">${turns.map(turn)}${busy ? html`<li class="ai-turn ai-turn-assistant muted" aria-busy="true"><p>Escrevendo o rascunho…</p></li>` : ''}</ol>` : ''}
@@ -99,13 +100,13 @@ const body = (turns: readonly Turn[], kind: Kind, busy: boolean): Html => html`
 `
 
 /**
- * "Criar com IA" (ADR-0011): the person describes what they want; the model answers with a draft —
+ * "Criar com Laís" (ADR-0011): the person describes what they want; the model answers with a draft —
  * a page or a whiteboard — they can refine in the same chat and then create where they were.
  */
 export const openDrawAi = (target: CreateTarget): void => {
   const dialog = document.createElement('dialog')
   dialog.className = 'dialog draw-ai'
-  dialog.setAttribute('aria-label', 'Criar com IA')
+  dialog.setAttribute('aria-label', 'Criar com Laís')
   document.body.append(dialog)
   const state = { turns: [] as Turn[], kind: 'auto' as Kind, busy: false }
   const draw = () => {

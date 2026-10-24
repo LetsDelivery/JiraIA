@@ -36,6 +36,7 @@ const SERVICES = [
       'labels/routes.js',
       'cards/relation.routes.js',
       'cards/conversation.routes.js',
+      'personal/my-cards.routes.js',
       'sprints/routes.js',
       'search/routes.js',
       'views/routes.js',
