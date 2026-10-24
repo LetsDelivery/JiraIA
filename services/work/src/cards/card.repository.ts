@@ -209,9 +209,9 @@ export class CardRepository {
 export const registerLabels = async (tx: Database, cardId: string): Promise<void> => {
   await tx.execute(sql`
     insert into ${labels} (id, space_id, name, color, created_at)
-    select gen_random_uuid(), c.space_id, l.name, ${labelColorSql(sql`l.name`)}, now()
-    from ${cards} c cross join lateral jsonb_array_elements_text(c.labels) as l(name)
-    where c.id = ${cardId}
+    select gen_random_uuid(), ${cards.spaceId}, l.name, ${labelColorSql(sql`l.name`)}, now()
+    from ${cards} cross join lateral jsonb_array_elements_text(${cards.labels}) as l(name)
+    where ${eq(cards.id, cardId)}
     on conflict (space_id, name) do nothing`)
 }
 

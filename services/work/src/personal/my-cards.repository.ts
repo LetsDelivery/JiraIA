@@ -29,15 +29,19 @@ type Tab = { where: SQL | undefined; at: SQL; order: SQL[] }
 
 const isOpen = sql`${workflowStates.group} not in ('done', 'cancelled')`
 
+/*
+ * A value compared with a column goes through `eq`, never straight into `sql`: only then does the
+ * Data API learn it is a uuid, and not refuse `uuid = text` (ADR-0002).
+ */
 const starredAt = ({ meId }: Asker): SQL =>
-  sql`(select ${cardStars.createdAt} from ${cardStars} where ${cardStars.cardId} = ${cards.id} and ${cardStars.memberId} = ${meId})`
+  sql`(select ${cardStars.createdAt} from ${cardStars} where ${cardStars.cardId} = ${cards.id} and ${eq(cardStars.memberId, meId)})`
 
 /** A space where the caller holds a role, directly or through a group (ADR-0012). */
 const holdsRole = ({ meId }: Asker): SQL => sql`(
-  ${cards.spaceId} in (select ${spaceMembers.spaceId} from ${spaceMembers} where ${spaceMembers.memberId} = ${meId})
+  ${cards.spaceId} in (select ${spaceMembers.spaceId} from ${spaceMembers} where ${eq(spaceMembers.memberId, meId)})
   or ${cards.spaceId} in (select ${spaceGroupRoles.spaceId} from ${spaceGroupRoles}
     inner join ${groupMembers} on ${groupMembers.groupId} = ${spaceGroupRoles.groupId}
-    where ${groupMembers.memberId} = ${meId}))`
+    where ${eq(groupMembers.memberId, meId)}))`
 
 /** In the running sprint of its own space — never the backlog, never a future or closed sprint. */
 const inActiveSprint = sql`${cards.sprintId} in (select ${sprints.id} from ${sprints}
