@@ -19,8 +19,9 @@ export class DrawSpaceRepository {
     return rows.map((row) => ({ ...row.space, creatorName: row.creatorName }))
   }
 
-  async list(organizationId: string): Promise<DrawSpaceWithCreator[]> {
-    return await this._rows(eq(drawSpaces.organizationId, organizationId))
+  /** The organization's spaces of one product: Draw's, or the wiki's collections (ADR-0033). */
+  async list(organizationId: string, area: DrawSpaceRow['area'] = 'draw'): Promise<DrawSpaceWithCreator[]> {
+    return await this._rows(and(eq(drawSpaces.organizationId, organizationId), eq(drawSpaces.area, area)))
   }
 
   async find(organizationId: string, id: string): Promise<DrawSpaceWithCreator | undefined> {

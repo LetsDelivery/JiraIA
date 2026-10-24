@@ -56,6 +56,7 @@ export class DrawSpaceService {
         id,
         organizationId: actor.organizationId,
         ...input,
+        area: 'draw',
         createdBy: actor.id,
         createdAt: now,
         updatedAt: now,

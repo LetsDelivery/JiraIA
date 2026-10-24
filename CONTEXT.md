@@ -150,6 +150,35 @@ _Avoid_: board (a board is JiraIA's kanban), canvas
 What "Criar com IA" proposes from a conversation — a page or a whiteboard not yet created (ADR-0011).
 _Avoid_: proposal (an agent's change, Etapa 6), suggestion
 
+## LET’S Wiki (ADR-0033, proposed)
+
+**LET’S Wiki**:
+The product for what is true about LET’S and its customers — official pages, each with an owner and a
+review date — under `/wiki`, beside JiraIA and LET’S Draw AI. Draw is where people draft; the wiki is
+what they trust.
+_Avoid_: knowledge base, docs, Confluence
+
+**Collection**:
+A subject of the wiki (Empresa, Operação, Clientes…) holding its pages, created in the wiki. It
+shares the content engine with Draw's spaces but is never seen in Draw. Its admins are its owners.
+Screen word: "Coleção".
+_Avoid_: wiki space, category, section
+
+**Official page**:
+A wiki page its collection's owners stand behind, until its review date. Otherwise a wiki page is a
+draft. Screen words: "Oficial", "Rascunho".
+_Avoid_: verified, approved, published page
+
+**Review date**:
+Until when an official page holds; its owner confirms it to move it on. Past it, the page stays
+official and shows "Revisão vencida".
+_Avoid_: expiry, validity (a privileged entitlement's), deadline
+
+**Customer**:
+A company that hires LET’S. Its knowledge lives in the Clientes collection; its contracts and prices
+stay in Google Drive; no personal data is written about anyone.
+_Avoid_: client (an OAuth client), account, consumer
+
 ## Access governance (ADR-0024)
 
 **System**:

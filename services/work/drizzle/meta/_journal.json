@@ -169,6 +169,13 @@
       "when": 1792848130360,
       "tag": "0023_card-stars",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792870592845,
+      "tag": "0024_wiki",
+      "breakpoints": true
     }
   ]
 }

@@ -54,7 +54,7 @@ const _siblings = (spaceId: string, parentId: string | null): SQL | undefined =>
 export class ContentRepository {
   constructor(private readonly db: Database) {}
 
-  /** The pages and whiteboards changed last across the organization's spaces (ADR-0011). */
+  /** The pages and whiteboards changed last across the organization's Draw spaces (ADR-0011). */
   async recent(organizationId: string, limit: number) {
     return await this.db
       .select({ content: contentColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
@@ -65,6 +65,7 @@ export class ContentRepository {
           eq(contents.organizationId, organizationId),
           isNull(contents.deletedAt),
           isNull(drawSpaces.deletedAt),
+          eq(drawSpaces.area, 'draw'),
           ne(contents.kind, 'folder')
         )
       )
@@ -87,7 +88,14 @@ export class ContentRepository {
       .from(contentVisits)
       .innerJoin(contents, eq(contents.id, contentVisits.contentId))
       .innerJoin(drawSpaces, eq(drawSpaces.id, contents.spaceId))
-      .where(and(eq(contentVisits.memberId, memberId), isNull(contents.deletedAt), isNull(drawSpaces.deletedAt)))
+      .where(
+        and(
+          eq(contentVisits.memberId, memberId),
+          isNull(contents.deletedAt),
+          isNull(drawSpaces.deletedAt),
+          eq(drawSpaces.area, 'draw')
+        )
+      )
       .orderBy(desc(contentVisits.visitedAt))
       .limit(limit)
   }

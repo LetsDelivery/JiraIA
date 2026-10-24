@@ -121,6 +121,11 @@ import { viewRoutes } from './views/routes.js'
 import { ViewRepository } from './views/view.repository.js'
 import { ViewService } from './views/view.service.js'
 import { webhookRoutes } from './webhooks/routes.js'
+import { CollectionRepository } from './wiki/collection.repository.js'
+import { CollectionService } from './wiki/collection.service.js'
+import { WikiPageRepository } from './wiki/page.repository.js'
+import { WikiPageService } from './wiki/page.service.js'
+import { collectionRoutes, wikiPageRoutes } from './wiki/routes.js'
 
 /**
  * Wires the service together — the only place in `work` that constructs anything.
@@ -306,6 +311,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...documentRoutes(services.documents, services.realtime),
     ...contentTalkRoutes(services.contentComments, services.realtime),
     ...contentFileRoutes(services.contentFiles),
+    ...collectionRoutes(services.wikiCollections, services.wikiPages),
+    ...wikiPageRoutes(services.wikiPages),
     ...formRoutes(intake.forms),
     ...automationRoutes(intake.automations),
     ...integrationRoutes(intake.slack),
@@ -423,7 +430,8 @@ type DrawDeps = {
 
 /**
  * LET’S Draw AI (Etapa 4, ADR-0009–0011): its spaces, the content tree, the documents edited together,
- * comments, files and the realtime relay.
+ * comments, files and the realtime relay — and LET’S Wiki's collections and pages, on the same content
+ * engine (ADR-0033).
  */
 const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, files }: DrawDeps) => {
   const contents = new ContentRepository(db)
@@ -441,10 +449,32 @@ const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, 
     versions: new VersionRepository(db)
   })
   const comments = new ContentCommentRepository(db)
+  const contentService = new ContentService({ db, clock, ids, audit, drawGate, contents, members })
+  const wikiCollections = new CollectionService({
+    db,
+    clock,
+    ids,
+    audit,
+    drawGate,
+    spaces,
+    collections: new CollectionRepository(db),
+    contents: contentService
+  })
   return {
     drawSpaces: new DrawSpaceService({ db, clock, ids, audit, drawGate, spaces }),
     drafts: new DraftService({ drawGate, writer: overrides.writer ?? _writer(config) }),
-    contents: new ContentService({ db, clock, ids, audit, drawGate, contents, members }),
+    contents: contentService,
+    wikiCollections,
+    wikiPages: new WikiPageService({
+      db,
+      clock,
+      audit,
+      drawGate,
+      collections: wikiCollections,
+      contents,
+      pages: new WikiPageRepository(db),
+      members
+    }),
     documents,
     contentFiles: new ContentFileService({ db, clock, ids, drawGate, files }),
     contentComments: new ContentCommentService({ db, clock, ids, audit, drawGate, comments, members }),

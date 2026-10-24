@@ -48,6 +48,7 @@ const SERVICES = [
       'governance/routes.js',
       'draw/routes.js',
       'draw/space.routes.js',
+      'wiki/routes.js',
       'forms/routes.js',
       'automations/routes.js',
       'integrations/routes.js',
