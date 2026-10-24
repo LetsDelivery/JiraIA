@@ -37,6 +37,7 @@ type WikiPage = {
 
 let service: ReturnType<typeof buildService>
 let clock: ReturnType<typeof fixedClock>
+let files: InMemoryFileStore
 let clientes: Collection
 
 const as = (email: string) => async (input: Omit<Call, 'subject'>) =>
@@ -64,12 +65,8 @@ const official = async (id: string, value = true, who = admin) =>
 beforeEach(async () => {
   await truncateSchema(db, 'work')
   clock = fixedClock(new Date('2026-10-24T12:00:00.000Z'))
-  service = buildService(config, {
-    db,
-    clock,
-    files: new InMemoryFileStore(),
-    broadcaster: new RecordingBroadcaster()
-  })
+  files = new InMemoryFileStore()
+  service = buildService(config, { db, clock, files, broadcaster: new RecordingBroadcaster() })
   await bootstrapOrganization(
     { db, clock, ids: uuidGenerator },
     { organizationName: "LET'S", admin: { email: 'admin@uselets.com', name: 'Admin' } }
@@ -198,5 +195,60 @@ describe('pages', () => {
       .from(auditEvents)
       .where(and(eq(auditEvents.entityType, 'wiki_page'), eq(auditEvents.entityId, loja.id)))
     expect(events.map((each) => each.action).sort()).toEqual(['made_official', 'reviewed'])
+  })
+})
+
+describe('publishing a Draw page', () => {
+  const drawPage = async () => {
+    const produto = (await ok(admin({ method: 'POST', path: '/draw/spaces', body: { name: 'Produto' } }), 201)) as {
+      id: string
+    }
+    const page = (await ok(
+      admin({ method: 'POST', path: `/draw/spaces/${produto.id}/contents`, body: { title: 'Política de reembolso' } }),
+      201
+    )) as Content
+    const json = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Até 7 dias.' }] }] }
+    await ok(admin({ method: 'PUT', path: `/draw/contents/${page.id}/derived`, body: { json, text: 'Até 7 dias.' } }))
+    return page
+  }
+  const publish = (contentId: string, who = admin, collection = clientes) =>
+    who({ method: 'POST', path: `/wiki/collections/${collection.id}/published`, body: { contentId } })
+
+  it('copies it into the collection as a draft its publisher owns; the Draw page stays', async () => {
+    const source = await drawPage()
+    const copy = (await ok(publish(source.id), 201)) as Content
+    expect(copy).toMatchObject({ title: 'Política de reembolso' })
+    expect(JSON.stringify(copy.contentJson)).toContain('Até 7 dias.')
+    expect(await page(copy.id)).toMatchObject({ state: 'draft', owner: { name: 'Admin' } })
+    expect((await admin({ method: 'GET', path: `/draw/contents/${source.id}` })).status).toBe(200)
+  })
+
+  it('the copy still shows the images and files of the Draw page', async () => {
+    const source = await drawPage()
+    const started = (await ok(
+      admin({
+        method: 'POST',
+        path: `/draw/contents/${source.id}/files`,
+        body: { name: 'fluxo.png', contentType: 'image/png', size: 2048 }
+      }),
+      201
+    )) as { id: string; upload: { url: string } }
+    await files.put(new URL(started.upload.url).pathname.slice(1), 2048)
+    await ok(admin({ method: 'POST', path: `/draw/contents/${source.id}/files/${started.id}/complete` }))
+
+    const copy = (await ok(publish(source.id), 201)) as Content
+    const file = (await ok(admin({ method: 'GET', path: `/draw/contents/${copy.id}/files/${started.id}` }))) as {
+      name: string
+    }
+    expect(file.name).toBe('fluxo.png')
+    const loja = await createPage('Loja Exemplo')
+    expect((await admin({ method: 'GET', path: `/draw/contents/${loja.id}/files/${started.id}` })).status).toBe(404)
+  })
+
+  it('refuses a wiki page as the source, and whoever does not edit the collection', async () => {
+    const loja = await createPage('Loja Exemplo')
+    expect((await publish(loja.id)).status).toBe(409)
+    await invite('rui@uselets.com')
+    expect((await publish((await drawPage()).id, as('rui@uselets.com'))).status).toBe(403)
   })
 })

@@ -57,4 +57,7 @@ it holds.
 - A wiki page's text, versions, comments and files go through the content routes under
   `/draw/contents/{id}`, gated by the same space roles; `/wiki/...` adds only what is the wiki's.
 - Search returns each page's `area`, so the panel opens it in its own product.
+- A published copy keeps referring to the Draw page's images and files by id; reading one the copy
+  lacks falls back to its source (`wiki_pages.source_id`). Deleting the Draw page leaves them readable.
+- Monday's summary (ADR-0028) gains the owner's pages due within 14 days or past due; no new job.
 - Answers from Laís citing official pages build on `wiki_pages.state` later, with no change to it.

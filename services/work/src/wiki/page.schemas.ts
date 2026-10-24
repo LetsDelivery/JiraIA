@@ -19,6 +19,8 @@ export const createWikiPageSchema = createContentSchema.omit({ draft: true })
 export type CreateWikiPage = z.infer<typeof createWikiPageSchema>
 
 export const changeOwnerSchema = z.object({ ownerId: z.uuid() })
+/** A Draw page to copy into a collection as a draft (W8). */
+export const publishSchema = z.object({ contentId: z.uuid() })
 export const officialSchema = z.object({ official: z.boolean() })
 
 const personSchema = z.object({ id: z.uuid(), name: z.string() })

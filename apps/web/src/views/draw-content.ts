@@ -12,6 +12,7 @@ import { bindVersionsPanel, versionsPanel } from '@/ui/content-versions'
 import { openCreateMenu } from '@/ui/create-menu'
 import { icon } from '@/ui/icons'
 import { toast } from '@/ui/toast'
+import { openPublishToWiki } from '@/ui/wiki-dialogs'
 
 import { attachBubble, bubbleMenu, insertBoard, insertCard, insertFile } from './page-actions'
 
@@ -84,6 +85,7 @@ const titleRow = (data: Loaded): Html => html`
     <label class="sr-only" for="page-title">Título</label>
     <input id="page-title" class="page-title" data-page-title value="${data.content.title}" maxlength="255" />
     <div class="page-meta">
+      ${data.area === 'draw' && data.content.kind === 'page' ? html`<button type="button" class="button button-ghost" data-publish-wiki title="Copiar para uma coleção da LET’S Wiki">${icon('books', 16)}Publicar na Wiki</button>` : ''}
       <span class="page-presence" data-presence></span>
       <span class="page-status muted" data-page-status role="status"></span>
     </div>
@@ -193,6 +195,7 @@ export const bindDocument = (root: HTMLElement, data: Loaded): void => {
     root.querySelector('[data-format-host]')?.append(toolbar)
   }
   bindTitle(root, data.content)
+  bindPublish(root, data, session)
   bindPresence(root, session.provider.awareness)
   bindPanels(root, data, session, redraw)
 }
@@ -260,6 +263,16 @@ const bindPanels = (root: HTMLElement, data: Loaded, session: OpenSession, redra
     },
     redraw
   )
+}
+
+/** "Publicar na Wiki": what is typed reaches the server first, so the copy carries it (W8). */
+const bindPublish = (root: HTMLElement, data: Loaded, session: { flush: () => Promise<unknown> }): void => {
+  root.querySelector('[data-publish-wiki]')?.addEventListener('click', () => {
+    session
+      .flush()
+      .then(() => openPublishToWiki(data.content))
+      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+  })
 }
 
 const bindTitle = (root: HTMLElement, content: Content): void => {

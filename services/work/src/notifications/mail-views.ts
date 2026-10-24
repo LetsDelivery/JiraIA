@@ -1,6 +1,6 @@
 import type { CommentView } from './email/blocks.js'
 import type { CardRef, UpdateView } from './email/card-emails.js'
-import type { ChangedContentView, OpenCardView } from './email/summary-emails.js'
+import type { ChangedContentView, OpenCardView, ReviewView } from './email/summary-emails.js'
 import type { NotificationWithActor } from './notification.repository.js'
 import type { CardChange, NotificationData } from './schemas.js'
 import type { OpenCard, WaitingMention } from './weekly.repository.js'
@@ -137,4 +137,20 @@ export const openOf = (card: OpenCard, webUrl: string): OpenCardView => {
   const key = `${card.key}-${card.number}`
   const url = cardUrl(webUrl, key)
   return { key, title: card.title, spaceName: card.spaceName, url, assignUrl: `${url}&atribuir=eu` }
+}
+
+/** A wiki page to review, opening on its page in LET’S Wiki (ADR-0033). */
+export const reviewOf = (
+  page: { contentId: string; title: string; collectionId: string; collectionName: string; reviewDue: Date | null },
+  webUrl: string,
+  now: Date
+): ReviewView => {
+  const due = page.reviewDue ?? now
+  return {
+    title: page.title,
+    collectionName: page.collectionName,
+    url: `${webUrl}/wiki/${page.collectionId}/${page.contentId}`,
+    due,
+    overdue: due.getTime() < now.getTime()
+  }
 }

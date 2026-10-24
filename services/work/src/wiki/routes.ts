@@ -13,6 +13,7 @@ import {
   changeOwnerSchema,
   createWikiPageSchema,
   officialSchema,
+  publishSchema,
   recentQuerySchema,
   recentWikiPagesSchema,
   reviewListSchema,
@@ -86,6 +87,21 @@ export const collectionRoutes = (collections: CollectionService, pages: WikiPage
     handler: async ({ caller, path, body }) => ({
       statusCode: 201,
       body: await collections.createPage(caller, path.collectionId, body)
+    })
+  })
+]
+
+/** "Publicar na Wiki" (W8): a Draw page copied into a collection as a draft. */
+export const publishRoutes = (collections: CollectionService): Route[] => [
+  defineRoute({
+    method: 'POST',
+    path: '/wiki/collections/{collectionId}/published',
+    requires: 'authenticated',
+    schemas: { path: collectionPathSchema, body: publishSchema },
+    responds: contentViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 201,
+      body: await collections.publish(caller, path.collectionId, body.contentId)
     })
   })
 ]

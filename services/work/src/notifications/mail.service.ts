@@ -4,11 +4,13 @@ import type { JiraiaLogger } from '@jiraia/logger'
 import type { VersionRepository } from '../draw/version.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
+import type { WikiPageRepository } from '../wiki/page.repository.js'
+import { DUE_SOON_DAYS, dueAfter } from '../wiki/page.schemas.js'
 import { ACCESS_KINDS, accessEmail } from './email/access-emails.js'
 import { mentionEmail, updatesEmail } from './email/card-emails.js'
 import type { Message } from './email/kit.js'
 import { drawDailyEmail, weeklyEmail } from './email/summary-emails.js'
-import { cardRef, changedOf, commentOf, drawMentionOf, openOf, updatesOf, waitingOf } from './mail-views.js'
+import { cardRef, changedOf, commentOf, drawMentionOf, openOf, reviewOf, updatesOf, waitingOf } from './mail-views.js'
 import type { Mailer } from './mailer.js'
 import type { NotificationRepository, NotificationWithActor } from './notification.repository.js'
 import { DEFAULT_CHANNEL, type NotificationKind } from './schemas.js'
@@ -21,6 +23,8 @@ type Deps = {
   members: MemberRepository
   versions: VersionRepository
   weekly: WeeklyRepository
+  /** Whose wiki pages wait for review, for Monday's message (ADR-0033). */
+  wikiPages: WikiPageRepository
   mailer: Mailer
   webUrl: string
   /** How long a card's changes gather before their e-mail goes; the local harness passes 0. */
@@ -84,7 +88,7 @@ export class MailService {
     return await this._sendAll(outgoing)
   }
 
-  /** Monday at 08:00: each person's unanswered mentions and the cards nobody took where they work. */
+  /** Monday at 08:00: each person's unanswered mentions, the cards nobody took where they work, and their wiki pages to review. */
   async weekly(): Promise<MailResult> {
     const organizationId = this._ready() ? await this.deps.members.organizationId() : undefined
     if (!organizationId) {
@@ -146,12 +150,13 @@ export class MailService {
   private async _weekly(member: MemberRow): Promise<Message | undefined> {
     const now = this.deps.clock.now()
     const since = new Date(now.getTime() - WEEKLY_REACH_MS)
-    const [mentions, spaceIds] = await Promise.all([
+    const [mentions, spaceIds, due] = await Promise.all([
       this.deps.weekly.mentionsWaiting(member.id, since),
-      this.deps.weekly.spacesWorked(member.id, since)
+      this.deps.weekly.spacesWorked(member.id, since),
+      this.deps.wikiPages.dueFor(member.id, dueAfter(now, DUE_SOON_DAYS))
     ])
     const open = await this.deps.weekly.openCards(spaceIds)
-    if (mentions.length === 0 && open.length === 0) {
+    if (mentions.length === 0 && open.length === 0 && due.length === 0) {
       return undefined
     }
     return weeklyEmail({
@@ -161,6 +166,7 @@ export class MailService {
       mentionTotal: mentions.length,
       open: open.slice(0, 4).map((card) => openOf(card, this.deps.webUrl)),
       openTotal: open.length,
+      reviews: due.map((page) => reviewOf(page, this.deps.webUrl, now)),
       webUrl: this.deps.webUrl
     })
   }

@@ -18,6 +18,9 @@ import {
 /** A card nobody holds, in a space the reader worked on lately. */
 export type OpenCardView = { key: string; title: string; spaceName: string; url: string; assignUrl: string }
 
+/** An official wiki page the reader owns whose review date is near or past (ADR-0033). */
+export type ReviewView = { title: string; collectionName: string; url: string; due: Date; overdue: boolean }
+
 export type WeeklyView = {
   readerName: string
   now: Date
@@ -26,6 +29,8 @@ export type WeeklyView = {
   mentionTotal: number
   open: readonly OpenCardView[]
   openTotal: number
+  /** The reader's wiki pages to review, soonest first. */
+  reviews: readonly ReviewView[]
   webUrl: string
 }
 
@@ -44,6 +49,31 @@ const _openItem = (card: OpenCardView): string =>
     where: card.spaceName,
     action: { label: 'Atribuir a mim', url: card.assignUrl }
   })
+
+const _reviewItem = (page: ReviewView): string =>
+  item({
+    label: page.title,
+    url: page.url,
+    where: `${page.collectionName} · ${page.overdue ? 'revisão vencida em' : 'revisar até'} ${shortDate(page.due)}`,
+    action: { label: 'Revisar', url: page.url }
+  })
+
+/** The wiki section of Monday's message: only for whoever owns pages to review. */
+const _reviews = (view: WeeklyView): string =>
+  view.reviews.length === 0
+    ? ''
+    : heading(`Páginas da wiki para revisar (${view.reviews.length})`) +
+      rows(view.reviews.slice(0, 5).map(_reviewItem), 12) +
+      (view.reviews.length > 5
+        ? `<p style="margin:16px 0 0">${textLink('Ver todas as revisões', `${view.webUrl}/wiki/revisoes`)}</p>`
+        : '')
+
+const _weeklySubject = (view: WeeklyView): string => {
+  const base = `Sua semana no JiraIA: ${_plural(view.mentionTotal, 'menção', 'menções')} e ${_plural(view.openTotal, 'card sem responsável', 'cards sem responsável')}`
+  return view.reviews.length === 0
+    ? base
+    : `${base}, ${_plural(view.reviews.length, 'página para revisar', 'páginas para revisar')}`
+}
 
 /** Monday's message: mentions that wait for an answer, and cards nobody took where the reader works. */
 export const weeklyEmail = (view: WeeklyView): Message => {
@@ -65,9 +95,10 @@ export const weeklyEmail = (view: WeeklyView): Message => {
     view.openTotal > view.open.length
       ? `<p style="margin:16px 0 0">${textLink('Ver cards sem responsável', `${view.webUrl}/`)}</p>`
       : '',
+    _reviews(view),
     `<div style="margin-top:28px">${button('Abrir o JiraIA', view.webUrl)}</div>`
   ].join('')
-  const subject = `Sua semana no JiraIA: ${_plural(view.mentionTotal, 'menção', 'menções')} e ${_plural(view.openTotal, 'card sem responsável', 'cards sem responsável')}`
+  const subject = _weeklySubject(view)
   return {
     subject,
     html: shell({
@@ -88,7 +119,9 @@ const _weeklyText = (view: WeeklyView): string =>
     ...view.mentions.map((each) => `- ${each.authorName} ${each.action}: ${each.body} ${each.url}`),
     '',
     `Cards sem responsável (${view.openTotal}):`,
-    ...view.open.map((card) => `- ${card.key} ${card.title} (${card.spaceName}) ${card.url}`)
+    ...view.open.map((card) => `- ${card.key} ${card.title} (${card.spaceName}) ${card.url}`),
+    ...(view.reviews.length > 0 ? ['', `Páginas da wiki para revisar (${view.reviews.length}):`] : []),
+    ...view.reviews.map((page) => `- ${page.title} (${page.collectionName}, até ${shortDate(page.due)}) ${page.url}`)
   ].join('\n')
 
 /** A page or a board the reader helped write that someone else changed since yesterday. */

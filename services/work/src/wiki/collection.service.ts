@@ -1,4 +1,4 @@
-import { type Clock, ForbiddenException, type IdGenerator, NotFoundException } from '@jiraia/core'
+import { type Clock, ConflictException, ForbiddenException, type IdGenerator, NotFoundException } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 import type { Caller } from '@jiraia/http'
 
@@ -18,7 +18,8 @@ import {
   toCollectionView,
   type UpdateCollection
 } from './collection.schemas.js'
-import type { CreateWikiPage } from './page.schemas.js'
+import type { WikiPageRepository } from './page.repository.js'
+import { type CreateWikiPage, draftOf } from './page.schemas.js'
 
 type Deps = {
   db: Database
@@ -29,6 +30,7 @@ type Deps = {
   spaces: DrawSpaceRepository
   collections: CollectionRepository
   contents: ContentService
+  pages: WikiPageRepository
 }
 
 /** A collection opened through its space's gate: the space must be the wiki's (ADR-0033). */
@@ -116,6 +118,28 @@ export class CollectionService {
     const outlined = input.kind === 'page' && collection.outline === 'customer'
     const draft = outlined ? { json: markdownToDoc(CUSTOMER_OUTLINE), text: CUSTOMER_OUTLINE } : undefined
     return await this.deps.contents.create(caller, collectionId, { ...input, draft })
+  }
+
+  /**
+   * "Publicar na Wiki" (W8): a copy of a Draw page, as Draw last derived it, lands at the top of the
+   * collection as a draft its publisher owns, with a link back. The Draw page stays where it was.
+   */
+  async publish(caller: Caller, collectionId: string, sourceId: string): Promise<ContentView> {
+    const { gate, content } = await this.deps.drawGate.openDocument(caller, sourceId, 'read')
+    if (gate.space.area !== 'draw' || content.kind !== 'page') {
+      throw new ConflictException(`"${content.title}" is not a Draw page; only a Draw page is published to the wiki`, {
+        contentId: sourceId
+      })
+    }
+    await this.open(caller, collectionId, 'write')
+    const draft = { json: content.contentJson as Record<string, unknown>, text: content.contentText }
+    const created = await this.deps.contents.create(caller, collectionId, { kind: 'page', title: content.title, draft })
+    const now = this.deps.clock.now()
+    await this.deps.db.transaction(async (tx) => {
+      await this.deps.pages.save(tx, { ...draftOf(created.id, gate.actor.id, now), sourceId })
+      await this._audit(tx, gate.actor, collectionId, 'published', diff({}, { contentId: created.id, sourceId }))
+    })
+    return created
   }
 
   /** The space behind `collectionId` through Draw's gate, refused unless it is a wiki collection. */

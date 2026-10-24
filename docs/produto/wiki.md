@@ -92,6 +92,9 @@ Draw ganham o link "LET’S Wiki" na barra lateral, como já têm um para o outr
 | W8 | Atalho "Publicar na Wiki" numa página do Draw, para quem rascunhou lá: copia para uma coleção como Rascunho, com link de volta. O caminho normal é criar direto na Wiki |
 | W9 | Toda mudança de estado, responsável, revisão e dono é auditada |
 
+Estado em 2026-10-24: W1 a W9 implementados na branch `feat/lets-wiki`. Na busca geral, os resultados
+da Wiki vêm antes dos do Draw; ainda não há ordem entre oficial e rascunho dentro da Wiki.
+
 ## Depois
 
 - **Sugerir mudança** em página oficial, aprovada pelo responsável (modelo de propostas, ADR-0019).

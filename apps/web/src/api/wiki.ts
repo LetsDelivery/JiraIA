@@ -76,6 +76,14 @@ export const wikiWrite = {
     invalidate(`wiki:collection:${collectionId}:tree`, `draw:space:${collectionId}:tree`, 'wiki:recent')
     return created
   },
+  /** "Publicar na Wiki" (W8): a copy of a Draw page, as a draft in the collection. */
+  publish: async (collectionId: string, contentId: string) => {
+    const created = await unwrap(
+      api.POST('/work/wiki/collections/{collectionId}/published', { ...collection(collectionId), body: { contentId } })
+    )
+    invalidate(`wiki:collection:${collectionId}:tree`, `draw:space:${collectionId}:tree`, 'wiki:recent')
+    return created
+  },
   setOfficial: async (item: { contentId: string; collectionId: string }, official: boolean) => {
     const updated = await unwrap(
       api.PUT('/work/wiki/pages/{contentId}/official', { ...page(item.contentId), body: { official } })

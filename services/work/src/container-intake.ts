@@ -59,6 +59,7 @@ import { TokenService } from './tokens/token.service.js'
 import { WebhookSender } from './webhooks/sender.js'
 import { WebhookRepository } from './webhooks/webhook.repository.js'
 import { WebhookService } from './webhooks/webhook.service.js'
+import { WikiPageRepository } from './wiki/page.repository.js'
 
 /**
  * Etapa 5's part of the wiring (ADR-0014): intake forms, automations and Slack; notifications and the
@@ -246,6 +247,7 @@ export const buildNotifications = ({
       members,
       versions,
       weekly: new WeeklyRepository(db),
+      wikiPages: new WikiPageRepository(db),
       mailer: overrides.mailer ?? _mailer(config),
       webUrl: (config.WEB_URL ?? 'http://localhost:5280').replace(/\/$/, ''),
       windowMs: overrides.mailWindowMs ?? MAIL_WINDOW_MS

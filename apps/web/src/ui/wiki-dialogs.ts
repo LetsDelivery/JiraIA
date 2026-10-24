@@ -1,9 +1,9 @@
 import type { Member } from '@/api/requests'
-import { type Collection, type WikiPage, wikiWrite } from '@/api/wiki'
+import { type Collection, type WikiPage, wikiRead, wikiWrite } from '@/api/wiki'
 import { html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
-import { collectionPath, REVIEW_PERIODS, WIKI_HOME } from '@/lib/wiki'
+import { collectionPath, REVIEW_PERIODS, WIKI_HOME, wikiPagePath } from '@/lib/wiki'
 
 import { openFormDialog, textField } from './dialog'
 import { selectField } from './select'
@@ -87,6 +87,31 @@ export const openChangeOwner = (page: WikiPage, members: readonly Member[]): voi
       ${selectField({ name: 'ownerId', label: 'Responsável', options: people, value: page.owner.id })}`,
     onSubmit: async (data) => {
       await wikiWrite.changeOwner(page, String(data.get('ownerId')))
+    }
+  })
+}
+
+/**
+ * "Publicar na Wiki" (W8): the Draw page, as last saved, copied into a collection the caller edits as a
+ * draft they own. The Draw page stays; the copy opens in the wiki.
+ */
+export const openPublishToWiki = async (content: { id: string; title: string }): Promise<void> => {
+  const writable = (await wikiRead.collections()).items.filter((each) => each.canWrite)
+  if (writable.length === 0) {
+    toast('Você ainda não edita nenhuma coleção da wiki. Peça a um dono para incluir você.', 'error')
+    return
+  }
+  const options = writable.map((each) => ({ value: each.id, label: `${each.icon} ${each.name}` }))
+  openFormDialog({
+    title: 'Publicar na Wiki',
+    submit: 'Publicar como rascunho',
+    done: 'Página publicada como rascunho.',
+    fields: html`<p class="muted">Uma cópia de “${content.title}” vai para a coleção como rascunho, com você como responsável. Os donos da coleção a tornam oficial. A página no Draw continua onde está.</p>
+      ${selectField({ name: 'collectionId', label: 'Coleção', options, value: options[0]?.value ?? '' })}`,
+    onSubmit: async (data) => {
+      const collectionId = String(data.get('collectionId'))
+      const created = await wikiWrite.publish(collectionId, content.id)
+      navigate(wikiPagePath(collectionId, created.id))
     }
   })
 }
