@@ -111,32 +111,32 @@ const linkForm = (): Html => html`
   </form>
 `
 
-const composer = (form: Html, opener: string): Html => html`
-  ${form}
-  <button type="button" class="compose-opener" data-compose-open>${icon('plus', 16)}${opener}</button>
-`
+/** How a panel is drawn: open while its composer is, and hidden while it has nothing and nothing is being added. */
+const panelState = (context: RelationsContext, form: ComposeForm, empty: boolean): Html =>
+  html`data-compose="${context.composing.has(form) ? 'open' : 'closed'}" data-compose-name="${form}" ${empty ? html`data-empty` : ''}`
 
 const subtasks = (relations: Relations, context: RelationsContext): Html =>
   detailPanel({
     title: html`Subtarefas${count(relations.children.length)}`,
-    attributes: html`data-compose="${context.composing.has('subtask') ? 'open' : 'closed'}" data-compose-name="subtask"`,
+    attributes: panelState(context, 'subtask', relations.children.length === 0),
     body: html`
       ${relations.children.length ? html`<ul class="refs">${relations.children.map((child) => ref(child))}</ul>` : ''}
-      ${context.canWrite ? composer(subtaskForm(context), 'Adicionar subtarefa') : relations.children.length ? '' : html`<p class="muted">Nenhuma subtarefa.</p>`}`
+      ${context.canWrite ? subtaskForm(context) : ''}`
   })
 
 const links = (relations: Relations, context: RelationsContext): Html =>
   detailPanel({
     title: html`Cards vinculados${count(relations.links.length + (relations.parent ? 1 : 0))}`,
-    attributes: html`data-compose="${context.composing.has('link') ? 'open' : 'closed'}" data-compose-name="link"`,
+    attributes: panelState(context, 'link', relations.links.length === 0 && !relations.parent),
     body: html`
       ${parentLine(relations, context.canWrite)}
       ${linkGroups(relations.links, context.canWrite)}
-      ${context.canWrite ? composer(linkForm(), 'Vincular card') : relations.links.length || relations.parent ? '' : html`<p class="muted">Nenhum vínculo.</p>`}`
+      ${context.canWrite ? linkForm() : ''}`
   })
 
 /**
- * Subtasks, then the card's parent and typed links (escopo-mvp 2.6, 2.7), each in its own panel. The
+ * Subtasks, then the card's parent and typed links (escopo-mvp 2.6, 2.7), each in its own panel. A
+ * panel with nothing in it stays out of sight until the card's action bar opens its composer. The
  * wrapper holds no box of its own: it is the one root the binding listens on.
  */
 export const relationsSection = (relations: Relations, context: RelationsContext): Html => html`

@@ -118,6 +118,113 @@ describe('workflow', () => {
   })
 })
 
+type CardType = { id: string; name: string; icon: string; color: string; position: number }
+
+const types = async () =>
+  ((await admin({ method: 'GET', path: `/spaces/${spaceId}/workflow` })).body as { types: CardType[] }).types
+
+describe('card types', () => {
+  it('starts a space with types that already look like themselves', async () => {
+    expect(await types()).toMatchObject([{ name: 'Tarefa', icon: 'checkbox', color: 'blue', position: 0 }])
+  })
+
+  it('adds a type with its look, renames it, recolours it and puts it first', async () => {
+    const added = await admin({ method: 'POST', path: `/spaces/${spaceId}/types`, body: { name: 'Bug' } })
+    expect(added.status).toBe(201)
+    const bug = (added.body as { types: CardType[] }).types.find((type) => type.name === 'Bug') as CardType
+    expect(bug).toMatchObject({ icon: 'bug', color: 'red', position: 1 })
+
+    await admin({
+      method: 'PATCH',
+      path: `/spaces/${spaceId}/types/${bug.id}`,
+      body: { name: 'Defeito', color: 'orange' }
+    })
+    const tarefa = (await types())[0] as CardType
+    const ordered = await admin({
+      method: 'PUT',
+      path: `/spaces/${spaceId}/types/order`,
+      body: { typeIds: [bug.id, tarefa.id] }
+    })
+
+    expect((ordered.body as { types: CardType[] }).types.map((type) => [type.name, type.icon, type.color])).toEqual([
+      ['Defeito', 'bug', 'orange'],
+      ['Tarefa', 'checkbox', 'blue']
+    ])
+  })
+
+  it('refuses a name the space already has, and an icon outside the set', async () => {
+    expect((await admin({ method: 'POST', path: `/spaces/${spaceId}/types`, body: { name: 'tarefa' } })).status).toBe(
+      409
+    )
+    const odd = await admin({ method: 'POST', path: `/spaces/${spaceId}/types`, body: { name: 'X', icon: 'skull' } })
+    expect(odd.status).toBe(400)
+  })
+
+  it('removes a type by turning its cards and the fields that name it into another type', async () => {
+    const spike = (
+      (await admin({ method: 'POST', path: `/spaces/${spaceId}/types`, body: { name: 'Spike' } })).body as {
+        types: CardType[]
+      }
+    ).types.find((type) => type.name === 'Spike') as CardType
+    const tarefa = (await types()).find((type) => type.name === 'Tarefa') as CardType
+    const card = await createCard('Investigar fila', { typeId: spike.id })
+    const field = await admin({
+      method: 'POST',
+      path: `/spaces/${spaceId}/fields`,
+      body: { name: 'Hipótese', kind: 'text', options: [], typeIds: [spike.id] }
+    })
+
+    const rule = await admin({
+      method: 'POST',
+      path: `/spaces/${spaceId}/automations`,
+      body: {
+        name: 'Spike comenta',
+        trigger: { type: 'card_created' },
+        conditions: [{ type: 'type_is', typeIds: [spike.id] }],
+        actions: [{ type: 'comment', body: 'Timebox de 2 dias.' }]
+      }
+    })
+    expect(rule.status).toBe(201)
+
+    const removed = await admin({
+      method: 'DELETE',
+      path: `/spaces/${spaceId}/types/${spike.id}`,
+      query: { moveTo: tarefa.id }
+    })
+
+    expect(removed.status).toBe(200)
+    expect((removed.body as { types: CardType[] }).types.map((type) => type.name)).toEqual(['Tarefa'])
+    expect((await admin({ method: 'GET', path: `/cards/${card.id}` })).body).toMatchObject({ typeId: tarefa.id })
+    const fields = (await admin({ method: 'GET', path: `/spaces/${spaceId}/fields` })).body as {
+      items: { id: string; typeIds: string[] }[]
+    }
+    expect(fields.items.find((each) => each.id === (field.body as { id: string }).id)?.typeIds).toEqual([tarefa.id])
+    const rules = (await admin({ method: 'GET', path: `/spaces/${spaceId}/automations` })).body as {
+      items: { conditions: { typeIds: string[] }[] }[]
+    }
+    expect(rules.items[0]?.conditions[0]?.typeIds).toEqual([tarefa.id])
+  })
+
+  it('keeps the last type, asks where the cards go, and leaves types to the space admins', async () => {
+    const tarefa = (await types())[0] as CardType
+    const last = await admin({
+      method: 'DELETE',
+      path: `/spaces/${spaceId}/types/${tarefa.id}`,
+      query: { moveTo: tarefa.id }
+    })
+    expect(last.status).toBe(409)
+    expect((await admin({ method: 'DELETE', path: `/spaces/${spaceId}/types/${tarefa.id}` })).status).toBe(400)
+
+    await giveRole('ana@uselets.com', 'member')
+    const refused = await as('ana@uselets.com')({
+      method: 'POST',
+      path: `/spaces/${spaceId}/types`,
+      body: { name: 'X' }
+    })
+    expect(refused.status).toBe(403)
+  })
+})
+
 describe('cards', () => {
   it('numbers cards from the space key, starts them in the first state and moves the space activity', async () => {
     const first = await createCard('Rastreio em tempo real')

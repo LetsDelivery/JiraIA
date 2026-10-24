@@ -21,10 +21,13 @@ export type RoleHolder = Json<'/work/spaces/{spaceId}/members', 'get'>['items'][
 export type Workflow = Json<'/work/spaces/{spaceId}/workflow', 'get'>
 export type State = Workflow['states'][number]
 export type CardType = Workflow['types'][number]
+/** How a card type looks: an icon and a colour from the API's closed sets (ADR-0031). */
+export type TypeLook = { icon?: CardType['icon']; color?: CardType['color'] }
 export type Card = Json<'/work/cards/{cardId}', 'get'>
 export type Comment = Json<'/work/cards/{cardId}/comments', 'get'>['items'][number]
 export type HistoryEvent = Json<'/work/cards/{cardId}/history', 'get'>['items'][number]
 export type Field = Json<'/work/spaces/{spaceId}/fields', 'get'>['items'][number]
+export type Label = Json<'/work/spaces/{spaceId}/labels', 'get'>['items'][number]
 export type FieldKind = Field['kind']
 export type Relations = Json<'/work/cards/{cardId}/relations', 'get'>
 export type Link = Relations['links'][number]
@@ -91,6 +94,11 @@ export const read = {
   cards: (spaceId: string) =>
     cached(`space:${spaceId}:cards`, () =>
       unwrap(api.GET('/work/spaces/{spaceId}/cards', { params: { path: { spaceId } } }))
+    ),
+  /** Under the space's cards: every card write can teach the catalogue a label (ADR-0032). */
+  labels: (spaceId: string) =>
+    cached(`space:${spaceId}:cards:labels`, () =>
+      unwrap(api.GET('/work/spaces/{spaceId}/labels', { params: { path: { spaceId } } }))
     ),
   fields: (spaceId: string) =>
     cached(`space:${spaceId}:fields`, () =>
@@ -260,6 +268,38 @@ export const write = {
       api.DELETE('/work/spaces/{spaceId}/states/{stateId}', { params: { path: { spaceId, stateId }, query } })
     )
     invalidate(`space:${spaceId}:workflow`, `space:${spaceId}:cards`)
+  },
+  addLabel: async (spaceId: string, body: { name: string; color?: Label['color'] }) => {
+    await unwrap(api.POST('/work/spaces/{spaceId}/labels', { params: { path: { spaceId } }, body }))
+    invalidate(`space:${spaceId}:cards`)
+  },
+  /** A new name another label has joins the two, on every card (ADR-0032). */
+  updateLabel: async (spaceId: string, labelId: string, body: { name?: string; color?: Label['color'] }) => {
+    await unwrap(api.PATCH('/work/spaces/{spaceId}/labels/{labelId}', { params: { path: { spaceId, labelId } }, body }))
+    invalidate(`space:${spaceId}:cards`)
+  },
+  deleteLabel: async (spaceId: string, labelId: string) => {
+    await unwrap(api.DELETE('/work/spaces/{spaceId}/labels/{labelId}', { params: { path: { spaceId, labelId } } }))
+    invalidate(`space:${spaceId}:cards`)
+  },
+  addType: async (spaceId: string, body: TypeLook & { name: string }) => {
+    await unwrap(api.POST('/work/spaces/{spaceId}/types', { params: { path: { spaceId } }, body }))
+    invalidate(`space:${spaceId}:workflow`)
+  },
+  updateType: async (spaceId: string, typeId: string, body: Partial<TypeLook & { name: string }>) => {
+    await unwrap(api.PATCH('/work/spaces/{spaceId}/types/{typeId}', { params: { path: { spaceId, typeId } }, body }))
+    invalidate(`space:${spaceId}:workflow`)
+  },
+  orderTypes: async (spaceId: string, typeIds: string[]) => {
+    await unwrap(api.PUT('/work/spaces/{spaceId}/types/order', { params: { path: { spaceId } }, body: { typeIds } }))
+    invalidate(`space:${spaceId}:workflow`)
+  },
+  /** Everything of the type becomes of `moveTo` first (ADR-0031). */
+  deleteType: async (spaceId: string, typeId: string, moveTo: string) => {
+    await unwrap(
+      api.DELETE('/work/spaces/{spaceId}/types/{typeId}', { params: { path: { spaceId, typeId }, query: { moveTo } } })
+    )
+    invalidate(`space:${spaceId}:workflow`, `space:${spaceId}:cards`, `space:${spaceId}:fields`)
   },
   star: async (spaceId: string, starred: boolean) => {
     const path = { params: { path: { spaceId } } }

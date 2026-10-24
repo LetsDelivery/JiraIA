@@ -32,6 +32,8 @@ const SERVICES = [
     modules: [
       'routes.js',
       'cards/routes.js',
+      'cards/card-type.routes.js',
+      'labels/routes.js',
       'cards/relation.routes.js',
       'cards/conversation.routes.js',
       'sprints/routes.js',

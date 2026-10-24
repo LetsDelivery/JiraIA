@@ -2,6 +2,7 @@ import { toIso } from '@jiraia/core'
 import { z } from 'zod'
 
 import type { cardComments, cards, cardTypes, workflowStates } from '../schema.js'
+import { typeColorSchema, typeIconSchema } from './card-type.schemas.js'
 
 export type StateRow = typeof workflowStates.$inferSelect
 export type CardTypeRow = typeof cardTypes.$inferSelect
@@ -24,7 +25,13 @@ export const stateViewSchema = z.object({
   group: stateGroupSchema,
   position: z.number()
 })
-export const cardTypeViewSchema = z.object({ id: z.uuid(), name: z.string() })
+export const cardTypeViewSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  icon: typeIconSchema,
+  color: typeColorSchema,
+  position: z.number()
+})
 export const workflowViewSchema = z.object({ states: z.array(stateViewSchema), types: z.array(cardTypeViewSchema) })
 export type WorkflowView = z.infer<typeof workflowViewSchema>
 
@@ -178,7 +185,13 @@ export const toStateView = (row: StateRow) => ({
   group: stateGroupSchema.parse(row.group),
   position: row.position
 })
-export const toTypeView = (row: CardTypeRow) => ({ id: row.id, name: row.name })
+export const toTypeView = (row: CardTypeRow) => ({
+  id: row.id,
+  name: row.name,
+  icon: typeIconSchema.parse(row.icon),
+  color: typeColorSchema.parse(row.color),
+  position: row.position
+})
 
 export type CardWithPeople = CardRow & {
   spaceKey: string

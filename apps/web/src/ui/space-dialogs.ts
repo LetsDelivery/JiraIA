@@ -67,29 +67,33 @@ const ESTIMATION_OPTIONS = [
   { value: 'points', label: 'Pontos', hint: '1, 2, 3, 5, 8, 13…' }
 ]
 
+/** What a space's admins change about it, here and in its settings' "Geral". */
+export const spaceFormFields = (space: Space, members: readonly Member[]) => html`
+  ${textField({ name: 'name', label: 'Nome', required: true, value: space.name })}
+  ${selectField({ name: 'type', label: 'Tipo', options: SPACE_TYPE_OPTIONS, value: space.type })}
+  ${selectField({ name: 'leadId', label: 'Líder', options: leadOptions(members), value: space.lead?.id ?? '', placeholder: 'Sem líder' })}
+  ${textField({ name: 'description', label: 'Descrição', value: space.description })}
+  ${selectField({ name: 'usesSprints', label: 'Sprints', options: SPRINT_OPTIONS, value: String(space.usesSprints) })}
+  ${selectField({ name: 'estimation', label: 'Estimativa dos cards', options: ESTIMATION_OPTIONS, value: space.estimation })}
+`
+
+/** The form's answers as the API takes them. */
+export const spaceChanges = (data: FormData) => ({
+  name: String(data.get('name')),
+  description: String(data.get('description') ?? ''),
+  type: String(data.get('type')) as SpaceType,
+  leadId: String(data.get('leadId')) || null,
+  usesSprints: data.get('usesSprints') === 'true',
+  estimation: data.get('estimation') === 'points' ? ('points' as const) : ('tshirt' as const)
+})
+
 export const openEditSpace = async (space: Space): Promise<void> => {
   const members = await read.members()
-
   openFormDialog({
     title: `Editar ${space.name}`,
     submit: 'Salvar',
     done: 'Espaço atualizado.',
-    fields: html`
-      ${textField({ name: 'name', label: 'Nome', required: true, value: space.name })}
-      ${selectField({ name: 'type', label: 'Tipo', options: SPACE_TYPE_OPTIONS, value: space.type })}
-      ${selectField({ name: 'leadId', label: 'Líder', options: leadOptions(members.items), value: space.lead?.id ?? '', placeholder: 'Sem líder' })}
-      ${textField({ name: 'description', label: 'Descrição', value: space.description })}
-      ${selectField({ name: 'usesSprints', label: 'Sprints', options: SPRINT_OPTIONS, value: String(space.usesSprints) })}
-      ${selectField({ name: 'estimation', label: 'Estimativa dos cards', options: ESTIMATION_OPTIONS, value: space.estimation })}
-    `,
-    onSubmit: (data) =>
-      write.updateSpace(space.id, {
-        name: String(data.get('name')),
-        description: String(data.get('description') ?? ''),
-        type: String(data.get('type')) as SpaceType,
-        leadId: String(data.get('leadId')) || null,
-        usesSprints: data.get('usesSprints') === 'true',
-        estimation: data.get('estimation') === 'points' ? 'points' : 'tshirt'
-      })
+    fields: spaceFormFields(space, members.items),
+    onSubmit: (data) => write.updateSpace(space.id, spaceChanges(data))
   })
 }

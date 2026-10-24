@@ -21,56 +21,42 @@ const stateRow = (state: State, index: number, total: number): Html => html`
   </li>
 `
 
-const content = (workflow: Workflow): Html => html`
-  <header class="dialog-header">
-    <h2>Configurar fluxo</h2>
-    <button type="button" class="button button-ghost button-icon" data-close aria-label="Fechar">${icon('x')}</button>
-  </header>
-  <div class="dialog-body">
-    <p class="muted">As colunas do board, na ordem. O grupo diz o que o estado significa nos relatórios. O nome aceita emoji.</p>
-    <ol class="states">${workflow.states.map((state, index) => stateRow(state, index, workflow.states.length))}</ol>
-    <form class="state-add" data-add-state>
-      <label class="sr-only" for="new-state">Novo estado</label>
-      <input id="new-state" class="input" name="name" placeholder="Novo estado, ex.: 🚧 Bloqueado" maxlength="60" required />
-      ${selectField({ name: 'group', label: 'Grupo do novo estado', visibleLabel: false, options: GROUP_OPTIONS, value: 'in_progress' })}
-      <button type="submit" class="button button-secondary">${icon('plus', 16)}Adicionar</button>
-    </form>
-  </div>
+const readOnlyRow = (state: State): Html => html`
+  <li class="state-row"><span class="group-dot group-${state.group}" aria-hidden="true"></span>${state.name}<span class="muted">${STATE_GROUP_LABEL[state.group]}</span></li>
+`
+
+const editor = (workflow: Workflow): Html => html`
+  <ol class="states">${workflow.states.map((state, index) => stateRow(state, index, workflow.states.length))}</ol>
+  <form class="state-add" data-add-state>
+    <label class="sr-only" for="new-state">Novo estado</label>
+    <input id="new-state" class="input" name="name" placeholder="Novo estado, ex.: 🚧 Bloqueado" maxlength="60" required />
+    ${selectField({ name: 'group', label: 'Grupo do novo estado', visibleLabel: false, options: GROUP_OPTIONS, value: 'in_progress' })}
+    <button type="submit" class="button button-secondary">${icon('plus', 16)}Adicionar</button>
+  </form>
 `
 
 /**
- * The workflow editor (escopo-mvp 2.2): add, rename, regroup, reorder and delete states. Every change
- * saves at once; deleting a state that holds cards asks where they go.
+ * The workflow (escopo-mvp 2.2), in the space's settings: its admins add, rename, regroup, reorder and
+ * delete states, each change saved at once; everyone else reads the columns and what each one means.
  */
-export const openWorkflowEditor = async (spaceId: string): Promise<void> => {
-  const dialog = document.createElement('dialog')
-  dialog.className = 'dialog glass workflow-dialog'
-  dialog.setAttribute('aria-label', 'Configurar fluxo')
-  document.body.append(dialog)
-  const close = () => {
-    dialog.close()
-    dialog.remove()
-  }
-  dialog.addEventListener('cancel', close)
-  dialog.showModal()
-  await render(dialog, spaceId, close)
-}
-
-const render = async (dialog: HTMLDialogElement, spaceId: string, close: () => void): Promise<void> => {
+export const workflowPanel = async (spaceId: string, manages: boolean): Promise<Html> => {
   const workflow = await read.workflow(spaceId)
-  dialog.innerHTML = content(workflow).value
-  bindSelects(dialog)
-  bind(dialog, spaceId, workflow, close)
+  return html`
+    <p class="muted">As colunas do board, na ordem. O grupo diz o que o estado significa nos relatórios. O nome aceita emoji.</p>
+    ${manages ? editor(workflow) : html`<ol class="states">${workflow.states.map(readOnlyRow)}</ol>`}
+  `
 }
 
-const bind = (dialog: HTMLDialogElement, spaceId: string, workflow: Workflow, close: () => void): void => {
-  const again = () => render(dialog, spaceId, close)
-  const run = (change: Promise<unknown>) =>
-    change.then(again).catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+/** Every change saves and the page draws itself again from the cache. */
+export const bindWorkflowPanel = async (root: HTMLElement, spaceId: string): Promise<void> => {
+  if (!root.querySelector('[data-add-state]')) {
+    return
+  }
+  const workflow = await read.workflow(spaceId)
+  bindSelects(root)
+  const run = (change: Promise<unknown>) => change.catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
   const ids = workflow.states.map((state) => state.id)
-
-  dialog.querySelector('[data-close]')?.addEventListener('click', close)
-  for (const row of dialog.querySelectorAll<HTMLElement>('[data-state]')) {
+  for (const row of root.querySelectorAll<HTMLElement>('[data-state]')) {
     const stateId = row.dataset.state ?? ''
     const index = ids.indexOf(stateId)
     const swap = (offset: number) => {
@@ -90,7 +76,7 @@ const bind = (dialog: HTMLDialogElement, spaceId: string, workflow: Workflow, cl
     row.querySelector('[data-down]')?.addEventListener('click', () => swap(1))
     row.querySelector('[data-delete]')?.addEventListener('click', () => void remove(spaceId, workflow, stateId, run))
   }
-  dialog.querySelector<HTMLFormElement>('[data-add-state]')?.addEventListener('submit', (event) => {
+  root.querySelector<HTMLFormElement>('[data-add-state]')?.addEventListener('submit', (event) => {
     event.preventDefault()
     const form = event.target as HTMLFormElement
     const data = new FormData(form)

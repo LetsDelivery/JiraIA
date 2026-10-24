@@ -5817,11 +5817,52 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
                         ],
                         "additionalProperties": false
                       }
@@ -5954,11 +5995,52 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
                         ],
                         "additionalProperties": false
                       }
@@ -6085,11 +6167,52 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
                         ],
                         "additionalProperties": false
                       }
@@ -6228,11 +6351,52 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
                         ],
                         "additionalProperties": false
                       }
@@ -6353,11 +6517,52 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
                           }
                         },
                         "required": [
                           "id",
-                          "name"
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
                         ],
                         "additionalProperties": false
                       }
@@ -6366,6 +6571,1198 @@
                   "required": [
                     "states",
                     "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/spaces/{spaceId}/types": {
+      "post": {
+        "operationId": "workPostSpacesSpaceIdTypes",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /spaces/{spaceId}/types",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "icon": {
+                    "type": "string",
+                    "enum": [
+                      "checkbox",
+                      "bookmark",
+                      "bug",
+                      "bolt",
+                      "bulb",
+                      "flask",
+                      "database",
+                      "palette",
+                      "subtask",
+                      "file",
+                      "target",
+                      "flag",
+                      "star",
+                      "message",
+                      "rocket",
+                      "layers"
+                    ]
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "gray",
+                      "red",
+                      "orange",
+                      "yellow",
+                      "green",
+                      "teal",
+                      "blue",
+                      "violet",
+                      "pink"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string",
+                            "enum": [
+                              "not_started",
+                              "in_progress",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "group",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "states",
+                    "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/spaces/{spaceId}/types/order": {
+      "put": {
+        "operationId": "workPutSpacesSpaceIdTypesOrder",
+        "tags": [
+          "work"
+        ],
+        "summary": "PUT /spaces/{spaceId}/types/order",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "typeIds": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "typeIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string",
+                            "enum": [
+                              "not_started",
+                              "in_progress",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "group",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "states",
+                    "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/spaces/{spaceId}/types/{typeId}": {
+      "patch": {
+        "operationId": "workPatchSpacesSpaceIdTypesTypeId",
+        "tags": [
+          "work"
+        ],
+        "summary": "PATCH /spaces/{spaceId}/types/{typeId}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "typeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "icon": {
+                    "type": "string",
+                    "enum": [
+                      "checkbox",
+                      "bookmark",
+                      "bug",
+                      "bolt",
+                      "bulb",
+                      "flask",
+                      "database",
+                      "palette",
+                      "subtask",
+                      "file",
+                      "target",
+                      "flag",
+                      "star",
+                      "message",
+                      "rocket",
+                      "layers"
+                    ]
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "gray",
+                      "red",
+                      "orange",
+                      "yellow",
+                      "green",
+                      "teal",
+                      "blue",
+                      "violet",
+                      "pink"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string",
+                            "enum": [
+                              "not_started",
+                              "in_progress",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "group",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "states",
+                    "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "workDeleteSpacesSpaceIdTypesTypeId",
+        "tags": [
+          "work"
+        ],
+        "summary": "DELETE /spaces/{spaceId}/types/{typeId}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "typeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "moveTo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string",
+                            "enum": [
+                              "not_started",
+                              "in_progress",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "group",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "checkbox",
+                              "bookmark",
+                              "bug",
+                              "bolt",
+                              "bulb",
+                              "flask",
+                              "database",
+                              "palette",
+                              "subtask",
+                              "file",
+                              "target",
+                              "flag",
+                              "star",
+                              "message",
+                              "rocket",
+                              "layers"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "icon",
+                          "color",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "states",
+                    "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/spaces/{spaceId}/labels": {
+      "get": {
+        "operationId": "workGetSpacesSpaceIdLabels",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /spaces/{spaceId}/labels",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "cards": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "color",
+                          "cards"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "workPostSpacesSpaceIdLabels",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /spaces/{spaceId}/labels",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "gray",
+                      "red",
+                      "orange",
+                      "yellow",
+                      "green",
+                      "teal",
+                      "blue",
+                      "violet",
+                      "pink"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "cards": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "color",
+                          "cards"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/spaces/{spaceId}/labels/{labelId}": {
+      "patch": {
+        "operationId": "workPatchSpacesSpaceIdLabelsLabelId",
+        "tags": [
+          "work"
+        ],
+        "summary": "PATCH /spaces/{spaceId}/labels/{labelId}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "labelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "gray",
+                      "red",
+                      "orange",
+                      "yellow",
+                      "green",
+                      "teal",
+                      "blue",
+                      "violet",
+                      "pink"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "cards": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "color",
+                          "cards"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "workDeleteSpacesSpaceIdLabelsLabelId",
+        "tags": [
+          "work"
+        ],
+        "summary": "DELETE /spaces/{spaceId}/labels/{labelId}",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "labelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "gray",
+                              "red",
+                              "orange",
+                              "yellow",
+                              "green",
+                              "teal",
+                              "blue",
+                              "violet",
+                              "pink"
+                            ]
+                          },
+                          "cards": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "color",
+                          "cards"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
                   ],
                   "additionalProperties": false
                 }

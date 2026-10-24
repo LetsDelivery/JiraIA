@@ -64,7 +64,8 @@ test('an admin adds a webhook, sees its secret once, and its deliveries', async 
 
 test('the webhooks tab is for the space admins only', async ({ page }) => {
   await signIn(page, 'rui@uselets.com')
-  await page.goto('/espacos/PRD')
+  await page.goto('/espacos/PRD/configuracoes')
+  await expect(page.getByRole('link', { name: 'Pessoas e papéis' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Webhooks' })).toHaveCount(0)
 })
 

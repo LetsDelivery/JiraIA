@@ -41,13 +41,13 @@ const fieldRow = (field: Field, workflow: Workflow): Html => html`
   </li>
 `
 
-const content = (fields: readonly Field[], workflow: Workflow): Html => html`
-  <header class="dialog-header">
-    <h2>Campos do espaço</h2>
-    <button type="button" class="button button-ghost button-icon" data-close aria-label="Fechar">${icon('x')}</button>
-  </header>
-  <div class="dialog-body">
-    <p class="muted">Campos além dos padrão. Marque os tipos de card em que cada um aparece; sem marcar, aparece em todos.</p>
+const readOnlyRow = (field: Field, workflow: Workflow): Html => {
+  const types = workflow.types.filter((type) => field.typeIds.includes(type.id)).map((type) => type.name)
+  return html`<li class="state-row">${field.name}<span class="badge">${FIELD_KIND_LABEL[field.kind]}</span>
+    <span class="muted">${types.length ? types.join(', ') : 'Todos os tipos'}</span></li>`
+}
+
+const editor = (fields: readonly Field[], workflow: Workflow): Html => html`
     ${fields.length ? html`<ol class="states">${fields.map((field) => fieldRow(field, workflow))}</ol>` : html`<p class="muted">Nenhum campo ainda.</p>`}
     <form class="stack-tight field-add" data-add-field>
       <div class="state-add">
@@ -59,37 +59,32 @@ const content = (fields: readonly Field[], workflow: Workflow): Html => html`
       <input class="input" name="options" data-new-options placeholder="Opções, separadas por vírgula (seleção)" hidden />
       ${typeChips(workflow, [], 'new')}
     </form>
-  </div>
 `
 
-/** The custom fields editor (escopo-mvp 2.5): add, rename, change options and types, delete. */
-export const openFieldsEditor = async (spaceId: string): Promise<void> => {
-  const dialog = document.createElement('dialog')
-  dialog.className = 'dialog glass workflow-dialog'
-  dialog.setAttribute('aria-label', 'Campos do espaço')
-  document.body.append(dialog)
-  const close = () => {
-    dialog.close()
-    dialog.remove()
-  }
-  dialog.addEventListener('cancel', close)
-  dialog.showModal()
-  await render(dialog, spaceId, close)
+/**
+ * The space's own fields (escopo-mvp 2.5), in its settings: admins add, rename, change options and
+ * types, and delete; everyone else reads which fields there are and on which types.
+ */
+export const fieldsPanel = async (spaceId: string, manages: boolean): Promise<Html> => {
+  const [fields, workflow] = await Promise.all([read.fields(spaceId), read.workflow(spaceId)])
+  return html`
+    <p class="muted">Campos além dos padrão. Marque os tipos de card em que cada um aparece; sem marcar, aparece em todos.</p>
+    ${manages ? editor(fields.items, workflow) : html`<ol class="states">${fields.items.map((field) => readOnlyRow(field, workflow))}</ol>`}
+  `
 }
 
-const render = async (dialog: HTMLDialogElement, spaceId: string, close: () => void): Promise<void> => {
-  const [fields, workflow] = await Promise.all([read.fields(spaceId), read.workflow(spaceId)])
-  dialog.innerHTML = content(fields.items, workflow).value
-  bindSelects(dialog)
-  dialog.querySelector('[data-close]')?.addEventListener('click', close)
-  const run = (change: Promise<unknown>) =>
-    change
-      .then(() => render(dialog, spaceId, close))
-      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
-  for (const row of dialog.querySelectorAll<HTMLElement>('[data-field-id]')) {
+/** Every change saves and the page draws itself again from the cache. */
+export const bindFieldsPanel = async (root: HTMLElement, spaceId: string): Promise<void> => {
+  if (!root.querySelector('[data-add-field]')) {
+    return
+  }
+  const fields = await read.fields(spaceId)
+  bindSelects(root)
+  const run = (change: Promise<unknown>) => change.catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+  for (const row of root.querySelectorAll<HTMLElement>('[data-field-id]')) {
     bindRow(row, spaceId, fields.items, run)
   }
-  bindAdd(dialog, spaceId, run)
+  bindAdd(root, spaceId, run)
 }
 
 const chosenTypes = (scope: ParentNode, key: string): string[] =>
@@ -126,7 +121,7 @@ const bindRow = (
   })
 }
 
-const bindAdd = (dialog: HTMLDialogElement, spaceId: string, run: (change: Promise<unknown>) => Promise<unknown>) => {
+const bindAdd = (dialog: HTMLElement, spaceId: string, run: (change: Promise<unknown>) => Promise<unknown>) => {
   const form = dialog.querySelector<HTMLFormElement>('[data-add-field]') as HTMLFormElement
   const options = form.querySelector<HTMLInputElement>('[data-new-options]') as HTMLInputElement
   form.addEventListener('select-change', (event) => {

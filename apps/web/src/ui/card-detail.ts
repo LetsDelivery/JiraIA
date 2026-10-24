@@ -1,21 +1,30 @@
 import { accessRead, type Group } from '@/api/access'
 import { type Proposal, proposalsRead } from '@/api/proposals'
-import { type Card, type CardChanges, type CardRef, type Comment, type HistoryEvent, read, write } from '@/api/requests'
-import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, parseLabels } from '@/lib/cards'
+import {
+  type Card,
+  type CardChanges,
+  type CardRef,
+  type CardType,
+  type Comment,
+  type HistoryEvent,
+  read,
+  write
+} from '@/api/requests'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 import { spacePath } from '@/lib/space-types'
-import { POINTS, planning } from '@/lib/sprints'
 import type { BoardContext } from '@/views/board'
 
 import { type ActivityTab, activitySection, bindActivity } from './card-activity'
-import { attachmentsSection, bindAttachments, uploadFile } from './card-attachments'
+import { attachButton, attachmentsSection, bindAttachments, uploadFile } from './card-attachments'
 import { bindComments, commentsSection } from './card-comments'
+import { type DescriptionHandle, descriptionSection, mountDescription } from './card-description'
+import { pickLabels } from './card-pickers'
 import { bindRelations, type ComposeForm, type RelationsContext, relationsSection } from './card-relations'
-import { bindCustomFields, customFieldInputs } from './custom-fields'
-import { bindDatePickers, dateField } from './date-picker'
-import { detailPanel } from './detail-panel'
+import { bindSide, type SideGroup, side } from './card-side'
+import { bindCustomFields } from './custom-fields'
+import { bindDatePickers } from './date-picker'
 import { openFormDialog } from './dialog'
 import { applyArrival } from './email-arrival'
 import { icon } from './icons'
@@ -23,108 +32,10 @@ import { proposalStrip } from './proposal-strip'
 import { bindSelects, selectField } from './select'
 import { bindSquadField, type SquadContext, squadField } from './squad-field'
 import { toast } from './toast'
+import { typeIcon } from './type-look'
 
-const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
-
-type Select = (name: string, label: string, options: { value: string; label: string }[], value: string) => Html
-
-/** P/M/G, or story points where the space estimates in them (ADR-0029). */
-const estimateField = (card: Card, context: BoardContext, select: Select): Html => {
-  if (context.space.estimation !== 'points') {
-    const sizes = ESTIMATES.map((size) => ({ value: size, label: size }))
-    return select('estimate', 'Estimativa', [{ value: '', label: 'Sem estimativa' }, ...sizes], card.estimate ?? '')
-  }
-  const scale = [...new Set([...POINTS, ...(card.points === null ? [] : [card.points])])].sort((a, b) => a - b)
-  const options = scale.map((points) => ({ value: String(points), label: String(points) }))
-  return select(
-    'points',
-    'Pontos',
-    [{ value: '', label: 'Sem pontos' }, ...options],
-    card.points === null ? '' : String(card.points)
-  )
-}
-
-/** The sprints a card can go to — the active and planned ones — and the closed one it was done in. */
-const sprintOptions = (card: Card, context: BoardContext) => {
-  const closed = context.sprints.find((sprint) => sprint.id === card.sprintId && sprint.state === 'closed')
-  return [
-    { value: '', label: 'Backlog' },
-    ...planning(context.sprints).map((sprint) => ({
-      value: sprint.id,
-      label: sprint.state === 'active' ? `${sprint.name} (ativa)` : sprint.name
-    })),
-    ...(closed ? [{ value: closed.id, label: `${closed.name} (encerrada)` }] : [])
-  ]
-}
-
-const fields = (card: Card, context: BoardContext): Html => {
-  const canWrite = context.canWrite
-  const people = [
-    { value: '', label: 'Sem responsável' },
-    ...context.members
-      .filter((member) => member.status === 'active' && member.kind === 'person')
-      .map((member) => ({ value: member.id, label: member.name }))
-  ]
-  const select: Select = (name, label, options, value) =>
-    canWrite
-      ? selectField({ name, label, options, value, attributes: html`data-field="${name}"` })
-      : html`<div class="field"><span class="label">${label}</span><span>${options.find((option) => option.value === value)?.label ?? '—'}</span></div>`
-
-  return html`
-    ${select(
-      'typeId',
-      'Tipo',
-      context.workflow.types.map((type) => ({ value: type.id, label: type.name })),
-      card.typeId
-    )}
-    ${select('assigneeId', 'Responsável', people, card.assignee?.id ?? '')}
-    ${canWrite && card.assignee?.id !== context.meId ? html`<button type="button" class="detail-assign" data-assign-me>Atribuir a mim</button>` : ''}
-    <div class="field"><span class="label">Relator</span><span>${card.reporter.name}</span></div>
-    ${select(
-      'priority',
-      'Prioridade',
-      PRIORITIES.map((priority) => ({ value: priority, label: PRIORITY_LABEL[priority] })),
-      card.priority
-    )}
-    ${estimateField(card, context, select)}
-    ${context.space.usesSprints ? select('sprintId', 'Sprint', sprintOptions(card, context), card.sprintId ?? '') : ''}
-    <div class="field">
-      <label for="card-labels">Labels</label>
-      <input id="card-labels" class="input" data-labels value="${card.labels.join(', ')}" ${canWrite ? '' : html`readonly`} placeholder="okr-saude-escala, business-form" />
-    </div>
-    ${dateField({ name: 'dueDate', label: 'Data limite', value: card.dueDate, readonly: !canWrite, attributes: html`data-due` })}
-    <div class="detail-props-custom" data-custom-fields>${customFieldInputs(card, context.fields, context.members, canWrite)}</div>
-  `
-}
-
-/**
- * What a person does to the card, above its fields: the state as a button — the most frequent change —
- * and moving the card to another space.
- */
-const toolbar = (card: Card, context: BoardContext): Html => {
-  const state = context.workflow.states.find((each) => each.id === card.stateId)
-  if (!context.canWrite) {
-    return html`<div class="detail-toolbar"><span class="status-pill status-${state?.group ?? 'not_started'}">${state?.name ?? '—'}</span></div>`
-  }
-  const options = context.workflow.states.map((each) => ({ value: each.id, label: each.name }))
-  return html`
-    <div class="detail-toolbar">
-      <div class="status-select status-${state?.group ?? 'not_started'}">
-        ${selectField({ name: 'stateId', label: 'Estado', visibleLabel: false, options, value: card.stateId, attributes: html`data-field="stateId"` })}
-      </div>
-      <button type="button" class="button button-secondary button-icon" data-transfer aria-label="Mover para outro espaço" title="Mover para outro espaço">${icon('arrowsRightLeft', 16)}</button>
-    </div>
-  `
-}
-
-/** The side column: the actions, the fields in one panel, and when the card was born. */
-const side = (card: Card, context: BoardContext): Html => html`
-  <aside class="detail-side">
-    ${toolbar(card, context)}
-    ${detailPanel({ title: 'Detalhes', body: html`<div class="detail-props">${fields(card, context)}</div>` })}
-    <p class="detail-meta">Criado em ${WHEN.format(new Date(card.createdAt))}<br />Atualizado em ${WHEN.format(new Date(card.updatedAt))}</p>
-  </aside>
-`
+/** Each open card's description editor, destroyed before a redraw replaces it and when the card closes. */
+const descriptions = new WeakMap<HTMLDialogElement, DescriptionHandle>()
 
 type Loaded = {
   /** Agents' proposals about this card still waiting for someone (ADR-0019). */
@@ -145,11 +56,15 @@ const watchButton = (loaded: Loaded, meId: string): Html => {
     ${icon(watching ? 'eye' : 'eyeOff', 16)}${watching ? 'Observando' : 'Observar'} <span class="count">${loaded.watchers.length}</span></button>`
 }
 
+/** The card's type in the path: its icon in its colour, then its name. */
+const crumbType = (type: CardType | undefined): Html =>
+  type ? html`<span class="detail-crumb-type">${typeIcon(type, 16)}${type.name}</span>` : html`<span>Card</span>`
+
 const header = (card: Card, context: BoardContext, loaded: Loaded): Html => html`
   <header class="detail-header">
     <p class="detail-crumb">
       <span>${context.spaceKey}</span><span aria-hidden="true">/</span>
-      <span>${context.workflow.types.find((type) => type.id === card.typeId)?.name ?? 'Card'}</span><span aria-hidden="true">/</span>
+      ${crumbType(context.workflow.types.find((type) => type.id === card.typeId))}<span aria-hidden="true">/</span>
       <span class="key">${card.key}</span>
     </p>
     <div class="detail-actions">
@@ -159,28 +74,34 @@ const header = (card: Card, context: BoardContext, loaded: Loaded): Html => html
   </header>
 `
 
-const description = (card: Card, canWrite: boolean): Html =>
-  detailPanel({
-    title: html`<label for="card-description">Descrição</label>`,
-    attributes: html`data-description-block`,
-    body: html`
-      <textarea id="card-description" class="detail-description" data-description rows="4" ${canWrite ? '' : html`readonly`}
-        placeholder="${canWrite ? 'Adicione contexto, problema, escopo, critérios de aceite…' : 'Sem descrição.'}">${card.description}</textarea>
-      ${canWrite ? html`<div class="description-actions"><button type="button" class="button button-primary button-small" data-save-description>Salvar descrição</button></div>` : ''}`
-  })
+/**
+ * What a person adds to the card, under its text: a subtask, a link, a file. Each opens its section,
+ * which stays out of sight while the card has none (Jira's row under the title).
+ */
+const actionBar = (canWrite: boolean): Html =>
+  canWrite
+    ? html`<div class="detail-add" role="group" aria-label="Adicionar ao card">
+        <button type="button" class="button button-secondary button-small" data-compose-start="subtask" aria-label="Adicionar subtarefa">${icon('subtask', 16)}Subtarefa</button>
+        <button type="button" class="button button-secondary button-small" data-compose-start="link" aria-label="Vincular card">${icon('link', 16)}Vincular</button>
+        ${attachButton()}
+      </div>`
+    : html``
 
-const content = (card: Card, context: BoardContext, loaded: Loaded, sections: Html): Html => html`
+type Parts = { sections: Html; squad: Html; folded: ReadonlySet<SideGroup> }
+
+const content = (card: Card, context: BoardContext, loaded: Loaded, parts: Parts): Html => html`
   <div class="detail-root" data-detail-root>
   ${header(card, context, loaded)}
   <div class="detail-grid">
-    <div class="detail-main">
+    <div class="detail-main" data-drop-files>
       ${proposalStrip(loaded.proposals)}
       <label class="sr-only" for="card-title">Título</label>
       <textarea id="card-title" class="detail-title" data-title rows="1" ${context.canWrite ? '' : html`readonly`} maxlength="255">${card.title}</textarea>
-      ${description(card, context.canWrite)}
-      ${sections}
+      ${descriptionSection(context.canWrite, !card.description.trim())}
+      ${actionBar(context.canWrite)}
+      ${parts.sections}
     </div>
-    ${side(card, context)}
+    ${side(card, context, parts.squad, parts.folded)}
   </div>
   </div>
 `
@@ -200,6 +121,7 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
   history.replaceState(null, '', url)
 
   const close = () => {
+    descriptions.get(dialog)?.destroy()
     dialog.close()
     dialog.remove()
     const back = new URL(location.href)
@@ -259,25 +181,52 @@ const render = async (
   const relationContext = relationsOf(dialog, card, context, close)
   const squadContext = squadOf(card, context, loaded, again)
   const tab = (dialog.dataset.activity ?? 'comments') as ActivityTab
+  const folded = new Set((dialog.dataset.folded ?? '').split(',').filter(Boolean) as SideGroup[])
   const comments = { html: commentsSection(loaded.comments, commentContext), count: loaded.comments.length }
   const sections = html`
-    ${detailPanel({ title: 'Squad', body: squadField(squadContext) })}
     ${relationsSection(loaded.relations, relationContext)}
     ${attachmentsSection(loaded.attachments, attachContext)}
     ${activitySection({ ...context, groups: loaded.groups }, loaded.history, comments, tab)}
   `
 
+  const previous = descriptions.get(dialog)
+  const draft = previous?.draft()
+  previous?.destroy()
   keepScroll(dialog, () => {
-    dialog.innerHTML = content(card, context, loaded, sections).value
+    dialog.innerHTML = content(card, context, loaded, { sections, squad: squadField(squadContext), folded }).value
   })
   bindSelects(dialog)
   bindDatePickers(dialog)
   bindDetail(dialog, card, context, close)
+  descriptions.set(
+    dialog,
+    mountDescription(dialog, {
+      markdown: card.description,
+      draft,
+      canWrite: context.canWrite,
+      save: (markdown) =>
+        write
+          .updateCard(card, { description: markdown })
+          .then((updated) => {
+            toast('Descrição salva.')
+            void render(dialog, updated, context, close)
+            return true
+          })
+          .catch((refusal: unknown) => {
+            toast(refusalSentence(refusal), 'error')
+            return false
+          })
+    })
+  )
   bindRelations(dialog, loaded.relations, relationContext)
   bindSquadField(dialog.querySelector('[data-detail-root]') as HTMLElement, squadContext)
   bindAttachments(dialog, attachContext)
   bindComments(dialog, loaded.comments, commentContext)
   bindWatch(dialog, card, () => again())
+  bindSide(dialog.querySelector('[data-detail-root]') as HTMLElement, (group, closed) => {
+    closed ? folded.add(group) : folded.delete(group)
+    dialog.dataset.folded = [...folded].join(',')
+  })
   dialog.querySelector('[data-proposal-strip] a')?.addEventListener('click', close)
   bindActivity(dialog, (chosen) => {
     dialog.dataset.activity = chosen
@@ -389,14 +338,8 @@ const bindDetail = (dialog: HTMLDialogElement, card: Card, context: BoardContext
       void save({ title: value('[data-title]').trim() })
     }
   })
-  dialog
-    .querySelector('[data-labels]')
-    ?.addEventListener('change', () => void save({ labels: parseLabels(value('[data-labels]')) }))
-  dialog
-    .querySelector('[data-save-description]')
-    ?.addEventListener('click', () =>
-      save({ description: value('[data-description]') }).then(() => toast('Descrição salva.'))
-    )
+  const labels = dialog.querySelector<HTMLElement>('[data-labels-pick]')
+  labels?.addEventListener('click', () => pickLabels(labels, card, context, (changes) => void save(changes)))
   dialog.querySelector('[data-transfer]')?.addEventListener('click', () => void transfer(card, context, close))
   dialog.querySelector('[data-assign-me]')?.addEventListener('click', () => void save({ assigneeId: context.meId }))
 }
@@ -412,7 +355,7 @@ const _change = (field: string, chosen: string): CardChanges => {
   return { [field]: field === 'points' ? Number(chosen) : chosen } as CardChanges
 }
 
-/** The title wraps like text but Enter commits it, as in an input; the description offers Save once edited. */
+/** The title wraps like text but Enter commits it, as in an input. */
 const bindEditing = (dialog: HTMLDialogElement): void => {
   const title = dialog.querySelector<HTMLTextAreaElement>('[data-title]')
   title?.addEventListener('keydown', (event) => {
@@ -421,8 +364,6 @@ const bindEditing = (dialog: HTMLDialogElement): void => {
       title.blur()
     }
   })
-  const block = dialog.querySelector<HTMLElement>('[data-description-block]')
-  block?.addEventListener('input', () => block.classList.add('is-dirty'))
 }
 
 /** Moves the card to a space the caller can write in (escopo-mvp 2.14); its old key keeps opening it. */

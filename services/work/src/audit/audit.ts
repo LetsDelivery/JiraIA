@@ -24,6 +24,8 @@ export type AuditInput = {
     | 'space_group'
     | 'draw_space_member'
     | 'workflow_state'
+    | 'card_type'
+    | 'label'
     | 'custom_field'
     | 'card'
     | 'card_comment'

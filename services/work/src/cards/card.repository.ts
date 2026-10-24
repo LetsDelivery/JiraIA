@@ -2,7 +2,7 @@ import type { Database } from '@jiraia/db'
 import { and, asc, eq, inArray, max, type SQL, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
-import { cardKeyAliases, cards, groups, members, spaces } from '../schema.js'
+import { cardKeyAliases, cards, groups, labels, members, spaces } from '../schema.js'
 import type { CardRow, CardWithPeople } from './schemas.js'
 
 const assignee = alias(members, 'assignee')
@@ -105,6 +105,7 @@ export class CardRepository {
 
   async insert(tx: Database, row: CardRow): Promise<void> {
     await tx.insert(cards).values(row)
+    await registerLabels(tx, row.id)
   }
 
   async update(tx: Database, id: string, fields: CardFields, at: Date): Promise<void> {
@@ -112,6 +113,9 @@ export class CardRepository {
       .update(cards)
       .set({ ...fields, updatedAt: at })
       .where(eq(cards.id, id))
+    if (fields.labels !== undefined || fields.spaceId !== undefined) {
+      await registerLabels(tx, id)
+    }
   }
 
   /** Renumbers a column 1, 2, 3… when two neighbours got too close to split again. */
@@ -196,3 +200,21 @@ export class CardRepository {
     return row?.top ?? 0
   }
 }
+
+/**
+ * The space's catalogue learns each label the card carries and it lacks (ADR-0032), in the colour
+ * `colorOf` gives the name — repeated here in SQL so it holds whichever way the card was written: an
+ * edit, a bulk change, a form, an automation, an agent.
+ */
+export const registerLabels = async (tx: Database, cardId: string): Promise<void> => {
+  await tx.execute(sql`
+    insert into ${labels} (id, space_id, name, color, created_at)
+    select gen_random_uuid(), c.space_id, l.name, ${labelColorSql(sql`l.name`)}, now()
+    from ${cards} c cross join lateral jsonb_array_elements_text(c.labels) as l(name)
+    where c.id = ${cardId}
+    on conflict (space_id, name) do nothing`)
+}
+
+/** `colorOf` in SQL: the first 7 hex digits of the name's md5, modulo the eight colours. */
+export const labelColorSql = (name: SQL): SQL =>
+  sql`(array['red','orange','yellow','green','teal','blue','violet','pink'])[1 + (('x' || lpad(substr(md5(${name}), 1, 7), 8, '0'))::bit(32)::int % 8)]`

@@ -11,7 +11,8 @@ import {
 } from '@/lib/dates'
 import { type Html, html } from '@/lib/html'
 
-import { icon } from './icons'
+import { type IconName, icon } from './icons'
+import { openFloating } from './picker'
 
 let counter = 0
 /** Whether the one document listener that closes open calendars is installed. */
@@ -27,6 +28,7 @@ export const dateField = (options: {
   label: string
   value?: string | null
   readonly?: boolean
+  icon?: IconName
   attributes?: Html
 }): Html => {
   counter += 1
@@ -35,7 +37,7 @@ export const dateField = (options: {
 
   return html`
     <div class="field date-field" data-date ${options.attributes ?? ''}>
-      <span class="label" id="${id}-label">${options.label}</span>
+      <span class="label" id="${id}-label">${options.icon ? icon(options.icon, 16) : ''}${options.label}</span>
       <input type="hidden" name="${options.name}" value="${value}" />
       <button type="button" class="select-trigger" aria-haspopup="dialog" aria-expanded="false"
         aria-labelledby="${id}-label" ${options.readonly ? html`disabled` : ''}>
@@ -130,4 +132,35 @@ export const bindDatePickers = (scope: ParentNode): void => {
       }
     })
   }
+}
+
+/**
+ * The same calendar, floating beside any trigger — a due date on a board tile — with no field around
+ * it. `choose` gets the day, or `null` for "Limpar".
+ */
+export const openCalendar = (
+  anchor: HTMLElement,
+  value: string | null,
+  choose: (value: string | null) => void
+): void => {
+  const panel = document.createElement('div')
+  panel.className = 'calendar'
+  panel.setAttribute('role', 'dialog')
+  panel.setAttribute('aria-label', 'Escolher data')
+  const draw = (month: Month) => {
+    panel.dataset.month = isoDate(month.year, month.month, 1)
+    panel.innerHTML = calendar(month, value ?? '').value
+  }
+  draw(monthOf(value || todayInSaoPaulo()))
+  const close = openFloating(anchor, panel, () => anchor.focus({ preventScroll: true }))
+  panel.addEventListener('click', (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-day], [data-shift], [data-clear]')
+    if (target?.dataset.shift) {
+      draw(shiftMonth(monthOf(panel.dataset.month ?? todayInSaoPaulo()), Number(target.dataset.shift)))
+    } else if (target?.dataset.day || target?.hasAttribute('data-clear')) {
+      close()
+      choose(target.dataset.day ?? null)
+    }
+  })
+  panel.querySelector<HTMLElement>('[aria-pressed="true"], .is-today')?.focus()
 }

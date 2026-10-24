@@ -1,6 +1,7 @@
 import type { Channel, Notice, NoticeKind } from '@/api/notifications'
 
 import { contentPath, drawSpacePath } from './draw'
+import { settingsPath } from './space-settings'
 import { spacePath } from './space-types'
 
 /**
@@ -65,7 +66,7 @@ export const target = (notice: Pick<Notice, 'kind' | 'data' | 'spaceId'>): strin
   if (notice.data.product === 'draw') {
     return _drawTarget(notice)
   }
-  return notice.data.spaceKey ? `${spacePath(notice.data.spaceKey)}?aba=pessoas` : '/espacos'
+  return notice.data.spaceKey ? settingsPath(notice.data.spaceKey, 'pessoas') : '/espacos'
 }
 
 export const KIND_LABEL: Record<NoticeKind, { label: string; hint: string }> = {

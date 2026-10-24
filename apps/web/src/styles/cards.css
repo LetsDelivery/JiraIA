@@ -214,12 +214,6 @@
   font-size: var(--text-xs);
 }
 
-[data-attachments].is-dropping {
-  outline: 1px dashed var(--accent);
-  outline-offset: var(--space-1);
-  border-radius: var(--radius-control);
-}
-
 /* ---------- Comments ---------- */
 .comment-content {
   display: flex;
