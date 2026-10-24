@@ -67,7 +67,8 @@ export const drawRead = {
     unwrap(api.POST('/work/draw/contents/{contentId}/realtime', content(contentId)))
 }
 
-const treeOf = (spaceId: string) => `draw:space:${spaceId}:tree`
+/** A space's tree — and, when the space is a wiki collection, its marked tree and the wiki's home (ADR-0033). */
+const treesOf = (spaceId: string) => [`draw:space:${spaceId}:tree`, `wiki:collection:${spaceId}:tree`, 'wiki:recent']
 
 export const drawWrite = {
   createSpace: async (body: SpaceInput) => {
@@ -98,20 +99,20 @@ export const drawWrite = {
     const created = await unwrap(
       api.POST('/work/draw/spaces/{spaceId}/contents', { params: { path: { spaceId } }, body })
     )
-    invalidate(treeOf(spaceId), 'draw:recent')
+    invalidate(...treesOf(spaceId), 'draw:recent')
     return created
   },
   rename: async (item: { id: string; spaceId: string }, title: string) => {
     await unwrap(api.PATCH('/work/draw/contents/{contentId}', { ...content(item.id), body: { title } }))
-    invalidate(treeOf(item.spaceId), `draw:content:${item.id}`, 'draw:recent')
+    invalidate(...treesOf(item.spaceId), `draw:content:${item.id}`, 'draw:recent')
   },
   move: async (item: { id: string; spaceId: string }, parentId: string | null, index: number) => {
     await unwrap(api.POST('/work/draw/contents/{contentId}/move', { ...content(item.id), body: { parentId, index } }))
-    invalidate(treeOf(item.spaceId))
+    invalidate(...treesOf(item.spaceId))
   },
   remove: async (item: { id: string; spaceId: string }) => {
     await unwrap(api.DELETE('/work/draw/contents/{contentId}', content(item.id)))
-    invalidate(treeOf(item.spaceId), 'draw:recent')
+    invalidate(...treesOf(item.spaceId), 'draw:recent')
   },
   /** What the editor derived from the live document (ADR-0009); quiet — it changes nothing on screen. */
   saveDerived: async (contentId: string, body: { json: Record<string, unknown>; text: string }) => {

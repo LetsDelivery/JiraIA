@@ -19,11 +19,13 @@ import blockquote from '@tabler/icons/outline/blockquote.svg?raw'
 import bold from '@tabler/icons/outline/bold.svg?raw'
 import bolt from '@tabler/icons/outline/bolt.svg?raw'
 import bookmark from '@tabler/icons/outline/bookmark.svg?raw'
+import books from '@tabler/icons/outline/books.svg?raw'
 import boxMultiple from '@tabler/icons/outline/box-multiple.svg?raw'
 import slack from '@tabler/icons/outline/brand-slack.svg?raw'
 import bug from '@tabler/icons/outline/bug.svg?raw'
 import bulb from '@tabler/icons/outline/bulb.svg?raw'
 import calendar from '@tabler/icons/outline/calendar.svg?raw'
+import calendarCheck from '@tabler/icons/outline/calendar-check.svg?raw'
 import chalkboard from '@tabler/icons/outline/chalkboard.svg?raw'
 import chartBar from '@tabler/icons/outline/chart-bar.svg?raw'
 import chartDonut from '@tabler/icons/outline/chart-donut.svg?raw'
@@ -221,11 +223,13 @@ const ICONS = {
   externalLink,
   notebook,
   bookmark,
+  books,
   filter,
   search,
   arrowsRightLeft,
   at,
   calendar,
+  calendarCheck,
   chevronLeft,
   columns,
   eye,

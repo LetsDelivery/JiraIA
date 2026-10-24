@@ -168,6 +168,7 @@ export const appsMenu = (product: string) => html`
   <p class="draw-menu-title">Produtos</p>
   <a role="menuitem" href="/" ${product === 'jiraia' ? html`aria-current="page"` : ''}>${icon('kanban', 16)}JiraIA</a>
   <a role="menuitem" href="/draw" ${product === 'draw' ? html`aria-current="page"` : ''}>${icon('notebook', 16)}LET’S Draw AI</a>
+  <a role="menuitem" href="/wiki" ${product === 'wiki' ? html`aria-current="page"` : ''}>${icon('books', 16)}LET’S Wiki</a>
 `
 
 /**
@@ -202,5 +203,6 @@ export const shell = (
       ${navItem('/integracoes', 'Integrações', 'bolt', path)}
       <hr class="nav-divider" />
       ${productLink('/draw', 'LET’S Draw AI', 'notebook')}
+      ${productLink('/wiki', 'LET’S Wiki', 'books')}
     `
   })

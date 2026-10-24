@@ -1,10 +1,10 @@
 import { type ContentNode, drawWrite } from '@/api/draw'
 import { ancestorsOf, buildTree, type DropZone, dropTarget, type TreeItem } from '@/lib/content-tree'
-import { contentPath, drawSpacePath } from '@/lib/draw'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 import { persistedStore } from '@/lib/store'
+import { type Area, pathsIn } from '@/lib/wiki'
 
 import { openCreateMenu } from './create-menu'
 import { type IconName, icon } from './icons'
@@ -21,6 +21,8 @@ export type TreeContext = {
   searching: boolean
   /** Whether the viewer edits the space: who only reads gets no create, delete or drag (ADR-0012). */
   canWrite: boolean
+  /** The product the space is in, for its addresses and what can be created in it; Draw by default. */
+  area?: Area
 }
 
 /** Which folders are closed, per viewer, on this browser. */
@@ -52,7 +54,7 @@ const row = (item: TreeItem<ContentNode>, context: TreeContext, open: ReadonlySe
     <li role="treeitem" data-content-id="${item.id}" ${item.children.length ? html`aria-expanded="${expanded}"` : ''}>
       <div class="page-tree-row ${current ? 'is-active' : ''}" draggable="${context.canWrite}">
         ${toggle(item, expanded)}
-        <a class="page-tree-link" href="${contentPath(context.spaceId, item.id)}" ${current ? html`aria-current="page"` : ''}>
+        <a class="page-tree-link" href="${pathsIn(context.area).content(context.spaceId, item.id)}" ${current ? html`aria-current="page"` : ''}>
           <span class="tree-kind" aria-hidden="true">${icon(glyph, 16)}</span><span class="tree-title">${item.title}</span></a>
         ${context.canWrite ? actions(item) : ''}
       </div>
@@ -71,7 +73,7 @@ const openIds = (context: TreeContext): Set<string> => {
   return open
 }
 
-/** A LET’S Draw AI space's content (escopo-mvp 5.1): folders, pages and whiteboards, as a tree. */
+/** A Draw space's or a wiki collection's content (escopo-mvp 5.1): folders, pages and whiteboards, as a tree. */
 export const contentTree = (context: TreeContext): Html =>
   context.shown.length
     ? html`<ul role="tree" aria-label="Conteúdo" class="content-tree">${buildTree(context.shown).map((item) => row(item, context, openIds(context)))}</ul>`
@@ -84,13 +86,13 @@ const remove = (context: TreeContext, contentId: string) => {
   }
   drawWrite
     .remove({ id: contentId, spaceId: context.spaceId })
-    .then(() => (contentId === context.currentId ? navigate(drawSpacePath(context.spaceId)) : undefined))
+    .then(() => (contentId === context.currentId ? navigate(pathsIn(context.area).space(context.spaceId)) : undefined))
     .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
 }
 
 const TREE_ACTIONS: Record<string, (context: TreeContext, target: HTMLElement, redraw: () => void) => void> = {
   'data-add-inside': (context, target) =>
-    openCreateMenu(target, { spaceId: context.spaceId, parentId: target.dataset.addInside }),
+    openCreateMenu(target, { spaceId: context.spaceId, parentId: target.dataset.addInside, area: context.area }),
   'data-delete-content': (context, target) => remove(context, target.dataset.deleteContent ?? ''),
   'data-fold': (_context, target, redraw) => {
     const id = target.dataset.fold ?? ''

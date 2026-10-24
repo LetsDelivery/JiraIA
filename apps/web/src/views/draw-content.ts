@@ -4,9 +4,9 @@ import { type Content, type ContentNode, drawRead, drawWrite } from '@/api/draw'
 import { type Member, read } from '@/api/requests'
 import { invalidate } from '@/lib/cache'
 import { ancestorsOf } from '@/lib/content-tree'
-import { contentPath, drawSpacePath } from '@/lib/draw'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { type Area, pathsIn } from '@/lib/wiki'
 import { bindCommentsPanel, commentsPanel, focusThread, startInlineComment } from '@/ui/content-comments'
 import { bindVersionsPanel, versionsPanel } from '@/ui/content-versions'
 import { openCreateMenu } from '@/ui/create-menu'
@@ -45,9 +45,11 @@ export type Loaded = {
   nodes: ContentNode[]
   members: Member[]
   spaceName: string
+  /** Draw's or the wiki's: where its links lead and what can be created in it (ADR-0033). */
+  area: Area
 }
 
-export const loadContent = async (spaceId: string, contentId: string): Promise<Loaded> => {
+export const loadContent = async (spaceId: string, contentId: string, area: Area = 'draw'): Promise<Loaded> => {
   const [me, content, tree, members, space] = await Promise.all([
     read.me(),
     drawRead.content(contentId),
@@ -55,7 +57,7 @@ export const loadContent = async (spaceId: string, contentId: string): Promise<L
     read.members(),
     drawRead.space(spaceId)
   ])
-  return { me, content, nodes: tree.items, members: members.items, spaceName: space.name }
+  return { me, content, nodes: tree.items, members: members.items, spaceName: space.name, area }
 }
 
 const STATUS: Record<string, string> = {
@@ -69,10 +71,10 @@ const panelOf = (): 'comentarios' | 'versoes' =>
 
 const breadcrumbs = (data: Loaded): Html => html`
   <nav class="breadcrumbs" aria-label="Caminho">
-    <a href="${drawSpacePath(data.content.spaceId)}">${data.spaceName}</a>
+    <a href="${pathsIn(data.area).space(data.content.spaceId)}">${data.spaceName}</a>
     ${ancestorsOf(data.nodes, data.content.id).map(
       (node) =>
-        html`<span aria-hidden="true">/</span><a href="${contentPath(data.content.spaceId, node.id)}">${node.title}</a>`
+        html`<span aria-hidden="true">/</span><a href="${pathsIn(data.area).content(data.content.spaceId, node.id)}">${node.title}</a>`
     )}
   </nav>
 `
@@ -89,7 +91,7 @@ const titleRow = (data: Loaded): Html => html`
 `
 
 const panelTabs = (data: Loaded, current: string, comments: number): Html => {
-  const path = contentPath(data.content.spaceId, data.content.id)
+  const path = pathsIn(data.area).content(data.content.spaceId, data.content.id)
   return html`
     <nav class="tabs page-panel-tabs" aria-label="Painel">
       <a class="tab" href="${path}" ${current === 'comentarios' ? html`aria-current="page"` : ''}>${icon('message', 16)}Comentários <span class="count">${comments}</span></a>
@@ -152,7 +154,7 @@ export const folderScreen = (data: Loaded): Html => {
         ? html`<ul class="search-results">${children.map(
             (
               node
-            ) => html`<li class="search-result"><a class="search-result-link" href="${contentPath(data.content.spaceId, node.id)}">
+            ) => html`<li class="search-result"><a class="search-result-link" href="${pathsIn(data.area).content(data.content.spaceId, node.id)}">
               ${icon(node.kind === 'folder' ? 'folder' : node.kind === 'page' ? 'fileText' : 'chalkboard', 16)}
               <span class="search-result-title">${node.title}</span></a></li>`
           )}</ul>`
@@ -162,11 +164,13 @@ export const folderScreen = (data: Loaded): Html => {
 }
 
 export const bindFolder = (root: HTMLElement, data: Loaded): void => {
-  root
-    .querySelector<HTMLElement>('[data-create-here]')
-    ?.addEventListener('click', (event) =>
-      openCreateMenu(event.currentTarget as HTMLElement, { spaceId: data.content.spaceId, parentId: data.content.id })
-    )
+  root.querySelector<HTMLElement>('[data-create-here]')?.addEventListener('click', (event) =>
+    openCreateMenu(event.currentTarget as HTMLElement, {
+      spaceId: data.content.spaceId,
+      parentId: data.content.id,
+      area: data.area
+    })
+  )
 }
 
 /** Opens the content's live surface — a page editor or a board — and wires the screen around it. */

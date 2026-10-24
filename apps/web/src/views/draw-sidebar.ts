@@ -18,8 +18,8 @@ import { canCreateSpaces, navItem, productLink } from './shell'
 /** Whether "Espaços" is open in LET’S Draw AI's sidebar — per viewer, on this browser. */
 const spacesOpen = persistedStore('jiraia.draw.spaces-open', true)
 
-/** The way back to cards, at the foot of every LET’S Draw AI sidebar (ADR-0010). */
-const back = html`<hr class="nav-divider" />${productLink('/', 'JiraIA', 'kanban')}`
+/** The ways to cards and to the wiki, at the foot of every LET’S Draw AI sidebar (ADR-0010, ADR-0033). */
+const back = html`<hr class="nav-divider" />${productLink('/', 'JiraIA', 'kanban')}${productLink('/wiki', 'LET’S Wiki', 'books')}`
 
 /**
  * A space in the list. The one open carries its menu — star, follow, settings — so the sidebar names
