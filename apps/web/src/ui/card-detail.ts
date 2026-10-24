@@ -45,6 +45,7 @@ type Loaded = {
   relations: Awaited<ReturnType<typeof read.relations>>
   attachments: Awaited<ReturnType<typeof read.attachments>>['items']
   watchers: Awaited<ReturnType<typeof read.watchers>>['items']
+  starred: boolean
   groups: readonly Group[]
   isOrgAdmin: boolean
 }
@@ -55,6 +56,11 @@ const watchButton = (loaded: Loaded, meId: string): Html => {
   return html`<button type="button" class="button button-ghost" data-watch aria-pressed="${watching}" title="Observam: ${who}">
     ${icon(watching ? 'eye' : 'eyeOff', 16)}${watching ? 'Observando' : 'Observar'} <span class="count">${loaded.watchers.length}</span></button>`
 }
+
+const starButton = (starred: boolean): Html =>
+  html`<button type="button" class="button button-ghost button-icon" data-star aria-pressed="${starred}"
+    aria-label="${starred ? 'Desmarcar estrela' : 'Marcar com estrela'}" title="${starred ? 'Desmarcar estrela' : 'Marcar com estrela'}">
+    ${icon(starred ? 'starFilled' : 'star', 16)}</button>`
 
 /** The card's type in the path: its icon in its colour, then its name. */
 const crumbType = (type: CardType | undefined): Html =>
@@ -68,6 +74,7 @@ const header = (card: Card, context: BoardContext, loaded: Loaded): Html => html
       <span class="key">${card.key}</span>
     </p>
     <div class="detail-actions">
+      ${starButton(loaded.starred)}
       ${watchButton(loaded, context.meId)}
       <button type="button" class="button button-ghost button-icon" data-close aria-label="Fechar">${icon('x')}</button>
     </div>
@@ -134,13 +141,14 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
 }
 
 const load = async (cardId: string): Promise<Loaded> => {
-  const [proposals, comments, events, relations, attachments, watchers, groups, me] = await Promise.all([
+  const [proposals, comments, events, relations, attachments, watchers, star, groups, me] = await Promise.all([
     proposalsRead.forCard(cardId).catch(() => ({ items: [] })),
     read.comments(cardId),
     read.history(cardId),
     read.relations(cardId),
     read.attachments(cardId),
     read.watchers(cardId),
+    read.cardStar(cardId),
     accessRead.groups(),
     read.me()
   ])
@@ -151,6 +159,7 @@ const load = async (cardId: string): Promise<Loaded> => {
     relations,
     attachments: attachments.items,
     watchers: watchers.items,
+    starred: star.starred,
     groups: groups.items,
     isOrgAdmin: me.isOrgAdmin
   }
@@ -223,6 +232,7 @@ const render = async (
   bindAttachments(dialog, attachContext)
   bindComments(dialog, loaded.comments, commentContext)
   bindWatch(dialog, card, () => again())
+  bindStar(dialog, card, () => again())
   bindSide(dialog.querySelector('[data-detail-root]') as HTMLElement, (group, closed) => {
     closed ? folded.add(group) : folded.delete(group)
     dialog.dataset.folded = [...folded].join(',')
@@ -300,6 +310,16 @@ const bindWatch = (dialog: HTMLDialogElement, card: Card, again: () => void): vo
     const on = button.getAttribute('aria-pressed') !== 'true'
     write
       .watch(card.id, on)
+      .then(() => again())
+      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+  })
+}
+
+const bindStar = (dialog: HTMLDialogElement, card: Card, again: () => void): void => {
+  const button = dialog.querySelector<HTMLButtonElement>('[data-star]')
+  button?.addEventListener('click', () => {
+    write
+      .starCard(card.id, button.getAttribute('aria-pressed') !== 'true')
       .then(() => again())
       .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
   })

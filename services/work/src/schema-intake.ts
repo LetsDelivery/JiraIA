@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { boolean, index, integer, jsonb, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
-import { cardTypes, contents, members, spaces, work, workflowStates } from './schema.js'
+import { cards, cardTypes, contents, members, spaces, work, workflowStates } from './schema.js'
 
 /**
  * Etapa 5's tables — what comes in (forms), what reacts (automations) and where it is told (Slack) —
@@ -287,6 +287,24 @@ export const contentVisits = work.table(
     primaryKey({ columns: [table.memberId, table.contentId] }),
     index('content_visits_recent').on(table.memberId, table.visitedAt)
   ]
+)
+
+/**
+ * A member's star on a card: what "Marcados com estrela" on Para você lists. Personal, like a star on a
+ * space, so not audited.
+ */
+export const cardStars = work.table(
+  'card_stars',
+  {
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => members.id),
+    cardId: uuid('card_id')
+      .notNull()
+      .references(() => cards.id),
+    createdAt: createdAt()
+  },
+  (table) => [primaryKey({ columns: [table.memberId, table.cardId] })]
 )
 
 /**

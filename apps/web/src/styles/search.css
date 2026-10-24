@@ -146,3 +146,34 @@
   flex: 0 0 auto;
   min-width: 64px;
 }
+
+/* ---------- Suas tarefas (Para você) ---------- */
+.my-card-due {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.my-card-due.is-late {
+  color: var(--accent);
+}
+
+.my-card-assignee {
+  flex: none;
+  max-width: 160px;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On a phone a line keeps the key, the title and the state; the rest is one tap away. */
+@media (max-width: 760px) {
+  .my-card-due,
+  .my-card-assignee {
+    display: none;
+  }
+}

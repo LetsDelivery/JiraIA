@@ -16,6 +16,8 @@ export type Me = Json<'/work/me', 'get'>
 export type Space = Json<'/work/spaces/{spaceId}', 'get'>
 export type Member = Json<'/work/members', 'get'>['items'][number]
 export type MySpaces = Json<'/work/me/spaces', 'get'>
+export type MyCard = Json<'/work/me/cards', 'get'>['items'][number]
+export type MyCardTab = NonNullable<paths['/work/me/cards']['get']['parameters']['query']>['tab']
 export type SpaceSummary = MySpaces['starred'][number]
 export type RoleHolder = Json<'/work/spaces/{spaceId}/members', 'get'>['items'][number]
 export type Workflow = Json<'/work/spaces/{spaceId}/workflow', 'get'>
@@ -121,6 +123,9 @@ export const read = {
   attachments: (cardId: string) =>
     unwrap(api.GET('/work/cards/{cardId}/attachments', { params: { path: { cardId } } })),
   watchers: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/watchers', { params: { path: { cardId } } })),
+  /** "Suas tarefas" on Para você: never cached, it changes with every card the caller touches. */
+  myCards: (tab: MyCardTab) => unwrap(api.GET('/work/me/cards', { params: { query: { tab } } })),
+  cardStar: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/star', { params: { path: { cardId } } })),
   comments: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/comments', { params: { path: { cardId } } })),
   history: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/history', { params: { path: { cardId } } })),
   spaceRoles: (spaceId: string) =>
@@ -213,6 +218,10 @@ export const write = {
   watch: (cardId: string, on: boolean) => {
     const path = { params: { path: { cardId } } }
     return unwrap(on ? api.PUT('/work/cards/{cardId}/watch', path) : api.DELETE('/work/cards/{cardId}/watch', path))
+  },
+  starCard: (cardId: string, on: boolean) => {
+    const path = { params: { path: { cardId } } }
+    return unwrap(on ? api.PUT('/work/cards/{cardId}/star', path) : api.DELETE('/work/cards/{cardId}/star', path))
   },
   link: (cardId: string, body: { type: LinkType; direction: 'outward' | 'inward'; key: string }) =>
     unwrap(api.POST('/work/cards/{cardId}/links', { params: { path: { cardId } }, body })),

@@ -87,6 +87,9 @@ import { buildOAuth } from './oauth/build.js'
 import { mcpChallenge, publicBase } from './oauth/metadata.js'
 import { OAuthTokens } from './oauth/oauth-tokens.js'
 import { oauthRoutes } from './oauth/routes.js'
+import { MyCardsRepository } from './personal/my-cards.repository.js'
+import { myCardRoutes } from './personal/my-cards.routes.js'
+import { MyCardsService } from './personal/my-cards.service.js'
 import { PersonalRepository } from './personal/personal.repository.js'
 import { PersonalService } from './personal/personal.service.js'
 import { buildProposals } from './proposals/build.js'
@@ -208,6 +211,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     watchers: new WatcherService({ db, clock, cardGate, watchers }),
     attachments: new AttachmentService({ ...onCards, attachments: new AttachmentRepository(db), files }),
     personal: new PersonalService({ clock, access, spaces, personal }),
+    myCards: new MyCardsService({ clock, access, cardGate, myCards: new MyCardsRepository(db) }),
     search,
     bulk: new BulkEditService({ db, clock, audit, cardGate, rules, cards, watchers }),
     views: new ViewService({ db, clock, ids, audit, access, gate, views: viewRows, search }),
@@ -284,6 +288,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...cardRoutes(services.cards),
     ...linkRoutes(services.links),
     ...conversationRoutes(services.comments, services.watchers),
+    ...myCardRoutes(services.myCards),
     ...attachmentRoutes(services.attachments),
     ...searchRoutes(services.search, services.bulk),
     ...viewRoutes(services.views),
