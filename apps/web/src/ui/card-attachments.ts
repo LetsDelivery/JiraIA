@@ -35,19 +35,24 @@ const row = (attachment: Attachment, context: AttachmentsContext): Html => html`
   </li>
 `
 
-/** Files on the card (escopo-mvp 2.9): choose, drop or paste them; images show a preview. */
+/**
+ * Files on the card (escopo-mvp 2.9); images show a preview. The panel shows once there is a file —
+ * they are chosen from the card's action bar, dropped anywhere on the card or pasted in a comment.
+ */
 export const attachmentsSection = (attachments: readonly Attachment[], context: AttachmentsContext): Html =>
-  detailPanel({
-    title: html`Anexos${attachments.length ? html` <span class="count">${attachments.length}</span>` : ''}`,
-    attributes: html`data-attachments`,
-    actions: context.canWrite
-      ? html`<label class="button button-ghost button-small">${icon('upload', 16)}Anexar
-          <input type="file" class="sr-only" data-file-input multiple /></label>`
-      : html``,
-    body: attachments.length
-      ? html`<ul class="attachments">${attachments.map((attachment) => row(attachment, context))}</ul>`
-      : html`<p class="muted">${context.canWrite ? 'Nenhum anexo. Arraste um arquivo para cá.' : 'Nenhum anexo.'}</p>`
-  })
+  attachments.length
+    ? detailPanel({
+        title: html`Anexos <span class="count">${attachments.length}</span>`,
+        attributes: html`data-attachments`,
+        body: html`<ul class="attachments">${attachments.map((attachment) => row(attachment, context))}</ul>`
+      })
+    : html``
+
+/** The action bar's "Anexar": a label over the file input, so it opens the system's picker. */
+export const attachButton = (): Html => html`
+  <label class="button button-secondary button-small">${icon('paperclip', 16)}Anexar
+    <input type="file" class="sr-only" data-file-input multiple aria-label="Anexar arquivo" /></label>
+`
 
 /** Uploads one file and draws the card again; a refusal says why in pt-BR. */
 export const uploadFile = (context: AttachmentsContext, file: File): void => {
@@ -62,34 +67,51 @@ export const uploadFile = (context: AttachmentsContext, file: File): void => {
 }
 
 export const bindAttachments = (root: HTMLElement, context: AttachmentsContext): void => {
-  const section = root.querySelector<HTMLElement>('[data-attachments]')
-  if (!section || !context.canWrite) {
+  if (!context.canWrite) {
     return
   }
-  section.querySelector<HTMLInputElement>('[data-file-input]')?.addEventListener('change', (event) => {
+  root.querySelector<HTMLInputElement>('[data-file-input]')?.addEventListener('change', (event) => {
     for (const file of (event.target as HTMLInputElement).files ?? []) {
       uploadFile(context, file)
     }
   })
-  section.addEventListener('dragover', (event) => {
-    event.preventDefault()
-    section.classList.add('is-dropping')
-  })
-  section.addEventListener('dragleave', () => section.classList.remove('is-dropping'))
-  section.addEventListener('drop', (event) => {
-    event.preventDefault()
-    section.classList.remove('is-dropping')
-    for (const file of event.dataTransfer?.files ?? []) {
-      uploadFile(context, file)
-    }
-  })
-  section.addEventListener('click', (event) => {
+  const zone = root.querySelector<HTMLElement>('[data-drop-files]')
+  if (zone) {
+    _bindDrop(zone, context)
+  }
+  root.querySelector<HTMLElement>('[data-attachments]')?.addEventListener('click', (event) => {
     const id = (event.target as HTMLElement).closest<HTMLElement>('[data-detach]')?.dataset.detach
     if (id) {
       write
         .detach(context.cardId, id)
         .then(context.refresh)
         .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+    }
+  })
+}
+
+/** A file dropped anywhere on the card's reading column goes up; the column rings while one hovers. */
+const _bindDrop = (zone: HTMLElement, context: AttachmentsContext): void => {
+  const files = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false
+  zone.addEventListener('dragover', (event) => {
+    if (files(event)) {
+      event.preventDefault()
+      zone.classList.add('is-dropping')
+    }
+  })
+  zone.addEventListener('dragleave', (event) => {
+    if (!zone.contains(event.relatedTarget as Node | null)) {
+      zone.classList.remove('is-dropping')
+    }
+  })
+  zone.addEventListener('drop', (event) => {
+    if (!files(event)) {
+      return
+    }
+    event.preventDefault()
+    zone.classList.remove('is-dropping')
+    for (const file of event.dataTransfer?.files ?? []) {
+      uploadFile(context, file)
     }
   })
 }

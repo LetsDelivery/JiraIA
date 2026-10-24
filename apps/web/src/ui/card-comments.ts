@@ -77,7 +77,7 @@ export const commentsSection = (comments: readonly Comment[], context: CommentsC
           <button type="submit" class="button button-primary button-small align-start">Comentar</button>
         </div>
       </form>
-      ${newestFirst.length ? html`<ul class="comments">${newestFirst.map((comment) => item(comment, context, names))}</ul>` : html`<p class="muted">Nenhum comentário ainda.</p>`}
+      ${newestFirst.length ? html`<ul class="comments">${newestFirst.map((comment) => item(comment, context, names))}</ul>` : ''}
     </section>
   `
 }

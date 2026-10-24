@@ -48,6 +48,7 @@ const SCREENS = [
   '/espacos/PRD?aba=lista',
   '/espacos/PRD?aba=backlog',
   '/espacos/PRD?aba=pessoas',
+  '/espacos/PRD/configuracoes/tipos',
   '/integracoes',
   '/perfil',
   '/propostas',

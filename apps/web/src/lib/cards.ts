@@ -58,3 +58,14 @@ export const parseLabels = (text: string): string[] => [
       .filter(Boolean)
   )
 ]
+
+/**
+ * A label's colour from the space's catalogue (ADR-0032); grey for a name it does not know yet — one a
+ * card just got, before the catalogue is read again.
+ *
+ * @example labelColor([{ name: 'okr', color: 'teal' }], 'okr')   // 'teal'
+ */
+export const labelColor = <Color extends string>(
+  labels: readonly { name: string; color: Color }[],
+  name: string
+): Color | 'gray' => labels.find((label) => label.name === name)?.color ?? 'gray'

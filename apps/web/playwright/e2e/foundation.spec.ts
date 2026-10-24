@@ -34,6 +34,7 @@ test('an admin creates a space with its key and gives a reader a role; the reade
   await expect(page.getByText('Negócios · Líder: Admin LET’S')).toBeVisible()
   await expect(page.getByRole('region', { name: 'A fazer', exact: true })).toBeVisible()
 
+  await page.getByRole('link', { name: 'Configurações' }).click()
   await page.getByRole('link', { name: 'Pessoas e papéis' }).click()
   await page.getByRole('button', { name: 'Adicionar pessoa' }).click()
   const dialog = page.getByRole('dialog')
@@ -84,6 +85,7 @@ test('a newcomer reads every space, asks to edit one, and edits it once an admin
   await page.getByRole('menuitem', { name: 'Sair' }).click()
   await signIn(page, 'admin@uselets.com')
   await openSpace(page, 'Requisições')
+  await page.getByRole('link', { name: 'Configurações' }).click()
   await page.getByRole('link', { name: 'Pessoas e papéis' }).click()
   const request = page.locator('.request-row').filter({ hasText: email })
   await expect(request.getByText('Preciso abrir requisições.')).toBeVisible()

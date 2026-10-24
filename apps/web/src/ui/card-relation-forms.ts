@@ -21,6 +21,9 @@ export const bindRelations = (root: HTMLElement, relations: Relations, context: 
   for (const panel of section.querySelectorAll<HTMLElement>('[data-compose-name]')) {
     _bindComposer(panel, context)
   }
+  for (const button of root.querySelectorAll<HTMLElement>('[data-compose-start]')) {
+    button.addEventListener('click', () => startComposing(section, button.dataset.composeStart as ComposeForm, context))
+  }
   _bindSubtask(section, relations, context, run)
   _bindLink(section, context, run)
 }
@@ -42,20 +45,24 @@ const _bindRefs = (section: HTMLElement, relations: Relations, context: Relation
   })
 }
 
-/** "+ Adicionar…" opens the composer in place; Cancelar closes and empties it. */
-const _bindComposer = (panel: HTMLElement, context: RelationsContext): void => {
-  const name = panel.dataset.composeName as ComposeForm
-  const toggle = (open: boolean) => {
-    panel.dataset.compose = open ? 'open' : 'closed'
-    context.remember(name, open)
+/** The action bar opens a composer in its panel, which shows even while it has nothing yet. */
+const startComposing = (section: HTMLElement, form: ComposeForm, context: RelationsContext): void => {
+  const panel = section.querySelector<HTMLElement>(`[data-compose-name="${form}"]`)
+  if (!panel) {
+    return
   }
-  panel.querySelector('[data-compose-open]')?.addEventListener('click', () => {
-    toggle(true)
-    panel.querySelector<HTMLInputElement>('.compose input:not([type="hidden"])')?.focus()
-  })
+  panel.dataset.compose = 'open'
+  context.remember(form, true)
+  panel.scrollIntoView({ block: 'nearest' })
+  panel.querySelector<HTMLInputElement>('.compose input:not([type="hidden"])')?.focus()
+}
+
+/** Cancelar closes and empties the composer; an empty panel goes out of sight with it. */
+const _bindComposer = (panel: HTMLElement, context: RelationsContext): void => {
   panel.querySelector('[data-compose-cancel]')?.addEventListener('click', () => {
     panel.querySelector<HTMLFormElement>('form')?.reset()
-    toggle(false)
+    panel.dataset.compose = 'closed'
+    context.remember(panel.dataset.composeName as ComposeForm, false)
   })
 }
 

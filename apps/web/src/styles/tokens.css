@@ -74,6 +74,16 @@
   --squad-4: #7048e8;
   --squad-5: #2f9e44;
   --squad-6: #1971c2;
+  /* Card types (ADR-0031): the colour a type is told apart by, on its icon. */
+  --type-gray: #868e96;
+  --type-red: #e03131;
+  --type-orange: #e8590c;
+  --type-yellow: #e0a800;
+  --type-green: #2f9e44;
+  --type-teal: #0c8599;
+  --type-blue: #1971c2;
+  --type-violet: #7048e8;
+  --type-pink: #c2255c;
   /* Chart series (dataviz skill, validated on --surface): fixed order, never cycled; past eight, "Outros". */
   --series-1: #2a78d6;
   --series-2: #eb6834;
@@ -121,6 +131,15 @@
     --squad-4: #9775fa;
     --squad-5: #51cf66;
     --squad-6: #4dabf7;
+    --type-gray: #adb5bd;
+    --type-red: #ff6b6b;
+    --type-orange: #ff922b;
+    --type-yellow: #fcc419;
+    --type-green: #51cf66;
+    --type-teal: #3bc9db;
+    --type-blue: #4dabf7;
+    --type-violet: #9775fa;
+    --type-pink: #f06595;
     --backdrop: rgb(0 0 0 / 0.5);
     --series-1: #3987e5;
     --series-2: #d95926;
@@ -167,6 +186,15 @@
   --squad-4: #9775fa;
   --squad-5: #51cf66;
   --squad-6: #4dabf7;
+  --type-gray: #adb5bd;
+  --type-red: #ff6b6b;
+  --type-orange: #ff922b;
+  --type-yellow: #fcc419;
+  --type-green: #51cf66;
+  --type-teal: #3bc9db;
+  --type-blue: #4dabf7;
+  --type-violet: #9775fa;
+  --type-pink: #f06595;
   --backdrop: rgb(0 0 0 / 0.5);
   --series-1: #3987e5;
   --series-2: #d95926;

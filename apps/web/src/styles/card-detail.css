@@ -1,14 +1,17 @@
 /*
  * The card, opened over the board (escopo-mvp 2.5). A header with where the card lives, then two
- * columns that scroll on their own. The reading column stacks the title and one bordered panel per
- * section — description, squad, subtasks, linked cards, files, activity — so nothing floats loose;
- * the side column holds the actions (the state first) and the fields as label │ value rows.
+ * columns that scroll on their own. The reading column reads as a document: the title, the
+ * description as plain text, then each section — squad, subtasks, linked cards, files, activity —
+ * under a small heading and a hairline, no boxes. The side column, on a tint of its own, holds the
+ * actions (the state first) and the fields as label │ value rows.
  */
 
+/* As tall as what the card holds, up to the screen; past that, each column scrolls on its own. */
 .card-detail {
   width: min(1120px, calc(100vw - var(--space-6) * 2));
-  height: calc(100vh - var(--space-6) * 2);
-  max-height: none;
+  /* Not `auto`: a modal dialog is pinned to every edge, and `auto` would stretch it to the screen. */
+  height: fit-content;
+  max-height: calc(100vh - var(--space-6) * 2);
   overflow: hidden;
   background: var(--glass-dense);
 }
@@ -20,7 +23,7 @@
 .detail-root {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  max-height: calc(100vh - var(--space-6) * 2);
 }
 
 /* ---------- Header ---------- */
@@ -59,82 +62,174 @@
   flex: 1;
   grid-template-columns: minmax(0, 1fr) 360px;
   min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* Positioned, so what is absolutely placed inside (a hidden file input, a menu) scrolls with its column
+ * instead of stretching the dialog. */
+.detail-main,
+.detail-side {
+  position: relative;
 }
 
 .detail-main {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
   min-width: 0;
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-8);
   overflow-y: auto;
 }
 
 .detail-side {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-4);
   overflow-y: auto;
   border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-hover) 60%, transparent);
 }
 
-/* ---------- Title and description: text until touched ---------- */
-.detail-title,
-.detail-description {
+/* ---------- Title: text until touched ---------- */
+.detail-title {
   flex: none;
-  width: 100%;
-  margin: 0;
+  width: calc(100% + var(--space-2));
+  margin: 0 0 calc(var(--space-4) * -1) calc(var(--space-2) * -1);
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   background: transparent;
   font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--fg);
   resize: none;
   field-sizing: content;
   transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
 
-.detail-title {
-  margin-bottom: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  margin-left: calc(var(--space-2) * -1);
-  width: calc(100% + var(--space-2));
-  overflow: hidden;
-  font-size: var(--text-xl);
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-}
-
-.detail-description {
-  min-height: 96px;
-  padding: var(--space-2) var(--space-3);
-  margin-left: calc(var(--space-3) * -1);
-  width: calc(100% + var(--space-3) * 2);
-  line-height: 1.6;
-}
-
-.detail-title:not([readonly]):hover,
-.detail-description:not([readonly]):hover {
+.detail-title:not([readonly]):hover {
   background: var(--surface-hover);
 }
 
-.detail-title:focus,
-.detail-description:focus {
+.detail-title:focus {
   outline: none;
   border-color: var(--accent);
   background: var(--surface);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.detail-description::placeholder,
 .detail-title::placeholder {
   color: var(--faint);
 }
 
+/* ---------- Description: rich text, kept as Markdown; the bar shows while it is edited ---------- */
+.card-detail .description-editor .tiptap {
+  min-height: 48px;
+  margin-inline: calc(var(--space-3) * -1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.description-editor .tiptap[contenteditable='true']:hover {
+  background: var(--surface-hover);
+}
+
+.description-editor .tiptap:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.description-editor .tiptap > * + * {
+  margin-top: 0.75em;
+}
+
+.description-editor .tiptap h1 {
+  font-size: 1.35rem;
+}
+
+.description-editor .tiptap h2 {
+  font-size: 1.15rem;
+}
+
+.description-editor .tiptap h3 {
+  font-size: 1rem;
+}
+
+.description-editor .tiptap > * + h1,
+.description-editor .tiptap > * + :is(h2, h3) {
+  margin-top: 1.4em;
+}
+
+.description-editor .tiptap > :is(table, pre, blockquote, hr) {
+  margin-block: 1em;
+}
+
+.description-editor .tiptap :is(td, th) {
+  padding: var(--space-2);
+}
+
+.description-editor .tiptap :is(td, th) > p {
+  margin: 0;
+}
+
 .description-actions {
   display: none;
+  gap: var(--space-2);
+}
+
+/* A writer's description is one box: the bar always on top — held there while the text scrolls — then the text. */
+.description-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.description-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.description-toolbar {
+  position: sticky;
+  /* Up to the column's edge: a sticky box stops at the scroller's padding, which would let text show above it. */
+  top: calc(var(--space-6) * -1);
+  z-index: 3;
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius-surface) - 1px) calc(var(--radius-surface) - 1px) 0 0;
+  background: var(--surface);
+}
+
+.description-toolbar .format-toolbar {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.card-detail .description-box .tiptap,
+.card-detail .description-box .tiptap:focus,
+.card-detail .description-box .tiptap[contenteditable='true']:hover {
+  min-height: 120px;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 [data-description-block]:focus-within .description-actions,
@@ -142,12 +237,47 @@
   display: flex;
 }
 
-/* ---------- Panels: every section of the card is its own block ---------- */
+/* ---------- Action bar: add a subtask, a link, a file ---------- */
+.detail-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-3) * -1);
+}
+
+.detail-add .button {
+  height: 28px;
+  gap: var(--space-1);
+  color: var(--fg-secondary);
+}
+
+.detail-add .button:hover {
+  color: var(--fg);
+}
+
+.detail-add .button:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A file dragged over the reading column goes up wherever it lands. */
+.detail-main.is-dropping {
+  outline: 1px dashed var(--accent);
+  outline-offset: calc(var(--space-2) * -1);
+  border-radius: var(--radius-surface);
+}
+
+/* The squad is a field of the side column; its list opens leftwards, inside the column. */
+.detail-props .squad-field .squad-menu {
+  left: auto;
+  right: 0;
+  width: 300px;
+  min-width: 0;
+}
+
+/* ---------- Sections: a small heading over a hairline, no box ---------- */
 .detail-panel {
   flex: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-surface);
-  background: var(--surface);
 }
 
 .detail-panel-head {
@@ -155,8 +285,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 32px;
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border);
 }
 
@@ -165,9 +295,24 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--fg);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The description is the card's text: it follows the title with no heading bar. */
+[data-description-block] .detail-panel-head {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+[data-description-block] .detail-panel-body {
+  padding-top: 0;
 }
 
 .detail-panel-title label {
@@ -178,7 +323,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding-top: var(--space-3);
 }
 
 /* Subtasks and links are two panels under one binding root. */
@@ -239,7 +384,7 @@
 /* Jira's shortcut under the assignee: take the card without opening the list. */
 .detail-assign {
   align-self: flex-start;
-  margin: -6px 0 var(--space-1) calc(104px + var(--space-2) * 2);
+  margin: -6px 0 var(--space-1) calc(120px + var(--space-2) * 2);
   padding: 0;
   border: 0;
   background: none;
@@ -313,7 +458,7 @@
 
 .detail-props .field {
   display: grid;
-  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-columns: 120px minmax(0, 1fr);
   align-items: center;
   gap: var(--space-2);
   min-height: 36px;
@@ -368,8 +513,8 @@
 }
 
 .detail-props .select-menu {
-  left: 112px;
-  min-width: calc(100% - 112px);
+  left: 128px;
+  min-width: calc(100% - 128px);
 }
 
 .detail-props .calendar {
@@ -387,27 +532,152 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.detail-meta {
+/* ---------- Side groups: Detalhes, Estrutura do espaço, Integrações — each folds ---------- */
+.side-group {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.side-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
   padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  list-style: none;
+  cursor: pointer;
+}
+
+.side-group-title::-webkit-details-marker {
+  display: none;
+}
+
+.side-group-title .icon {
+  color: var(--muted);
+  transition: transform var(--fast) var(--ease);
+}
+
+.side-group:not([open]) .side-group-title .icon {
+  transform: rotate(-90deg);
+}
+
+.side-group .detail-props {
+  margin: 0;
+}
+
+/* Every field's name carries its icon; a space's own field, which has none, still lines up. */
+.detail-props .field > label,
+.detail-props .field > .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: var(--space-2);
+}
+
+.detail-props .field > label .icon,
+.detail-props .field > .label .icon {
+  flex: none;
+  color: var(--faint);
+}
+
+.detail-props .field > label:not(:has(.icon)),
+.detail-props .field > .label:not(:has(.icon)) {
+  padding-left: calc(var(--space-2) + 22px);
+}
+
+/* Labels read as tags; for a writer they are the button that opens the space's labels. */
+.labels-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+button.labels-tags {
+  cursor: pointer;
+}
+
+button.labels-tags:hover {
+  background: var(--surface-hover);
+}
+
+button.labels-tags > .icon {
+  margin-left: auto;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+button.labels-tags:hover > .icon {
+  opacity: 1;
+}
+
+.label-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   font-size: var(--text-xs);
-  line-height: 1.7;
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+
+.label-tag .icon {
+  color: var(--faint);
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) var(--space-2) 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.detail-meta li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-meta .icon {
   color: var(--faint);
 }
 
 /* ---------- Activity ---------- */
 .activity-tabs {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-4);
+  align-self: stretch;
+  margin-bottom: calc(var(--space-2) * -1 - 1px);
 }
 
 .activity-tab {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 26px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
   background: transparent;
   font-size: var(--text-sm);
   font-weight: 500;
@@ -421,8 +691,7 @@
 }
 
 .activity-tab[aria-selected='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-bottom-color: var(--accent);
   color: var(--fg);
 }
 
@@ -480,12 +749,15 @@
 }
 
 /* ---------- Composers: add a subtask, link a card (Jira's inline forms) ---------- */
-[data-compose='closed'] .compose,
-[data-compose='open'] .compose-opener {
+[data-compose='closed'] .compose {
   display: none;
 }
 
-.compose-opener,
+/* A section with nothing in it shows only while the action bar has its composer open. */
+.detail-panel[data-empty][data-compose='closed'] {
+  display: none;
+}
+
 .compose-link {
   display: inline-flex;
   align-items: center;
@@ -501,14 +773,6 @@
   color: var(--muted);
   cursor: pointer;
   transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-
-.compose-opener:hover {
-  background: var(--surface-hover);
-  color: var(--fg);
-}
-
-.compose-link {
   color: var(--accent);
 }
 
@@ -747,12 +1011,12 @@
 @media (max-width: 760px) {
   .card-detail {
     width: calc(100vw - var(--space-4) * 2);
-    height: calc(100vh - var(--space-4) * 2);
+    max-height: calc(100vh - var(--space-4) * 2);
     overflow-y: auto;
   }
 
   .detail-root {
-    height: auto;
+    max-height: none;
   }
 
   .detail-grid {
@@ -763,6 +1027,15 @@
   .detail-side {
     overflow: visible;
     padding: var(--space-4);
+  }
+
+  .detail-title {
+    font-size: var(--text-xl);
+  }
+
+  /* Here the whole dialog scrolls, and it has no padding. */
+  .description-toolbar {
+    top: 0;
   }
 
   .detail-side {

@@ -65,3 +65,12 @@ export const shortDate = (iso: string | null | undefined): string => {
   const [year, month, day] = iso.split('-')
   return `${day}/${month}/${year}`
 }
+
+/** "12 nov" — a due date on a board tile, where the year is almost always this one. */
+export const dayMonth = (iso: string): string => {
+  const [, month, day] = iso.split('-')
+  return `${Number(day)} ${MONTHS[Number(month) - 1]?.slice(0, 3) ?? ''}`
+}
+
+/** A due date already behind São Paulo's today. */
+export const isPast = (iso: string, today = todayInSaoPaulo()): boolean => iso < today

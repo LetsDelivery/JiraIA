@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isoDate, monthGrid, monthLabel, shiftMonth, shortDate, todayInSaoPaulo } from './dates'
+import { dayMonth, isoDate, isPast, monthGrid, monthLabel, shiftMonth, shortDate, todayInSaoPaulo } from './dates'
 
 describe('dates', () => {
   it('lays a month out in whole weeks from Sunday', () => {
@@ -20,5 +20,12 @@ describe('dates', () => {
     expect(todayInSaoPaulo(new Date('2026-11-30T01:30:00Z'))).toBe('2026-11-29')
     expect(shortDate('2026-11-30')).toBe('30/11/2026')
     expect(shortDate(null)).toBe('—')
+  })
+
+  it('shortens a due date for a tile and tells when it has passed', () => {
+    expect(dayMonth('2026-11-02')).toBe('2 nov')
+    expect(dayMonth('2026-03-30')).toBe('30 mar')
+    expect(isPast('2026-10-22', '2026-10-23')).toBe(true)
+    expect(isPast('2026-10-23', '2026-10-23')).toBe(false)
   })
 })

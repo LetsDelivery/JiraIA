@@ -18,6 +18,7 @@ import './styles/reports.css'
 import './styles/whiteboard.css'
 import './styles/account.css'
 import './styles/proposals.css'
+import './styles/settings.css'
 import './styles/oauth.css'
 import './styles/loading.css'
 import './styles/responsive.css'
@@ -68,6 +69,7 @@ import { applyTheme, appsMenu, collapsed, isDark, shell, spacesOpen, theme } fro
 import { bindSignIn, signInPage } from '@/views/sign-in'
 import { slackConnectView, slackView } from '@/views/slack'
 import { spaceView } from '@/views/space'
+import { spaceSettingsHomeView, spaceSettingsView } from '@/views/space-settings'
 import { spacesView } from '@/views/spaces'
 import type { View } from '@/views/view'
 
@@ -79,6 +81,8 @@ const ROUTES: readonly View[] = [
   forYouView,
   spacesView,
   spaceView,
+  spaceSettingsView,
+  spaceSettingsHomeView,
   peopleView,
   groupsView,
   myAccessView,

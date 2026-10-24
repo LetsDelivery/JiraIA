@@ -1086,7 +1086,8 @@ nav.tabs {
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
-  transition: border-color var(--fast) var(--ease), opacity var(--fast) var(--ease);
+  box-shadow: 0 1px 2px rgb(40 20 20 / 0.04);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), opacity var(--fast) var(--ease);
 }
 
 .card-tile[draggable='true'] {
@@ -1095,6 +1096,7 @@ nav.tabs {
 
 .card-tile:hover {
   border-color: var(--border-strong);
+  box-shadow: 0 2px 8px rgb(40 20 20 / 0.08);
 }
 
 .card-tile.is-dragging {
@@ -1104,31 +1106,137 @@ nav.tabs {
 .card-open {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-3) 0;
   border: 0;
   background: none;
   text-align: left;
   cursor: inherit;
 }
 
-.card-tile-title {
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.card-tile-meta {
+.card-tile-head {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
-.card-key {
-  flex: 1;
-  font-family: var(--font-mono);
+.card-tile-head .card-key {
+  flex: none;
+}
+
+.card-tile-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The properties a person scans for, as chips with room between them (6px, not packed): each one a
+ * button that changes it there. Who has the card closes the row.
+ */
+.card-tile-props {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-3);
+}
+
+.tile-prop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
   font-size: var(--text-xs);
-  color: var(--muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+button.tile-prop {
+  cursor: pointer;
+}
+
+button.tile-prop:hover,
+button.tile-prop[aria-expanded='true'] {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.tile-prop .icon {
+  flex: none;
+}
+
+/* A property the card does not have yet: only its icon, quiet, to be filled in. */
+.tile-prop.is-empty {
+  padding: 0;
+  width: 26px;
+  color: var(--faint);
+}
+
+.tile-prop.is-late {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tile-label {
+  min-width: 0;
+  max-width: 150px;
+}
+
+/* A label's colour (ADR-0032), from the same tones as the card types; grey until the catalogue knows it. */
+.tile-dot {
+  --type: var(--type-gray);
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--type);
+}
+
+/* Several labels: their dots overlap a little, ringed by the chip's surface. */
+.tile-dots {
+  display: inline-flex;
+}
+
+.tile-dots .tile-dot + .tile-dot {
+  margin-left: -3px;
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.tile-label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-assignee {
+  margin-left: auto;
+  padding: 0;
+  width: 26px;
+  border-color: transparent;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.tile-assignee .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+
+.tile-assignee .avatar-empty {
+  color: var(--faint);
 }
 
 .priority {
@@ -1166,6 +1274,100 @@ nav.tabs {
   border-radius: 4px;
   font-size: 11px;
   color: var(--fg-secondary);
+}
+
+/* ---------- Picker: a searchable list floating beside its trigger (glass, it floats) ---------- */
+.picker {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 260px;
+  max-height: 360px;
+  padding: var(--space-2);
+  border-radius: var(--radius-surface);
+  background: var(--glass-dense);
+}
+
+.picker-search {
+  flex: none;
+  height: 32px;
+}
+
+.picker-list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.picker-list [role='option'] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.picker-list [role='option']:hover,
+.picker-list [role='option']:focus {
+  outline: none;
+  background: var(--surface-hover);
+}
+
+.picker-list [role='option'][aria-selected='true'] {
+  font-weight: 500;
+}
+
+.picker-list:not([aria-multiselectable]) [role='option'][aria-selected='true'] {
+  background: var(--accent-soft);
+}
+
+.picker-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-list small {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.picker-check,
+.picker-tag {
+  display: inline-flex;
+  color: var(--faint);
+}
+
+[aria-selected='true'] > .picker-check {
+  color: var(--accent);
+}
+
+.picker .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.picker-empty {
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.picker-create {
+  justify-content: flex-start;
+}
+
+.picker.calendar {
+  width: 264px;
+  max-height: none;
+  padding: var(--space-3);
 }
 
 .drop-marker {
@@ -1271,3 +1473,21 @@ nav.tabs {
     grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);
   }
 }
+
+/* ---------- Card types: an icon in the type's colour (ADR-0031) ---------- */
+.type-icon {
+  --type: var(--type-gray);
+  display: inline-flex;
+  flex: none;
+  color: var(--type);
+}
+
+.type-gray { --type: var(--type-gray); }
+.type-red { --type: var(--type-red); }
+.type-orange { --type: var(--type-orange); }
+.type-yellow { --type: var(--type-yellow); }
+.type-green { --type: var(--type-green); }
+.type-teal { --type: var(--type-teal); }
+.type-blue { --type: var(--type-blue); }
+.type-violet { --type: var(--type-violet); }
+.type-pink { --type: var(--type-pink); }

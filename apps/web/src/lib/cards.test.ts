@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dropIndex, initials, parseLabels } from './cards'
+import { dropIndex, initials, labelColor, parseLabels } from './cards'
 
 describe('dropIndex', () => {
   const column = [
@@ -38,5 +38,13 @@ describe('parseLabels', () => {
       'okr-saude-escala',
       'business-form'
     ])
+  })
+})
+
+describe('labelColor', () => {
+  it('reads the colour from the catalogue, and grey for a name it does not know', () => {
+    const labels = [{ name: 'okr', color: 'teal' }] as const
+    expect(labelColor(labels, 'okr')).toBe('teal')
+    expect(labelColor(labels, 'nova')).toBe('gray')
   })
 })

@@ -2,6 +2,7 @@ import {
   type Card,
   type CardRef,
   type Field,
+  type Label,
   type Member,
   read,
   type Space,
@@ -11,7 +12,7 @@ import {
 } from '@/api/requests'
 import { type Sprint, sprintsRead } from '@/api/sprints'
 import { invalidate } from '@/lib/cache'
-import { dropIndex, initials, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
+import { dropIndex } from '@/lib/cards'
 import { assignableIds, type CardFilter, isEmpty } from '@/lib/filters'
 import { type Html, html } from '@/lib/html'
 import { LANE_BY, LANE_FIELD, LANE_LABEL, type Lane, type LaneBy, lanesOf } from '@/lib/lanes'
@@ -22,19 +23,18 @@ import { spacePath } from '@/lib/space-types'
 import { persistedStore } from '@/lib/store'
 import { openCardDetail } from '@/ui/card-detail'
 import { bindCardPicker } from '@/ui/card-picker'
+import { bindTileEdits, tile } from '@/ui/card-tile'
 import { openFormDialog, textField } from '@/ui/dialog'
-import { openFieldsEditor } from '@/ui/fields-dialog'
 import { icon } from '@/ui/icons'
 import { selectField } from '@/ui/select'
 import { bindSprintStrip, type SprintScope, shownSprint, sprintStrip } from '@/ui/sprint-strip'
 import { toast } from '@/ui/toast'
-import { openWorkflowEditor } from '@/ui/workflow-dialog'
 
 export type BoardContext = {
   spaceId: string
   spaceKey: string
   /** Whether it plans in sprints, and how it estimates (ADR-0029). */
-  space: Pick<Space, 'usesSprints' | 'estimation'>
+  space: Pick<Space, 'name' | 'usesSprints' | 'estimation'>
   /** Its sprints, none when it does not use them. */
   sprints: readonly Sprint[]
   workflow: Workflow
@@ -43,6 +43,8 @@ export type BoardContext = {
   members: readonly Member[]
   /** Who the Responsável filter offers: the space's people, not the whole organization (`assignableIds`). */
   assignable: ReadonlySet<string>
+  /** The space's labels with their colours (ADR-0032) — what the label pickers offer, filter or not. */
+  labels: readonly Label[]
   meId: string
   canWrite: boolean
   manages: boolean
@@ -59,24 +61,19 @@ export const setLanes = (spaceId: string, lanes: LaneBy): void => {
   lanePreference.set({ ...lanePreference.get(), [spaceId]: lanes })
 }
 
-export const tile = (card: Card, canWrite: boolean): Html => html`
-  <li class="card-tile" data-card-id="${card.id}" ${canWrite ? html`draggable="true"` : ''}
-    data-search="${`${card.key} ${card.title}`.toLowerCase()}" data-assignee="${card.assignee?.id ?? ''}">
-    <button type="button" class="card-open" data-open-card="${card.id}">
-      <span class="card-tile-title">${card.title}</span>
-      ${card.labels.length > 0 ? html`<span class="chips">${card.labels.slice(0, 2).map((label) => html`<span class="chip">${label}</span>`)}</span>` : ''}
-      <span class="card-tile-meta">
-        <span class="card-key">${card.key}</span>
-        ${card.parentId ? html`<span class="muted" title="Subtarefa">${icon('subtask', 14)}</span>` : ''}
-        <span class="priority priority-${card.priority}" title="Prioridade ${PRIORITY_LABEL[card.priority]}">${icon(PRIORITY_ICON[card.priority], 16)}</span>
-        ${card.assignee ? html`<span class="avatar" title="${card.assignee.name}">${initials(card.assignee.name)}</span>` : ''}
-      </span>
-    </button>
-  </li>
-`
+/** What every tile of the board needs from it: whether cards can be changed, and the types they wear. */
+type Drawing = Pick<BoardContext, 'canWrite' | 'workflow' | 'labels'>
 
-const cardsList = (state: State, cards: readonly Card[], canWrite: boolean, lane: string): Html => html`
-  <ol class="column-cards" data-drop-state="${state.id}" data-lane="${lane}" aria-label="${state.name}">${cards.map((card) => tile(card, canWrite))}</ol>
+const cardsList = (state: State, cards: readonly Card[], drawing: Drawing, lane: string): Html => html`
+  <ol class="column-cards" data-drop-state="${state.id}" data-lane="${lane}" aria-label="${state.name}">${cards.map(
+    (card) =>
+      tile(card, {
+        canWrite: drawing.canWrite,
+        group: state.group,
+        labels: drawing.labels,
+        type: drawing.workflow.types.find((type) => type.id === card.typeId)
+      })
+  )}</ol>
 `
 
 const columnHead = (state: State, total: number): Html => html`
@@ -93,11 +90,11 @@ const quickAdd = (state: State): Html => html`
   </form>
 `
 
-const column = (state: State, cards: readonly Card[], canWrite: boolean): Html => html`
+const column = (state: State, cards: readonly Card[], drawing: Drawing): Html => html`
   <section class="column" aria-label="${state.name}">
     ${columnHead(state, cards.length)}
-    ${cardsList(state, cards, canWrite, '')}
-    ${canWrite ? quickAdd(state) : ''}
+    ${cardsList(state, cards, drawing, '')}
+    ${drawing.canWrite ? quickAdd(state) : ''}
   </section>
 `
 
@@ -110,7 +107,7 @@ const laned = (context: BoardContext, lanes: Lane<Card>[]): Html => html`
     ${lanes.map(
       (lane) => html`
         <h4 class="lane-title">${lane.label} <span class="count">${lane.cards.length}</span></h4>
-        ${context.workflow.states.map((state) => html`<div class="column column-lane">${cardsList(state, inState(lane.cards, state), context.canWrite, lane.value)}</div>`)}
+        ${context.workflow.states.map((state) => html`<div class="column column-lane">${cardsList(state, inState(lane.cards, state), context, lane.value)}</div>`)}
       `
     )}
   </div>
@@ -151,13 +148,11 @@ export const board = (context: BoardContext): Html => {
       </div>
       <button type="button" class="button button-secondary" data-only-mine aria-pressed="false">${icon('user', 16)}Só os meus</button>
       ${selectField({ name: 'lanes', label: 'Raias', visibleLabel: false, options: LANE_OPTIONS, value: by, attributes: html`data-lanes` })}
-      ${context.manages ? html`<button type="button" class="button button-secondary" data-configure>${icon('adjustments', 16)}Configurar fluxo</button>` : ''}
-      ${context.manages ? html`<button type="button" class="button button-secondary" data-fields>${icon('forms', 16)}Campos</button>` : ''}
       ${context.canWrite ? html`<button type="button" class="button button-primary" data-create-card>${icon('plus')}Criar card</button>` : ''}
     </div>
     ${
       by === 'none'
-        ? html`<div class="board">${context.workflow.states.map((state) => column(state, inState(cards, state), context.canWrite))}</div>`
+        ? html`<div class="board">${context.workflow.states.map((state) => column(state, inState(cards, state), context))}</div>`
         : laned({ ...context, cards }, lanesOf(cards, by, names))
     }
   `
@@ -176,8 +171,7 @@ export const bindBoard = (root: HTMLElement, context: BoardContext): void => {
   bindDragAndDrop(root, context)
   bindQuickAdd(root, context)
   bindOpenCards(root, context)
-  root.querySelector('[data-configure]')?.addEventListener('click', () => void openWorkflowEditor(context.spaceId))
-  root.querySelector('[data-fields]')?.addEventListener('click', () => void openFieldsEditor(context.spaceId))
+  bindTileEdits(root, context)
   root.querySelector('[data-create-card]')?.addEventListener('click', () => createCard(context))
   root.querySelector('[data-lanes]')?.addEventListener('select-change', (event) => {
     lanePreference.set({
@@ -392,16 +386,26 @@ const createCard = (context: BoardContext): void =>
  * the people a filter hides stay offered in it.
  */
 export const loadBoard = async (spaceId: string, filter: CardFilter = {}) => {
-  const [workflow, cards, every, members, roles, fields, space] = await Promise.all([
+  const [workflow, cards, every, members, roles, fields, space, catalogue] = await Promise.all([
     read.workflow(spaceId),
     isEmpty(filter) ? read.cards(spaceId) : read.filteredCards(spaceId, filter),
     read.cards(spaceId),
     read.members(),
     read.spaceRoles(spaceId),
     read.fields(spaceId),
-    read.space(spaceId)
+    read.space(spaceId),
+    read.labels(spaceId)
   ])
   const assignable = assignableIds(roles.items, every.items, filter)
   const sprints = space.usesSprints ? (await sprintsRead.list(spaceId)).items : []
-  return { workflow, cards: cards.items, members: members.items, assignable, fields: fields.items, space, sprints }
+  return {
+    workflow,
+    cards: cards.items,
+    members: members.items,
+    assignable,
+    labels: catalogue.items,
+    fields: fields.items,
+    space,
+    sprints
+  }
 }

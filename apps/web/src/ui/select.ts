@@ -2,7 +2,7 @@ import { computePosition, flip, offset, shift } from '@floating-ui/dom'
 
 import { type Html, html } from '@/lib/html'
 
-import { icon } from './icons'
+import { type IconName, icon } from './icons'
 
 export type SelectOption = { value: string; label: string; hint?: string }
 
@@ -13,6 +13,7 @@ let counter = 0
  * for styled UI). The chosen value lives in a hidden input, so it travels with the form like any other.
  *
  * `label` names it; `visibleLabel: false` keeps that name for assistive tech only (a role per table row).
+ * `icon` draws in front of a visible label, as the card's side column lists its fields.
  */
 export const selectField = (options: {
   name: string
@@ -21,6 +22,7 @@ export const selectField = (options: {
   value?: string
   placeholder?: string
   visibleLabel?: boolean
+  icon?: IconName
   attributes?: Html
 }): Html => {
   counter += 1
@@ -30,7 +32,7 @@ export const selectField = (options: {
 
   return html`
     <div class="field select" data-select ${options.attributes ?? ''}>
-      ${showLabel ? html`<span class="label" id="${id}-label">${options.label}</span>` : ''}
+      ${showLabel ? html`<span class="label" id="${id}-label">${options.icon ? icon(options.icon, 16) : ''}${options.label}</span>` : ''}
       <input type="hidden" name="${options.name}" value="${chosen?.value ?? ''}" />
       <button
         type="button"

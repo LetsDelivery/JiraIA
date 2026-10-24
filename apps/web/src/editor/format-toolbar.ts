@@ -107,15 +107,41 @@ const palette = (): Html => html`
   </div>
 `
 
-const markup = (): Html => html`
+/**
+ * Which tools a bar offers: a page has them all; text kept as Markdown (a card's description) only what
+ * Markdown can carry — no underline, colour, alignment or callout.
+ */
+export type ToolKit = 'page' | 'markdown'
+
+/** Markdown keeps none of these; offering them would lose the person's work on saving. */
+const NOT_MARKDOWN = new Set(['underline', 'callout'])
+
+const markdownOnly = (tools: readonly Tool[]): readonly Tool[] => tools.filter((tool) => !NOT_MARKDOWN.has(tool.name))
+
+let bars = 0
+
+const blockSelect = (id: string): Html => html`
   <div class="format-group">
-    <label class="sr-only" for="format-block">Tipo de bloco</label>
-    <select id="format-block" class="input format-block" data-block>${BLOCK_TYPES.map((type) => html`<option value="${type.value}">${type.label}</option>`)}</select>
+    <label class="sr-only" for="${id}">Tipo de bloco</label>
+    <select id="${id}" class="input format-block" data-block>${BLOCK_TYPES.map((type) => html`<option value="${type.value}">${type.label}</option>`)}</select>
   </div>
+`
+
+const linkButton = (): Html =>
+  html`<button type="button" class="button button-ghost button-icon" data-tool="link" aria-label="Link (⌘K)" title="Link (⌘K)">${icon('link', 16)}</button>`
+
+const markdownMarkup = (id: string): Html => html`
+  ${blockSelect(id)}
+  <div class="format-group">${markdownOnly(MARKS).map(button)}${linkButton()}</div>
+  ${group(markdownOnly(BLOCKS))}${group(INSERT)}
+`
+
+const markup = (id: string): Html => html`
+  ${blockSelect(id)}
   ${group(MARKS)}
   <div class="format-group format-color">
     <button type="button" class="button button-ghost button-icon" data-tool="palette" aria-label="Cor e realce" title="Cor e realce" aria-haspopup="true">${icon('textColor', 16)}</button>
-    <button type="button" class="button button-ghost button-icon" data-tool="link" aria-label="Link (⌘K)" title="Link (⌘K)">${icon('link', 16)}</button>
+    ${linkButton()}
     ${palette()}
   </div>
   ${group(ALIGN)}${group(BLOCKS)}${group(INSERT)}
@@ -190,12 +216,14 @@ const onClick = (bar: HTMLElement, editor: Editor, event: MouseEvent): void => {
 }
 
 /** The bar for one editor; it follows the editor's selection and goes with it. */
-export const formatToolbar = (editor: Editor): HTMLElement => {
+export const formatToolbar = (editor: Editor, kit: ToolKit = 'page'): HTMLElement => {
   const bar = document.createElement('div')
   bar.className = 'format-toolbar'
   bar.setAttribute('role', 'toolbar')
   bar.setAttribute('aria-label', 'Formatação')
-  bar.innerHTML = markup().value
+  bars += 1
+  const id = `format-block-${bars}`
+  bar.innerHTML = (kit === 'markdown' ? markdownMarkup(id) : markup(id)).value
   bar.addEventListener('mousedown', (event) => {
     if (!(event.target as HTMLElement).closest('select')) {
       event.preventDefault()
