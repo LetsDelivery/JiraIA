@@ -13,6 +13,8 @@ import { CardRepository } from './cards/card.repository.js'
 import { CardService } from './cards/card.service.js'
 import { CardGate } from './cards/card-gate.js'
 import { CardRules } from './cards/card-rules.js'
+import { cardTypeRoutes } from './cards/card-type.routes.js'
+import { CardTypeService } from './cards/card-type.service.js'
 import { CommentRepository } from './cards/comment.repository.js'
 import { CommentService } from './cards/comment.service.js'
 import { attachmentRoutes, conversationRoutes } from './cards/conversation.routes.js'
@@ -70,6 +72,9 @@ import { GroupService } from './groups/group.service.js'
 import { groupRoutes } from './groups/routes.js'
 import { integrationRoutes } from './integrations/routes.js'
 import type { SlackNotifier } from './integrations/slack-notifier.js'
+import { LabelRepository } from './labels/label.repository.js'
+import { LabelService } from './labels/label.service.js'
+import { labelRoutes } from './labels/routes.js'
 import { buildMcp } from './mcp/build.js'
 import { mcpRoutes } from './mcp/routes.js'
 import { MemberAdmission } from './members/admission.js'
@@ -185,6 +190,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     members: new MemberService({ ...shared, members, allowedDomains, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
+    cardTypes: new CardTypeService({ db, clock, ids, audit, gate, workflows }),
+    labels: new LabelService({ db, clock, ids, audit, gate, labels: new LabelRepository(db) }),
     sprints: new SprintService({
       db,
       clock,
@@ -270,6 +277,8 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const routes: Route[] = [
     ...workRoutes(services),
     ...workflowRoutes(services.workflows),
+    ...cardTypeRoutes(services.cardTypes),
+    ...labelRoutes(services.labels),
     ...sprintRoutes(services.sprints),
     ...fieldRoutes(services.fields),
     ...cardRoutes(services.cards),

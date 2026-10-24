@@ -219,6 +219,9 @@ export const cardTypes = work.table(
       .notNull()
       .references(() => spaces.id),
     name: text('name').notNull(),
+    /** One of `typeIconValues` and `typeColorValues` (cards/card-type.schemas.ts), drawn by the panel. */
+    icon: text('icon').notNull().default('checkbox'),
+    color: text('color').notNull().default('gray'),
     position: integer('position').notNull(),
     createdAt: createdAt()
   },
@@ -379,6 +382,25 @@ export const cardLinks = work.table(
     uniqueIndex('card_links_unique').on(table.type, table.fromCardId, table.toCardId),
     index('card_links_to').on(table.toCardId)
   ]
+)
+
+/**
+ * A space's labels (ADR-0032): each name its cards carry, once, with a colour. A card keeps its labels
+ * by name (`cards.labels`); every name a card gets is registered here in the same write.
+ */
+export const labels = work.table(
+  'labels',
+  {
+    id: uuid('id').primaryKey(),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id),
+    name: text('name').notNull(),
+    /** One of `typeColorValues` (cards/card-type.schemas.ts). */
+    color: text('color').notNull(),
+    createdAt: createdAt()
+  },
+  (table) => [uniqueIndex('labels_name_unique').on(table.spaceId, table.name)]
 )
 
 /**
