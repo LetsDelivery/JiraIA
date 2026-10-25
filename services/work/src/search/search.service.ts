@@ -19,7 +19,14 @@ import {
 import type { CardSearch, SearchMatch, TextSearchResult } from './filter.schemas.js'
 import type { FoundCard, SearchRepository } from './search.repository.js'
 
-type Deps = { clock: Clock; access: AccessResolver; cards: CardRepository; search: SearchRepository }
+type Deps = {
+  clock: Clock
+  access: AccessResolver
+  cards: CardRepository
+  search: SearchRepository
+  /** The wiki collections the member reads: a closed one never shows in a result (ADR-0034). */
+  wikiReadable: (actor: MemberRow) => Promise<string[]>
+}
 
 /**
  * Finding cards (escopo-mvp 3.4, 3.6): by a structured filter — the equivalent of a JQL query — or by
@@ -60,12 +67,14 @@ export class SearchService {
     }
   }
 
-  /** LET’S Draw AI is open to the whole organization, so every member finds every page in it. */
+  /** Every Draw page, and the wiki pages of the collections the member reads (ADR-0034). */
   private async _contents(actor: MemberRow, query: string, limit: number) {
-    const rows = await this.deps.search.contents(actor.organizationId, likePattern(query), limit)
-    return rows.map(({ text, kind, ...content }) => ({
+    const wikiIds = await this.deps.wikiReadable(actor)
+    const rows = await this.deps.search.contents(actor.organizationId, likePattern(query), limit, wikiIds)
+    return rows.map(({ text, kind, area, ...content }) => ({
       ...content,
       kind: kind === 'whiteboard' ? ('whiteboard' as const) : ('page' as const),
+      area: area === 'wiki' ? ('wiki' as const) : ('draw' as const),
       excerpt: excerpt(text || content.title, query)
     }))
   }

@@ -12,6 +12,8 @@ import './styles/pages.css'
 import './styles/page-tools.css'
 import './styles/products.css'
 import './styles/draw.css'
+import './styles/wiki.css'
+import './styles/wiki-page.css'
 import './styles/access.css'
 import './styles/governance.css'
 import './styles/reports.css'
@@ -72,6 +74,11 @@ import { spaceView } from '@/views/space'
 import { spaceSettingsHomeView, spaceSettingsView } from '@/views/space-settings'
 import { spacesView } from '@/views/spaces'
 import type { View } from '@/views/view'
+import { wikiHomeView, wikiReviewsView } from '@/views/wiki'
+import { wikiCollectionView } from '@/views/wiki-collection'
+import { wikiCollectionsView } from '@/views/wiki-collections'
+import { wikiPageView } from '@/views/wiki-page'
+import { wikiShell } from '@/views/wiki-shell'
 
 /**
  * The panel, in plain JavaScript (ADR-0006): a router picks a view, the view renders markup from
@@ -103,10 +110,18 @@ const ROUTES: readonly View[] = [
   searchView,
   drawHomeView,
   drawSpaceView,
-  drawContentView
+  drawContentView,
+  wikiHomeView,
+  // Before a collection's address, which has the same shape.
+  wikiReviewsView,
+  wikiCollectionsView,
+  wikiCollectionView,
+  wikiPageView
 ]
 
 const app = document.getElementById('app') as HTMLElement
+
+const PRODUCT_NAME = { jiraia: 'JiraIA', draw: 'LET’S Draw AI', wiki: 'LET’S Wiki' } as const
 
 /** Each render takes a ticket; a slower, older render that finishes late is dropped. */
 let ticket = 0
@@ -177,16 +192,17 @@ const renderApp = async (path: string, entering: boolean) => {
     return
   }
 
-  // Two products, one panel (ADR-0010): each screen sits in its own product's frame.
-  const draw = match.route.area === 'draw'
-  app.innerHTML = (
-    draw
-      ? drawShell(me, sidebar ?? html``, path, content, notices.unread)
-      : shell(me, spaces, all.items, path, content, notices.unread, proposals.pending)
-  ).value
+  // Three products, one panel (ADR-0010, ADR-0033): each screen sits in its own product's frame.
+  const area = match.route.area ?? 'jiraia'
+  const frames = {
+    draw: () => drawShell(me, sidebar ?? html``, path, content, notices.unread),
+    wiki: () => wikiShell(me, sidebar ?? html``, path, content, notices.unread),
+    jiraia: () => shell(me, spaces, all.items, path, content, notices.unread, proposals.pending)
+  }
+  app.innerHTML = frames[area]().value
   // A re-render from a change keeps the drawer as it was; a navigation closes it (`onNavigate`).
   setDrawer(drawerOpen)
-  document.title = `${match.route.title} · ${draw ? 'LET’S Draw AI' : 'JiraIA'}`
+  document.title = `${match.route.title} · ${PRODUCT_NAME[area]}`
   const view = app.querySelector<HTMLElement>('#view') as HTMLElement
   bindSelects(view)
   bindGlobalSearch()

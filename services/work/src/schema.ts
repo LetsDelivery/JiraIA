@@ -512,7 +512,8 @@ export const savedViews = work.table(
 /**
  * A space of LET’S Draw AI (ADR-0011): where people keep pages and whiteboards, created as a team
  * needs one — apart from JiraIA's spaces. Open to every member of the organization; whoever created it,
- * or an organization admin, changes and deletes it. `icon` is an emoji.
+ * or an organization admin, changes and deletes it. `icon` is an emoji. LET’S Wiki's collections are
+ * spaces too, on the same content engine, told apart by `area` (ADR-0033).
  */
 export const drawSpaces = work.table(
   'draw_spaces',
@@ -522,6 +523,8 @@ export const drawSpaces = work.table(
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
     icon: text('icon').notNull(),
+    /** Which product the space belongs to: `draw`, or `wiki` for a LET’S Wiki collection (ADR-0033). */
+    area: text('area').notNull().default('draw'),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => members.id),
@@ -529,7 +532,7 @@ export const drawSpaces = work.table(
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' })
   },
-  (table) => [index('draw_spaces_organization').on(table.organizationId)]
+  (table) => [index('draw_spaces_organization').on(table.organizationId, table.area)]
 )
 
 /** A member's star or follow on a LET’S Draw AI space — personal, so not audited, as a JiraIA star. */
@@ -568,6 +571,8 @@ export const contents = work.table(
     /** `folder`, `page` or `whiteboard`. */
     kind: text('kind').notNull(),
     title: text('title').notNull(),
+    /** An emoji shown before the title; null for the kind's own icon (ADR-0034). */
+    icon: text('icon'),
     position: doublePrecision('position').notNull(),
     document: text('document').notNull().default(''),
     contentJson: jsonb('content_json').notNull().default(sql`'{}'::jsonb`),

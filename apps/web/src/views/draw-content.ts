@@ -4,14 +4,15 @@ import { type Content, type ContentNode, drawRead, drawWrite } from '@/api/draw'
 import { type Member, read } from '@/api/requests'
 import { invalidate } from '@/lib/cache'
 import { ancestorsOf } from '@/lib/content-tree'
-import { contentPath, drawSpacePath } from '@/lib/draw'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { type Area, pathsIn } from '@/lib/wiki'
 import { bindCommentsPanel, commentsPanel, focusThread, startInlineComment } from '@/ui/content-comments'
 import { bindVersionsPanel, versionsPanel } from '@/ui/content-versions'
 import { openCreateMenu } from '@/ui/create-menu'
 import { icon } from '@/ui/icons'
 import { toast } from '@/ui/toast'
+import { openPublishToWiki } from '@/ui/wiki-dialogs'
 
 import { attachBubble, bubbleMenu, insertBoard, insertCard, insertFile } from './page-actions'
 
@@ -45,9 +46,11 @@ export type Loaded = {
   nodes: ContentNode[]
   members: Member[]
   spaceName: string
+  /** Draw's or the wiki's: where its links lead and what can be created in it (ADR-0033). */
+  area: Area
 }
 
-export const loadContent = async (spaceId: string, contentId: string): Promise<Loaded> => {
+export const loadContent = async (spaceId: string, contentId: string, area: Area = 'draw'): Promise<Loaded> => {
   const [me, content, tree, members, space] = await Promise.all([
     read.me(),
     drawRead.content(contentId),
@@ -55,7 +58,7 @@ export const loadContent = async (spaceId: string, contentId: string): Promise<L
     read.members(),
     drawRead.space(spaceId)
   ])
-  return { me, content, nodes: tree.items, members: members.items, spaceName: space.name }
+  return { me, content, nodes: tree.items, members: members.items, spaceName: space.name, area }
 }
 
 const STATUS: Record<string, string> = {
@@ -69,27 +72,36 @@ const panelOf = (): 'comentarios' | 'versoes' =>
 
 const breadcrumbs = (data: Loaded): Html => html`
   <nav class="breadcrumbs" aria-label="Caminho">
-    <a href="${drawSpacePath(data.content.spaceId)}">${data.spaceName}</a>
+    <a href="${pathsIn(data.area).space(data.content.spaceId)}">${data.spaceName}</a>
     ${ancestorsOf(data.nodes, data.content.id).map(
       (node) =>
-        html`<span aria-hidden="true">/</span><a href="${contentPath(data.content.spaceId, node.id)}">${node.title}</a>`
+        html`<span aria-hidden="true">/</span><a href="${pathsIn(data.area).content(data.content.spaceId, node.id)}">${node.title}</a>`
     )}
   </nav>
 `
 
-const titleRow = (data: Loaded): Html => html`
+/**
+ * What LET’S Wiki adds around Draw's document screen (wiki-navegacao.md, "Página"): its own top bar
+ * with the whole path and the page's actions, the page's icon and state over the title, its subpages
+ * after the text, and a comments panel that opens and closes, split in two tabs.
+ */
+export type ScreenParts = { top?: Html; overTitle?: Html; after?: Html; panelOpen?: boolean; tabbedComments?: boolean }
+
+const titleRow = (data: Loaded, parts: ScreenParts): Html => html`
   <header class="page-title-row">
+    ${parts.overTitle ?? ''}
     <label class="sr-only" for="page-title">Título</label>
     <input id="page-title" class="page-title" data-page-title value="${data.content.title}" maxlength="255" />
     <div class="page-meta">
-      <span class="page-presence" data-presence></span>
+      ${data.area === 'draw' && data.content.kind === 'page' ? html`<button type="button" class="button button-ghost" data-publish-wiki title="Copiar para uma coleção da LET’S Wiki">${icon('books', 16)}Publicar na Wiki</button>` : ''}
+      ${parts.top ? '' : html`<span class="page-presence" data-presence></span>`}
       <span class="page-status muted" data-page-status role="status"></span>
     </div>
   </header>
 `
 
 const panelTabs = (data: Loaded, current: string, comments: number): Html => {
-  const path = contentPath(data.content.spaceId, data.content.id)
+  const path = pathsIn(data.area).content(data.content.spaceId, data.content.id)
   return html`
     <nav class="tabs page-panel-tabs" aria-label="Painel">
       <a class="tab" href="${path}" ${current === 'comentarios' ? html`aria-current="page"` : ''}>${icon('message', 16)}Comentários <span class="count">${comments}</span></a>
@@ -100,7 +112,7 @@ const panelTabs = (data: Loaded, current: string, comments: number): Html => {
 
 const currentSurface = () => editors?.sessions.currentSession()?.surface
 
-const panel = async (data: Loaded): Promise<Html> => {
+const panel = async (data: Loaded, tabs: boolean): Promise<Html> => {
   const id = data.content.id
   if (panelOf() === 'versoes') {
     const versions = await drawRead.versions(id)
@@ -114,26 +126,35 @@ const panel = async (data: Loaded): Promise<Html> => {
   }
   const comments = await drawRead.comments(id)
   const editor = (currentSurface() as { editor?: Editor } | undefined)?.editor
-  return commentsPanel(comments.items, { contentId: id, members: data.members, editor })
+  return commentsPanel(comments.items, { contentId: id, members: data.members, editor, tabs })
 }
 
+const surface = (board: boolean): Html =>
+  board
+    ? html`<div class="wb-stage"><div data-editor-host class="board-host"></div>
+        <div class="wb-toolbar-host" data-board-toolbar></div><div class="wb-panel-host" data-board-style></div></div>`
+    : html`<div data-editor-host></div>`
+
+const toolbarHost = html`<div class="page-toolbar" data-format-host></div>`
+
+/** Draw's order: path, title, formatting bar. The wiki's: its top bar, the formatting bar under it, then the title. */
+const pageHead = (data: Loaded, parts: ScreenParts, board: boolean): Html =>
+  parts.top
+    ? html`${parts.top}${board ? '' : toolbarHost}${titleRow(data, parts)}`
+    : html`${breadcrumbs(data)}${titleRow(data, parts)}${board ? '' : toolbarHost}`
+
 /** A page or a whiteboard: its path, its title, the surface in the middle, comments or versions beside. */
-export const documentScreen = async (data: Loaded): Promise<Html> => {
+export const documentScreen = async (data: Loaded, parts: ScreenParts = {}): Promise<Html> => {
   const open = (await drawRead.comments(data.content.id)).items.filter((each) => !each.parentId && !each.resolvedAt)
   const board = data.content.kind === 'whiteboard'
   return html`
-    <div class="page-layout ${board ? 'is-board' : ''}">
+    <div class="page-layout ${board ? 'is-board' : ''} ${parts.panelOpen === false ? 'is-panel-closed' : ''}">
       <article class="page-main">
-        ${breadcrumbs(data)}
-        ${titleRow(data)}
-        ${
-          board
-            ? html`<div class="wb-stage"><div data-editor-host class="board-host"></div>
-              <div class="wb-toolbar-host" data-board-toolbar></div><div class="wb-panel-host" data-board-style></div></div>`
-            : html`<div class="page-toolbar" data-format-host></div><div data-editor-host></div>`
-        }
+        ${pageHead(data, parts, board)}
+        ${surface(board)}
+        ${parts.after ?? ''}
       </article>
-      <aside class="page-panel">${panelTabs(data, panelOf(), open.length)}${await panel(data)}</aside>
+      <aside class="page-panel" data-page-panel>${panelTabs(data, panelOf(), open.length)}${await panel(data, Boolean(parts.tabbedComments))}</aside>
     </div>
   `
 }
@@ -152,7 +173,7 @@ export const folderScreen = (data: Loaded): Html => {
         ? html`<ul class="search-results">${children.map(
             (
               node
-            ) => html`<li class="search-result"><a class="search-result-link" href="${contentPath(data.content.spaceId, node.id)}">
+            ) => html`<li class="search-result"><a class="search-result-link" href="${pathsIn(data.area).content(data.content.spaceId, node.id)}">
               ${icon(node.kind === 'folder' ? 'folder' : node.kind === 'page' ? 'fileText' : 'chalkboard', 16)}
               <span class="search-result-title">${node.title}</span></a></li>`
           )}</ul>`
@@ -162,11 +183,13 @@ export const folderScreen = (data: Loaded): Html => {
 }
 
 export const bindFolder = (root: HTMLElement, data: Loaded): void => {
-  root
-    .querySelector<HTMLElement>('[data-create-here]')
-    ?.addEventListener('click', (event) =>
-      openCreateMenu(event.currentTarget as HTMLElement, { spaceId: data.content.spaceId, parentId: data.content.id })
-    )
+  root.querySelector<HTMLElement>('[data-create-here]')?.addEventListener('click', (event) =>
+    openCreateMenu(event.currentTarget as HTMLElement, {
+      spaceId: data.content.spaceId,
+      parentId: data.content.id,
+      area: data.area
+    })
+  )
 }
 
 /** Opens the content's live surface — a page editor or a board — and wires the screen around it. */
@@ -189,6 +212,7 @@ export const bindDocument = (root: HTMLElement, data: Loaded): void => {
     root.querySelector('[data-format-host]')?.append(toolbar)
   }
   bindTitle(root, data.content)
+  bindPublish(root, data, session)
   bindPresence(root, session.provider.awareness)
   bindPanels(root, data, session, redraw)
 }
@@ -256,6 +280,16 @@ const bindPanels = (root: HTMLElement, data: Loaded, session: OpenSession, redra
     },
     redraw
   )
+}
+
+/** "Publicar na Wiki": what is typed reaches the server first, so the copy carries it (W8). */
+const bindPublish = (root: HTMLElement, data: Loaded, session: { flush: () => Promise<unknown> }): void => {
+  root.querySelector('[data-publish-wiki]')?.addEventListener('click', () => {
+    session
+      .flush()
+      .then(() => openPublishToWiki(data.content))
+      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+  })
 }
 
 const bindTitle = (root: HTMLElement, content: Content): void => {

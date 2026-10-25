@@ -30,6 +30,7 @@ import { WorkflowRepository } from './cards/workflow.repository.js'
 import { WorkflowService } from './cards/workflow.service.js'
 import type { Config } from './config.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
+import { buildWiki } from './container-wiki.js'
 import { AnthropicDraftWriter } from './draw/anthropic-writer.js'
 import { ApiGatewayBroadcaster, type Broadcaster } from './draw/broadcaster.js'
 import { ContentRepository } from './draw/content.repository.js'
@@ -121,6 +122,7 @@ import { viewRoutes } from './views/routes.js'
 import { ViewRepository } from './views/view.repository.js'
 import { ViewService } from './views/view.service.js'
 import { webhookRoutes } from './webhooks/routes.js'
+import { collectionPageRoutes, collectionRoutes, libraryRoutes, wikiPageRoutes } from './wiki/routes.js'
 
 /**
  * Wires the service together — the only place in `work` that constructs anything.
@@ -181,9 +183,15 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     sprints: sprintRows
   })
   const onCards = { db, clock, ids, audit, cardGate, cards }
-  const search = new SearchService({ clock, access, cards, search: new SearchRepository(db) })
   const accessParts = buildAccess({ db, clock, ids, audit, access, members })
   const draw = buildDraw({ db, clock, ids, audit, access, members, config, overrides, files })
+  const search = new SearchService({
+    clock,
+    access,
+    cards,
+    search: new SearchRepository(db),
+    wikiReadable: async (actor) => (await draw.wikiCollections.readable(actor)).map((each) => each.space.id)
+  })
   const cardService = new CardService({ ...onCards, gate, rules, workflows, watchers })
   const links = new LinkService({ ...onCards, links: new LinkRepository(db) })
   const viewRows = new ViewRepository(db)
@@ -306,6 +314,10 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...documentRoutes(services.documents, services.realtime),
     ...contentTalkRoutes(services.contentComments, services.realtime),
     ...contentFileRoutes(services.contentFiles),
+    ...collectionRoutes(services.wikiCollections),
+    ...collectionPageRoutes(services.wikiPages, services.wikiContent),
+    ...libraryRoutes(services.wikiLibrary),
+    ...wikiPageRoutes(services.wikiPages),
     ...formRoutes(intake.forms),
     ...automationRoutes(intake.automations),
     ...integrationRoutes(intake.slack),
@@ -423,7 +435,8 @@ type DrawDeps = {
 
 /**
  * LET’S Draw AI (Etapa 4, ADR-0009–0011): its spaces, the content tree, the documents edited together,
- * comments, files and the realtime relay.
+ * comments, files and the realtime relay — and LET’S Wiki's collections and pages, on the same content
+ * engine (ADR-0033).
  */
 const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, files }: DrawDeps) => {
   const contents = new ContentRepository(db)
@@ -441,12 +454,22 @@ const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, 
     versions: new VersionRepository(db)
   })
   const comments = new ContentCommentRepository(db)
+  const contentService = new ContentService({ db, clock, ids, audit, drawGate, contents, members })
+  const wiki = buildWiki({ db, clock, ids, audit, drawGate, spaces, contents, contentService, members })
   return {
     drawSpaces: new DrawSpaceService({ db, clock, ids, audit, drawGate, spaces }),
     drafts: new DraftService({ drawGate, writer: overrides.writer ?? _writer(config) }),
-    contents: new ContentService({ db, clock, ids, audit, drawGate, contents, members }),
+    contents: contentService,
+    ...wiki.services,
     documents,
-    contentFiles: new ContentFileService({ db, clock, ids, drawGate, files }),
+    contentFiles: new ContentFileService({
+      db,
+      clock,
+      ids,
+      drawGate,
+      files,
+      sourceOf: async (contentId) => (await wiki.pages.find(contentId))?.sourceId ?? undefined
+    }),
     contentComments: new ContentCommentService({ db, clock, ids, audit, drawGate, comments, members }),
     realtime: new RealtimeService({
       clock,

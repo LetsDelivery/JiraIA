@@ -247,6 +247,30 @@ describe('Monday’s summary', () => {
     )
   })
 
+  it('tells a wiki page’s owner its review is near, and links to the page', async () => {
+    const collection = (await ok(
+      admin({ method: 'POST', path: '/wiki/collections', body: { name: 'Clientes', reviewDays: 30 } }),
+      201
+    )) as { id: string }
+    const page = (await ok(
+      admin({ method: 'POST', path: `/wiki/collections/${collection.id}/pages`, body: { title: 'Loja Exemplo' } }),
+      201
+    )) as { id: string }
+    await ok(admin({ method: 'PUT', path: `/wiki/pages/${page.id}/official`, body: { official: true } }))
+    await ok(
+      admin({ method: 'PUT', path: `/wiki/pages/${page.id}/owner`, body: { ownerId: people['gil@uselets.com'] } })
+    )
+    mailer.sent.length = 0
+    await service.mail.weekly()
+    expect(mailer.sent.find((each) => each.to === 'gil@uselets.com')).toBeUndefined()
+
+    later(20 * 24 * 60)
+    await service.mail.weekly()
+    const gils = mailer.sent.find((each) => each.to === 'gil@uselets.com')
+    expect(gils?.subject).toBe('Sua semana no JiraIA: 0 menções e 0 cards sem responsável, 1 página para revisar')
+    expect(gils?.html).toContain(`/wiki/${collection.id}/${page.id}`)
+  })
+
   it('sends nothing to whoever turned it off', async () => {
     await ok(
       gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'weekly_summary', channel: 'none' } })

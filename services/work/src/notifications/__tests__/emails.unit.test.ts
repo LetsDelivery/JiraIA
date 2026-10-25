@@ -106,12 +106,36 @@ describe('the summaries', () => {
       mentionTotal: 3,
       open: [{ ...card, assignUrl: `${card.url}&atribuir=eu` }],
       openTotal: 1,
+      reviews: [],
       webUrl: WEB
     })
     expect(email.subject).toBe('Sua semana no JiraIA: 3 menções e 1 card sem responsável')
     expect(email.html).toContain('há 8 dias')
     expect(email.html).toContain('Ver todas as notificações')
     expect(email.html).not.toContain('Ver cards sem responsável')
+    expect(email.html).not.toContain('Páginas da wiki para revisar')
+  })
+
+  it('lists the reader’s wiki pages to review, overdue or near, when there are some', () => {
+    const page = { title: 'Loja Exemplo', collectionName: 'Clientes', url: `${WEB}/wiki/c/p` }
+    const email = weeklyEmail({
+      readerName: 'Stênio Lima',
+      now: NOW,
+      mentions: [],
+      mentionTotal: 0,
+      open: [],
+      openTotal: 0,
+      reviews: [
+        { ...page, due: new Date(NOW.getTime() - 86_400_000), overdue: true },
+        { ...page, title: 'Mercado Azul', due: new Date(NOW.getTime() + 5 * 86_400_000), overdue: false }
+      ],
+      webUrl: WEB
+    })
+    expect(email.subject).toBe('Sua semana no JiraIA: 0 menções e 0 cards sem responsável, 2 páginas para revisar')
+    expect(email.html).toContain('Páginas da wiki para revisar (2)')
+    expect(email.html).toContain('revisão vencida em')
+    expect(email.html).toContain(`${WEB}/wiki/c/p`)
+    expect(email.text).toContain('Mercado Azul (Clientes, até')
   })
 
   it('wears the LET’S Draw AI brand and names who changed each page', () => {

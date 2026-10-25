@@ -8,7 +8,15 @@ import type { FileStore } from '../files/file-store.js'
 import { contentFiles } from '../schema.js'
 import type { DrawGate } from './draw-gate.js'
 
-type Deps = { db: Database; clock: Clock; ids: IdGenerator; drawGate: DrawGate; files: FileStore }
+type Deps = {
+  db: Database
+  clock: Clock
+  ids: IdGenerator
+  drawGate: DrawGate
+  files: FileStore
+  /** The Draw page a wiki page was published from, whose images and files it still shows (ADR-0033). */
+  sourceOf: (contentId: string) => Promise<string | undefined>
+}
 type ContentFileRow = typeof contentFiles.$inferSelect
 
 /**
@@ -51,7 +59,7 @@ export class ContentFileService {
   /** Where to read the file for the next few minutes, for anyone who reads the page. */
   async read(caller: Caller, contentId: string, fileId: string) {
     const { content } = await this.deps.drawGate.openDocument(caller, contentId, 'read')
-    const file = await this._file(content.id, fileId)
+    const file = await this._shown(content.id, fileId)
     if (file.status !== 'ready') {
       throw new NotFoundException('File', fileId)
     }
@@ -61,6 +69,19 @@ export class ContentFileService {
       contentType: file.contentType
     })
     return { id: file.id, name: file.name, contentType: file.contentType, size: file.size, url }
+  }
+
+  /** A file of the page — or, for a page published to the wiki, of the Draw page it was copied from. */
+  private async _shown(contentId: string, fileId: string): Promise<ContentFileRow> {
+    try {
+      return await this._file(contentId, fileId)
+    } catch (error) {
+      const source = await this.deps.sourceOf(contentId)
+      if (!source) {
+        throw error
+      }
+      return await this._file(source, fileId)
+    }
   }
 
   private async _file(contentId: string, fileId: string): Promise<ContentFileRow> {

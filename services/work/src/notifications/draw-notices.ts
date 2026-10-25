@@ -1,3 +1,5 @@
+import { can } from '@jiraia/authorization'
+import type { AccessResolver } from '../access.js'
 import type { ContentRepository } from '../draw/content.repository.js'
 import type { ContentCommentRepository } from '../draw/content-comment.repository.js'
 import type { DrawSpaceRepository } from '../draw/draw-space.repository.js'
@@ -15,6 +17,7 @@ type Deps = {
   spaces: DrawSpaceRepository
   notifications: NotificationRepository
   members: MemberRepository
+  access: AccessResolver
 }
 
 /** The Draw events someone hears about (Etapa 5f): a mention in a comment, and a new version. */
@@ -40,7 +43,7 @@ export class DrawNotices {
     }
     const base = await this._base(event, content)
     const data = { ...base.data, excerpt: await excerpt(this.deps.members, event.organizationId, comment.body) }
-    const mentioned = (comment.mentions as string[]) ?? []
+    const mentioned = await this._readers(event.organizationId, content.spaceId, (comment.mentions as string[]) ?? [])
     return mentioned.map((memberId) => ({ ...base, data, memberId, kind: 'draw_mentioned' as const }))
   }
 
@@ -54,9 +57,20 @@ export class DrawNotices {
       this.deps.notifications.waitingOn('content_changed', content.id)
     ])
     const base = await this._base(event, content)
-    return [...new Set([content.createdBy, ...authors])]
-      .filter((memberId) => !waiting.includes(memberId))
-      .map((memberId) => ({ ...base, memberId, kind: 'content_changed' as const }))
+    const writers = [...new Set([content.createdBy, ...authors])].filter((memberId) => !waiting.includes(memberId))
+    const readers = await this._readers(event.organizationId, content.spaceId, writers)
+    return readers.map((memberId) => ({ ...base, memberId, kind: 'content_changed' as const }))
+  }
+
+  /** Those of `memberIds` who still read the space: a closed wiki collection tells no one else (ADR-0034). */
+  private async _readers(organizationId: string, spaceId: string, memberIds: readonly string[]): Promise<string[]> {
+    const reads = await Promise.all(
+      memberIds.map(async (memberId) => {
+        const member = await this.deps.members.findById(organizationId, memberId)
+        return member ? can(await this.deps.access.forSpace(member, spaceId, 'draw'), 'space:read') : false
+      })
+    )
+    return memberIds.filter((_, index) => reads[index])
   }
 
   private async _base(event: DomainEvent, content: { id: string; spaceId: string; title: string; kind: string }) {

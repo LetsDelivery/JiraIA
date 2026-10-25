@@ -130,6 +130,15 @@ const weekly = weeklyEmail({
     }
   ],
   openTotal: 4,
+  reviews: [
+    {
+      title: 'Loja Exemplo',
+      collectionName: 'Clientes',
+      url: `${WEB}/wiki/c/p`,
+      due: ago(2),
+      overdue: true
+    }
+  ],
   webUrl: WEB
 })
 

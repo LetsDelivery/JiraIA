@@ -61,13 +61,24 @@ const grantTable = (title: string, rows: readonly Row[], manages: boolean, add: 
   </section>
 `
 
-const general = html`
+const openToAll = html`
   <section class="section access-general">
     <h2>Acesso geral</h2>
     <p class="row">${icon('world', 18)}<strong>Toda a LET’S</strong><span class="badge">Leitor</span></p>
     <p class="muted">Todo mundo da LET’S vê este espaço. Para editar, é preciso um papel — direto ou por um grupo.</p>
   </section>
 `
+
+/** A restricted or personal wiki collection (ADR-0034): nobody reads it without a role. */
+const onlyWithRole = html`
+  <section class="section access-general">
+    <h2>Acesso geral</h2>
+    <p class="row">${icon('lock', 18)}<strong>Só quem tem papel</strong></p>
+    <p class="muted">Só as pessoas e os grupos abaixo veem este espaço. Leitor lê; membro edita; administrador cuida das pessoas e das configurações.</p>
+  </section>
+`
+
+const general = (grants: Grants): Html => (grants.general ? openToAll : onlyWithRole)
 
 const requestRow = (request: AccessRequest) => html`
   <li class="request-row">
@@ -115,7 +126,7 @@ export const accessPanel = async (product: Product, spaceId: string): Promise<Ht
   const addPerson = html`<button type="button" class="button button-secondary" data-add-person>${icon('userPlus', 16)}Adicionar pessoa</button>`
   return html`
     ${requestsSection(requests)}
-    ${general}
+    ${general(grants)}
     ${grantTable('Grupos', groups, manages, addGroup, 'Nenhum grupo com papel aqui.')}
     ${grantTable('Pessoas', people, manages, addPerson, 'Ninguém com papel direto aqui.')}
   `

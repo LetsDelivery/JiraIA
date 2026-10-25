@@ -1,9 +1,9 @@
 import { type Card, type Member, read, type SavedView, type SearchResult } from '@/api/requests'
-import { contentPath } from '@/lib/draw'
 import { type Html, html } from '@/lib/html'
 import { mentionParts } from '@/lib/relations'
 import { MATCH_LABEL, spaceKeyOf } from '@/lib/search'
 import { spacePath } from '@/lib/space-types'
+import { contentPathIn } from '@/lib/wiki'
 import { viewLabel } from '@/ui/filter-bar'
 import { icon } from '@/ui/icons'
 
@@ -30,18 +30,20 @@ const refLine = (card: Ref, detail: Html): Html => html`
   </li>
 `
 
-/** Pages and whiteboards of LET’S Draw AI whose title or text holds the query (ADR-0011). */
-const contentResults = (contents: SearchResult['contents']): Html =>
-  contents.length
-    ? html`<p class="muted">${contents.length} no LET’S Draw AI</p>
+/** Pages and whiteboards of LET’S Draw AI and LET’S Wiki whose title or text holds the query, wiki first. */
+const contentResults = (found: SearchResult['contents']): Html => {
+  const contents = [...found].sort((a, b) => Number(b.area === 'wiki') - Number(a.area === 'wiki'))
+  return contents.length
+    ? html`<p class="muted">${contents.length} na LET’S Wiki e no LET’S Draw AI</p>
       <ul class="search-results">${contents.map(
         (
           item
-        ) => html`<li class="search-result"><a class="search-result-link" href="${contentPath(item.spaceId, item.id)}">
+        ) => html`<li class="search-result"><a class="search-result-link" href="${contentPathIn(item.area, item.spaceId, item.id)}">
           ${icon(item.kind === 'whiteboard' ? 'chalkboard' : 'fileText', 16)}<span class="search-result-title">${item.title}</span>
-          <span class="muted">${item.spaceName}</span></a><p class="muted search-excerpt">${item.excerpt}</p></li>`
+          <span class="muted">${item.area === 'wiki' ? 'Wiki' : 'Draw'} · ${item.spaceName}</span></a><p class="muted search-excerpt">${item.excerpt}</p></li>`
       )}</ul>`
     : html``
+}
 
 const textResults = (query: string, found: SearchResult, members: readonly Member[]): Html => {
   const names = new Map(members.map((member) => [member.id, member.name]))

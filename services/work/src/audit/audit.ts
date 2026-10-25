@@ -31,6 +31,8 @@ export type AuditInput = {
     | 'card_comment'
     | 'saved_view'
     | 'draw_space'
+    | 'wiki_collection'
+    | 'wiki_page'
     | 'group'
     | 'access_request'
     | 'content'

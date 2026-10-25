@@ -39,7 +39,8 @@ export class GrantService {
       this.deps.grants.people(product, space.id),
       this.deps.access.forSpace(actor, space.id, product)
     ])
-    const general = { scope: 'organization' as const, role: 'reader' as const }
+    const closed = product === 'draw' ? await this.deps.access.closedAs(space.id) : undefined
+    const general = closed ? null : { scope: 'organization' as const, role: 'reader' as const }
     return { general, groups, people, canManage: can(access, 'space:manage') }
   }
 
@@ -153,7 +154,8 @@ export class GrantService {
 
   private async _space(actor: MemberRow, product: Product, spaceId: string): Promise<GrantedSpace> {
     const space = await this.deps.grants.space(product, actor.organizationId, spaceId)
-    if (!space) {
+    // A closed wiki collection the caller cannot read does not exist for them (ADR-0034).
+    if (!space || !can(await this.deps.access.forSpace(actor, space.id, product), 'space:read')) {
       throw new NotFoundException('Space', spaceId)
     }
     return space

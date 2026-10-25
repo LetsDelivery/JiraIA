@@ -133,6 +133,18 @@ export class ContentService {
     return await this.read(caller, contentId)
   }
 
+  /** The emoji before the title, or none (ADR-0034); an edit of the content, so audited as one. */
+  async setIcon(caller: Caller, contentId: string, icon: string | null): Promise<ContentView> {
+    const { gate, content } = await this.deps.drawGate.open(caller, contentId, 'write')
+    if (icon !== content.icon) {
+      await this.deps.db.transaction(async (tx) => {
+        await this.deps.contents.update(tx, content.id, { icon, updatedBy: gate.actor.id }, this.deps.clock.now())
+        await this._audit(tx, gate, content.id, 'icon_changed', { icon: { before: content.icon, after: icon } })
+      })
+    }
+    return await this.read(caller, contentId)
+  }
+
   /** Under a folder or page of the same space, or at the top; never under itself or one of its own. */
   async move(caller: Caller, contentId: string, input: MoveContent): Promise<Tree> {
     const { gate, content } = await this.deps.drawGate.open(caller, contentId, 'write')
@@ -259,6 +271,7 @@ const _newContent = ({ id, gate, input, parentId, position, now }: NewContent): 
   parentId,
   kind: contentKindSchema.parse(input.kind),
   title: input.title,
+  icon: input.icon ?? null,
   position,
   document: '',
   contentJson: input.draft?.json ?? {},

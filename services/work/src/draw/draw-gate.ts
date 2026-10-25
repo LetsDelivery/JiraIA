@@ -40,6 +40,10 @@ export class DrawGate {
       throw new NotFoundException('Space', spaceId)
     }
     const access = await this.deps.access.forSpace(actor, space.id, 'draw')
+    // A closed wiki collection the caller cannot read does not exist for them (ADR-0034).
+    if (!can(access, 'space:read')) {
+      throw new NotFoundException('Space', spaceId)
+    }
     if (!can(access, ACTION[action])) {
       throw new ForbiddenException(`To ${action} in space "${space.name}" you need ${NEEDS[action]}`, {
         spaceId,
@@ -50,9 +54,16 @@ export class DrawGate {
   }
 
   /** What the member may do in the space, for a listing that shows it beside each one. */
-  async rights(actor: MemberRow, spaceId: string): Promise<{ canWrite: boolean; canManage: boolean }> {
+  async rights(
+    actor: MemberRow,
+    spaceId: string
+  ): Promise<{ canRead: boolean; canWrite: boolean; canManage: boolean }> {
     const access = await this.deps.access.forSpace(actor, spaceId, 'draw')
-    return { canWrite: can(access, 'space:write'), canManage: can(access, 'space:manage') }
+    return {
+      canRead: can(access, 'space:read'),
+      canWrite: can(access, 'space:write'),
+      canManage: can(access, 'space:manage')
+    }
   }
 
   async open(caller: Caller, contentId: string, action: DrawAction): Promise<ContentAccess> {

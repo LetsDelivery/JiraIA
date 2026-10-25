@@ -1,0 +1,480 @@
+/* ---------- LET’S Wiki (ADR-0033) ---------- */
+
+/* "O que você quer saber?": the home's first thing, wide and calm — not glass, it does not float. */
+.wiki-ask {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 640px;
+  margin: var(--space-4) 0 var(--space-6);
+  color: var(--muted);
+}
+
+.wiki-ask svg {
+  position: absolute;
+  left: var(--space-3);
+}
+
+.wiki-ask .input {
+  width: 100%;
+  height: 44px;
+  padding-left: 40px;
+  font-size: var(--text-md);
+}
+
+/* A collection's name and its two buttons wrap on a phone rather than push the page sideways. */
+.wiki-head {
+  flex-wrap: wrap;
+}
+
+.wiki-due a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--state-warn);
+}
+
+.wiki-meta a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.wiki-mark {
+  flex: none;
+}
+
+/* The page's state, over its editor: mark, owner, review, and what the caller may do. */
+.wiki-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.wiki-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+@media (max-width: 760px) {
+  .wiki-bar-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* ---------- Marks shared by the wiki's screens (wiki-navegacao.md) ---------- */
+.wiki-access {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.wiki-access-restricted,
+.wiki-access-personal {
+  color: var(--fg-secondary);
+}
+
+.wiki-lock {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+
+.wiki-emoji {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  width: 16px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.wiki-glyph {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+
+.wiki-person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.wiki-person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-more {
+  margin-left: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.wiki-number {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.wiki-line-where {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+}
+
+/* ---------- Sidebar: "Nova página", the sections that fold, the collections that expand ---------- */
+.wiki-new-page {
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.wiki-section .nav-group-label {
+  text-align: left;
+}
+
+.wiki-section .nav-group-label .nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-section .nav-sub {
+  margin-left: var(--space-4);
+}
+
+.wiki-nav-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nav-more {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.nav-more:hover {
+  color: var(--accent);
+}
+
+.nav-rest:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wiki-collection .draw-space-row {
+  padding-left: 0;
+}
+
+.wiki-collection .draw-space {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.wiki-expand[aria-expanded='true'] {
+  transform: rotate(90deg);
+}
+
+.wiki-collection-tree,
+.wiki-private-tree {
+  margin-left: var(--space-3);
+}
+
+.wiki-private-tree {
+  margin-left: var(--space-4);
+}
+
+/* ---------- Tables: Todas as coleções, and a collection's pages ---------- */
+.wiki-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.wiki-tabs {
+  border-bottom: 0;
+}
+
+.wiki-tabs .tab {
+  margin-bottom: -1px;
+}
+
+.wiki-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 240px;
+  min-width: 0;
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+}
+
+.wiki-search .icon {
+  position: absolute;
+  left: var(--space-2);
+  pointer-events: none;
+}
+
+.wiki-search .input {
+  width: 100%;
+  padding-left: 32px;
+}
+
+.wiki-table td {
+  vertical-align: middle;
+}
+
+.wiki-row {
+  cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+
+.wiki-row:hover {
+  background: var(--surface-hover);
+}
+
+.wiki-row-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.wiki-row-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-cell-name {
+  max-width: 0;
+  width: 40%;
+}
+
+.wiki-cell-official,
+.wiki-cell-people,
+.wiki-cell-access,
+.wiki-cell-state {
+  white-space: nowrap;
+}
+
+.wiki-cell-official .badge {
+  margin-left: var(--space-2);
+}
+
+.wiki-cell-when {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.wiki-card-unit {
+  display: none;
+}
+
+/* A page's row steps in by its depth; its arrow turns when its subpages show. */
+.wiki-page-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: calc(var(--depth, 0) * var(--space-6));
+  min-width: 0;
+}
+
+/* ---------- A collection's header ---------- */
+.wiki-collection-head {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* The title keeps room to read: the tools drop below it before they squeeze the description. */
+.wiki-collection-title {
+  display: flex;
+  gap: var(--space-4);
+  min-width: 0;
+  flex: 1 1 480px;
+}
+
+.wiki-collection-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  font-size: 26px;
+}
+
+.wiki-collection-text {
+  min-width: 0;
+}
+
+.wiki-collection-text h1 {
+  overflow-wrap: anywhere;
+}
+
+.wiki-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.wiki-tools .wiki-search {
+  flex: 0 1 200px;
+  margin-bottom: 0;
+}
+
+.wiki-tools .button.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.wiki-filter-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  max-width: 260px;
+}
+
+.wiki-filter-menu .draw-menu-title {
+  width: 100%;
+}
+
+.wiki-section-head {
+  justify-content: space-between;
+}
+
+/* ---------- Tablet and phone (ADR-0023): nothing scrolls sideways ---------- */
+/* The wiki's tables drop columns rather than scroll: they keep filling their width. */
+@media (max-width: 1100px) {
+  .wiki-table {
+    display: table;
+    overflow: hidden;
+  }
+
+  .wiki-cell-owners,
+  .wiki-cell-subpages,
+  .wiki-collections-table .wiki-cell-people {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .wiki-pages-table .wiki-cell-when,
+  .wiki-collections-table .wiki-cell-official,
+  .wiki-collections-table .wiki-cell-people {
+    display: none;
+  }
+
+  .wiki-table th,
+  .wiki-table td {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .wiki-pages-table .wiki-cell-name {
+    width: 100%;
+  }
+
+  .wiki-collections-table .wiki-cell-owners {
+    display: none;
+  }
+
+  /* "Todas as coleções" turns into cards: name, access and how many pages. */
+  .wiki-collections-table,
+  .wiki-collections-table tbody {
+    display: block;
+    border: 0;
+    background: none;
+  }
+
+  .wiki-collections-table thead {
+    display: none;
+  }
+
+  .wiki-collections-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-surface);
+    background: var(--surface);
+  }
+
+  .wiki-collections-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .wiki-collections-table .wiki-cell-name {
+    grid-row: 1;
+    grid-column: 1;
+    width: auto;
+    max-width: none;
+  }
+
+  .wiki-collections-table .actions {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .wiki-card-unit {
+    display: inline;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+  .wiki-tabs-row .wiki-search,
+  .wiki-tools .wiki-search {
+    flex: 1 1 100%;
+  }
+
+  .wiki-page-name {
+    padding-left: calc(var(--depth, 0) * var(--space-3));
+  }
+
+  .wiki-line-where {
+    display: none;
+  }
+}

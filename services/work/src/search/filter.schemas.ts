@@ -93,7 +93,7 @@ export const textSearchResultSchema = z.object({
   /** The card the caller typed the key of, when `q` is one and they may open it. */
   exact: cardRefSchema.nullable(),
   items: z.array(z.object({ card: cardRefSchema, match: searchMatchSchema, excerpt: z.string() })),
-  /** Pages and whiteboards of LET’S Draw AI whose title or text holds `q` (ADR-0011). */
+  /** Pages and whiteboards of LET’S Draw AI and LET’S Wiki whose title or text holds `q`. */
   contents: z.array(
     z.object({
       id: z.uuid(),
@@ -101,6 +101,8 @@ export const textSearchResultSchema = z.object({
       title: z.string(),
       spaceId: z.uuid(),
       spaceName: z.string(),
+      /** The product that opens it: LET’S Draw AI or LET’S Wiki (ADR-0033). */
+      area: z.enum(['draw', 'wiki']),
       excerpt: z.string()
     })
   )
