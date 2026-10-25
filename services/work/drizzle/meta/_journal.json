@@ -176,6 +176,13 @@
       "when": 1792870592845,
       "tag": "0024_wiki",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792935504911,
+      "tag": "0025_wiki-access",
+      "breakpoints": true
     }
   ]
 }

@@ -24,7 +24,8 @@ export type GroupGrant = z.infer<typeof groupGrantSchema>
  * (ADR-0012) — what "Pessoas e papéis" shows.
  */
 export const grantsViewSchema = z.object({
-  general: z.object({ scope: z.literal('organization'), role: z.literal('reader') }),
+  /** Null on a restricted or personal wiki collection, which only those with a role read (ADR-0034). */
+  general: z.object({ scope: z.literal('organization'), role: z.literal('reader') }).nullable(),
   groups: z.array(groupGrantSchema),
   people: z.array(personGrantSchema),
   /** Whether the caller may change these — the space's admins and organization admins. */

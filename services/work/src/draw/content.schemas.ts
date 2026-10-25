@@ -35,11 +35,15 @@ export const createContentSchema = z.object({
   kind: contentKindSchema.default('page'),
   title: titleSchema.default('Sem título'),
   parentId: z.uuid().optional(),
+  /** An emoji before the title (ADR-0034). */
+  icon: z.string().trim().min(1).max(8).optional(),
   /** A first content, for a page made from a prompt (5.2): ProseMirror JSON or whiteboard elements (ADR-0017). */
   draft: z.object({ json: z.record(z.string(), z.unknown()), text: z.string().max(500_000) }).optional()
 })
 export type CreateContent = z.infer<typeof createContentSchema>
 export const renameContentSchema = z.object({ title: titleSchema })
+/** An emoji before the title, or `null` for the kind's own icon (ADR-0034). */
+export const contentIconSchema = z.object({ icon: z.string().trim().min(1).max(8).nullable() })
 /** Under a folder or a page, or at the top (`null`), at a position among its siblings (0 = first). */
 export const moveContentSchema = z.object({ parentId: z.uuid().nullable(), index: z.number().int().min(0) })
 export type MoveContent = z.infer<typeof moveContentSchema>
@@ -61,6 +65,7 @@ export const contentNodeSchema = z.object({
   parentId: z.uuid().nullable(),
   kind: contentKindSchema,
   title: z.string(),
+  icon: z.string().nullable(),
   position: z.number(),
   updatedAt: z.iso.datetime()
 })
@@ -77,6 +82,7 @@ export const contentViewSchema = z.object({
   spaceId: z.uuid(),
   parentId: z.uuid().nullable(),
   title: z.string(),
+  icon: z.string().nullable(),
   position: z.number(),
   kind: contentKindSchema,
   contentJson: z.record(z.string(), z.unknown()),
@@ -141,6 +147,7 @@ export const toContentNode = (row: ContentRow) => ({
   parentId: row.parentId,
   kind: contentKindSchema.parse(row.kind),
   title: row.title,
+  icon: row.icon,
   position: row.position,
   updatedAt: toIso(row.updatedAt)
 })

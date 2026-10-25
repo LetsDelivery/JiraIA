@@ -236,7 +236,8 @@ export const buildNotifications = ({
         versions,
         spaces: new DrawSpaceRepository(db),
         notifications: rows,
-        members
+        members,
+        access
       }),
       slack: slackDirect
     }),
@@ -248,6 +249,7 @@ export const buildNotifications = ({
       versions,
       weekly: new WeeklyRepository(db),
       wikiPages: new WikiPageRepository(db),
+      access,
       mailer: overrides.mailer ?? _mailer(config),
       webUrl: (config.WEB_URL ?? 'http://localhost:5280').replace(/\/$/, ''),
       windowMs: overrides.mailWindowMs ?? MAIL_WINDOW_MS

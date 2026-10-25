@@ -8,6 +8,7 @@ import type { MemberAdmission } from './members/admission.js'
 import type { MemberRow } from './members/schemas.js'
 import { borrowedRole } from './proposals/delegation.js'
 import { drawSpaceGroupRoles, drawSpaceMembers, groupMembers, groups, spaceGroupRoles, spaceMembers } from './schema.js'
+import { wikiCollections } from './schema-wiki.js'
 
 /** Whose spaces: JiraIA's or LET’S Draw AI's — each keeps its grants in its own tables (ADR-0012). */
 export type Product = 'jiraia' | 'draw'
@@ -52,24 +53,40 @@ export class AccessResolver {
     const borrowed = product === 'jiraia' ? borrowedRole(actor.id, spaceId) : undefined
     return {
       active: actor.status === 'active',
-      isOrgAdmin: actor.isOrgAdmin,
+      // Not on a personal collection, which is its member's alone (ADR-0034).
+      isOrgAdmin: sources.some((each) => each.source === 'organization_admin'),
       spaceRole: strongest([...sources.map((each) => each.role), borrowed])
     }
   }
 
-  /** Every source of the member's access to the space, strongest first. */
+  /**
+   * Every source of the member's access to the space, strongest first. A restricted or personal wiki
+   * collection has no reader floor, and a personal one is not an organization admin's (ADR-0034).
+   */
   async sources(member: MemberRow, spaceId: string, product: Product = 'jiraia'): Promise<AccessSource[]> {
-    const [direct, viaGroups] = await Promise.all([
+    const [direct, viaGroups, closed] = await Promise.all([
       this._direct(member.id, spaceId, product),
-      this._viaGroups(member.id, spaceId, product)
+      this._viaGroups(member.id, spaceId, product),
+      product === 'draw' ? this.closedAs(spaceId) : undefined
     ])
     const sources: AccessSource[] = [
-      ...(member.isOrgAdmin ? [{ source: 'organization_admin' as const, role: 'admin' as const }] : []),
+      ...(member.isOrgAdmin && closed !== 'personal'
+        ? [{ source: 'organization_admin' as const, role: 'admin' as const }]
+        : []),
       ...(direct ? [{ source: 'direct' as const, role: direct }] : []),
       ...viaGroups,
-      ...(member.status === 'active' ? [{ source: 'organization' as const, role: 'reader' as const }] : [])
+      ...(member.status === 'active' && !closed ? [{ source: 'organization' as const, role: 'reader' as const }] : [])
     ]
     return sources
+  }
+
+  /** How a wiki collection is closed — `restricted` or `personal` — or `undefined` for every other space. */
+  async closedAs(spaceId: string): Promise<'restricted' | 'personal' | undefined> {
+    const [row] = await this.deps.db
+      .select({ access: wikiCollections.access })
+      .from(wikiCollections)
+      .where(eq(wikiCollections.spaceId, spaceId))
+    return row?.access === 'restricted' || row?.access === 'personal' ? row.access : undefined
   }
 
   private async _direct(memberId: string, spaceId: string, product: Product): Promise<Role | undefined> {

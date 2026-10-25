@@ -571,6 +571,8 @@ export const contents = work.table(
     /** `folder`, `page` or `whiteboard`. */
     kind: text('kind').notNull(),
     title: text('title').notNull(),
+    /** An emoji shown before the title; null for the kind's own icon (ADR-0034). */
+    icon: text('icon'),
     position: doublePrecision('position').notNull(),
     document: text('document').notNull().default(''),
     contentJson: jsonb('content_json').notNull().default(sql`'{}'::jsonb`),

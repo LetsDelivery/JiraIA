@@ -121,6 +121,15 @@ describe('pages', () => {
     expect(JSON.stringify((await createPage('Missão', geral)).contentJson)).not.toContain('Combinados')
   })
 
+  it('a customer collection also takes a blank page, and the tree carries each review date', async () => {
+    const path = `/wiki/collections/${clientes.id}/pages`
+    const blank = (await ok(admin({ method: 'POST', path, body: { title: 'Notas', blank: true } }), 201)) as Content
+    expect(JSON.stringify(blank.contentJson)).not.toContain('Combinados')
+    await official(blank.id)
+    const tree = (await ok(admin({ method: 'GET', path }))) as { items: { reviewDue: string | null }[] }
+    expect(tree.items[0]?.reviewDue).toBe('2027-01-22T12:00:00.000Z')
+  })
+
   it('owners make a page official, which starts its review period; a reader cannot', async () => {
     await invite('rui@uselets.com')
     const loja = await createPage('Loja Exemplo')
@@ -220,6 +229,8 @@ describe('publishing a Draw page', () => {
     expect(copy).toMatchObject({ title: 'Política de reembolso' })
     expect(JSON.stringify(copy.contentJson)).toContain('Até 7 dias.')
     expect(await page(copy.id)).toMatchObject({ state: 'draft', owner: { name: 'Admin' } })
+    await ok(admin({ method: 'PUT', path: `/draw/contents/${source.id}/icon`, body: { icon: '💸' } }))
+    expect(((await ok(publish(source.id), 201)) as { icon: string | null }).icon).toBe('💸')
     expect((await admin({ method: 'GET', path: `/draw/contents/${source.id}` })).status).toBe(200)
   })
 

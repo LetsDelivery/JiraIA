@@ -30,6 +30,7 @@ import { WorkflowRepository } from './cards/workflow.repository.js'
 import { WorkflowService } from './cards/workflow.service.js'
 import type { Config } from './config.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
+import { buildWiki } from './container-wiki.js'
 import { AnthropicDraftWriter } from './draw/anthropic-writer.js'
 import { ApiGatewayBroadcaster, type Broadcaster } from './draw/broadcaster.js'
 import { ContentRepository } from './draw/content.repository.js'
@@ -121,11 +122,7 @@ import { viewRoutes } from './views/routes.js'
 import { ViewRepository } from './views/view.repository.js'
 import { ViewService } from './views/view.service.js'
 import { webhookRoutes } from './webhooks/routes.js'
-import { CollectionRepository } from './wiki/collection.repository.js'
-import { CollectionService } from './wiki/collection.service.js'
-import { WikiPageRepository } from './wiki/page.repository.js'
-import { WikiPageService } from './wiki/page.service.js'
-import { collectionRoutes, publishRoutes, wikiPageRoutes } from './wiki/routes.js'
+import { collectionPageRoutes, collectionRoutes, libraryRoutes, wikiPageRoutes } from './wiki/routes.js'
 
 /**
  * Wires the service together — the only place in `work` that constructs anything.
@@ -186,9 +183,15 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     sprints: sprintRows
   })
   const onCards = { db, clock, ids, audit, cardGate, cards }
-  const search = new SearchService({ clock, access, cards, search: new SearchRepository(db) })
   const accessParts = buildAccess({ db, clock, ids, audit, access, members })
   const draw = buildDraw({ db, clock, ids, audit, access, members, config, overrides, files })
+  const search = new SearchService({
+    clock,
+    access,
+    cards,
+    search: new SearchRepository(db),
+    wikiReadable: async (actor) => (await draw.wikiCollections.readable(actor)).map((each) => each.space.id)
+  })
   const cardService = new CardService({ ...onCards, gate, rules, workflows, watchers })
   const links = new LinkService({ ...onCards, links: new LinkRepository(db) })
   const viewRows = new ViewRepository(db)
@@ -311,9 +314,10 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...documentRoutes(services.documents, services.realtime),
     ...contentTalkRoutes(services.contentComments, services.realtime),
     ...contentFileRoutes(services.contentFiles),
-    ...collectionRoutes(services.wikiCollections, services.wikiPages),
+    ...collectionRoutes(services.wikiCollections),
+    ...collectionPageRoutes(services.wikiPages, services.wikiContent),
+    ...libraryRoutes(services.wikiLibrary),
     ...wikiPageRoutes(services.wikiPages),
-    ...publishRoutes(services.wikiCollections),
     ...formRoutes(intake.forms),
     ...automationRoutes(intake.automations),
     ...integrationRoutes(intake.slack),
@@ -451,33 +455,12 @@ const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, 
   })
   const comments = new ContentCommentRepository(db)
   const contentService = new ContentService({ db, clock, ids, audit, drawGate, contents, members })
-  const wikiPageRows = new WikiPageRepository(db)
-  const wikiCollections = new CollectionService({
-    db,
-    clock,
-    ids,
-    audit,
-    drawGate,
-    spaces,
-    collections: new CollectionRepository(db),
-    contents: contentService,
-    pages: wikiPageRows
-  })
+  const wiki = buildWiki({ db, clock, ids, audit, drawGate, spaces, contents, contentService, members })
   return {
     drawSpaces: new DrawSpaceService({ db, clock, ids, audit, drawGate, spaces }),
     drafts: new DraftService({ drawGate, writer: overrides.writer ?? _writer(config) }),
     contents: contentService,
-    wikiCollections,
-    wikiPages: new WikiPageService({
-      db,
-      clock,
-      audit,
-      drawGate,
-      collections: wikiCollections,
-      contents,
-      pages: wikiPageRows,
-      members
-    }),
+    ...wiki.services,
     documents,
     contentFiles: new ContentFileService({
       db,
@@ -485,7 +468,7 @@ const buildDraw = ({ db, clock, ids, audit, access, members, config, overrides, 
       ids,
       drawGate,
       files,
-      sourceOf: async (contentId) => (await wikiPageRows.find(contentId))?.sourceId ?? undefined
+      sourceOf: async (contentId) => (await wiki.pages.find(contentId))?.sourceId ?? undefined
     }),
     contentComments: new ContentCommentService({ db, clock, ids, audit, drawGate, comments, members }),
     realtime: new RealtimeService({

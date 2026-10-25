@@ -14,14 +14,20 @@ export type PageState = z.infer<typeof pageStateSchema>
 export const DUE_SOON_DAYS = 14
 const DAY = 24 * 60 * 60 * 1000
 
-/** A page or a folder of a collection; its first content comes from the collection's outline. */
-export const createWikiPageSchema = createContentSchema.omit({ draft: true })
+/**
+ * A page or a folder of a collection; a page starts from the collection's outline unless asked for a
+ * blank one.
+ */
+export const createWikiPageSchema = createContentSchema
+  .omit({ draft: true })
+  .extend({ blank: z.boolean().default(false) })
 export type CreateWikiPage = z.infer<typeof createWikiPageSchema>
 
 export const changeOwnerSchema = z.object({ ownerId: z.uuid() })
 /** A Draw page to copy into a collection as a draft (W8). */
 export const publishSchema = z.object({ contentId: z.uuid() })
 export const officialSchema = z.object({ official: z.boolean() })
+export const favoriteSchema = z.object({ favorite: z.boolean() })
 
 const personSchema = z.object({ id: z.uuid(), name: z.string() })
 
@@ -35,6 +41,10 @@ export const wikiPageViewSchema = z.object({
   reviewDue: z.iso.datetime().nullable(),
   /** Official and past its review date: it still holds, and says it may be out of date. */
   overdue: z.boolean(),
+  /** Whether the caller starred it, to find it under "Favoritas". */
+  favorite: z.boolean(),
+  /** In a personal collection: never official; published to a collection instead (ADR-0034). */
+  personal: z.boolean(),
   /** An owner of the collection: makes it official or a draft again, and names its owner. */
   canManage: z.boolean(),
   /** Its owner or an owner of the collection: confirms it still holds. */
@@ -42,9 +52,16 @@ export const wikiPageViewSchema = z.object({
 })
 export type WikiPageView = z.infer<typeof wikiPageViewSchema>
 
-/** One line of a collection's tree, with the page's state for its mark (ADR-0033). */
+/** One line of a collection's tree, with the page's state for its mark and its owner (ADR-0033, ADR-0034). */
 export const wikiTreeSchema = z.object({
-  items: z.array(contentNodeSchema.extend({ state: pageStateSchema, overdue: z.boolean() }))
+  items: z.array(
+    contentNodeSchema.extend({
+      state: pageStateSchema,
+      reviewDue: z.iso.datetime().nullable(),
+      overdue: z.boolean(),
+      owner: personSchema
+    })
+  )
 })
 
 /** A page whose review date is near or past, for its owner. */
@@ -58,21 +75,20 @@ export const reviewItemSchema = z.object({
 })
 export const reviewListSchema = z.object({ items: z.array(reviewItemSchema) })
 
-/** The wiki pages changed last, across collections, for the wiki's home. */
-export const recentWikiPagesSchema = z.object({
-  items: z.array(
-    z.object({
-      contentId: z.uuid(),
-      title: z.string(),
-      collectionId: z.uuid(),
-      collectionName: z.string(),
-      collectionIcon: z.string(),
-      state: pageStateSchema,
-      overdue: z.boolean(),
-      updatedAt: z.iso.datetime()
-    })
-  )
+/** A page as the wiki's lists show it — home, recent, favorites, shared — with its mark (ADR-0034). */
+export const pageLineSchema = z.object({
+  contentId: z.uuid(),
+  title: z.string(),
+  icon: z.string().nullable(),
+  collectionId: z.uuid(),
+  collectionName: z.string(),
+  collectionIcon: z.string(),
+  state: pageStateSchema,
+  reviewDue: z.iso.datetime().nullable(),
+  overdue: z.boolean(),
+  updatedAt: z.iso.datetime()
 })
+export const pageLinesSchema = z.object({ items: z.array(pageLineSchema) })
 export const recentQuerySchema = z.object({ limit: z.coerce.number().int().min(1).max(50).default(20) })
 
 /** What a page without a row is: a draft owned by whoever created it. */
@@ -94,7 +110,15 @@ export const dueAfter = (from: Date, days: number): Date => new Date(from.getTim
 
 export const toWikiPageView = (
   row: WikiPageRow,
-  context: { collectionId: string; ownerName: string; now: Date; canManage: boolean; canReview: boolean }
+  context: {
+    collectionId: string
+    ownerName: string
+    favorite: boolean
+    personal: boolean
+    now: Date
+    canManage: boolean
+    canReview: boolean
+  }
 ): WikiPageView => ({
   contentId: row.contentId,
   collectionId: context.collectionId,
@@ -104,6 +128,8 @@ export const toWikiPageView = (
   reviewedAt: row.reviewedAt ? toIso(row.reviewedAt) : null,
   reviewDue: row.reviewDue ? toIso(row.reviewDue) : null,
   overdue: isOverdue(row, context.now),
+  favorite: context.favorite,
+  personal: context.personal,
   canManage: context.canManage,
   canReview: context.canReview
 })

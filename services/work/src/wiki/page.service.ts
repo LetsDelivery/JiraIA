@@ -17,7 +17,6 @@ import type { MemberRepository } from '../members/member.repository.js'
 import type { CollectionAccess, CollectionService } from './collection.service.js'
 import type { WikiPageRepository } from './page.repository.js'
 import {
-  DUE_SOON_DAYS,
   draftOf,
   dueAfter,
   isOverdue,
@@ -53,19 +52,37 @@ export class WikiPageService {
     return await this._view(await this._open(caller, contentId, 'read'))
   }
 
-  /** The collection's tree, each line with its page's state. */
+  /** A star is the member's own (ADR-0034): not audited, and gone from view once they cannot read the page. */
+  async favorite(caller: Caller, contentId: string, on: boolean): Promise<WikiPageView> {
+    const access = await this._open(caller, contentId, 'read')
+    const memberId = access.gate.actor.id
+    await (on
+      ? this.deps.pages.favorite(memberId, contentId, this.deps.clock.now())
+      : this.deps.pages.unfavorite(memberId, contentId))
+    return await this._view(access)
+  }
+
+  /** The collection's tree, each line with its page's state, owner and icon (ADR-0034). */
   async tree(caller: Caller, collectionId: string) {
-    await this.deps.collections.open(caller, collectionId, 'read')
-    const nodes = await this.deps.contents.tree(collectionId)
+    const { gate } = await this.deps.collections.open(caller, collectionId, 'read')
+    const [nodes, people] = await Promise.all([
+      this.deps.contents.tree(collectionId),
+      this.deps.members.list(gate.actor.organizationId)
+    ])
     const rows = await this.deps.pages.many(nodes.map((node) => node.id))
+    const names = new Map(people.map((person) => [person.id, person.name]))
     const now = this.deps.clock.now()
     return {
       items: nodes.map((node) => {
-        const row = rows.get(node.id)
+        const row = rows.get(node.id) ?? draftOf(node.id, node.createdBy, node.createdAt)
+        const owner = { id: row.ownerId, name: names.get(row.ownerId) ?? '' }
+        const reviewDue = row.reviewDue ? toIso(row.reviewDue) : null
         return {
           ...toContentNode(node),
-          state: pageStateSchema.parse(row?.state ?? 'draft'),
-          overdue: isOverdue(row, now)
+          state: pageStateSchema.parse(row.state),
+          reviewDue,
+          overdue: isOverdue(row, now),
+          owner
         }
       })
     }
@@ -74,6 +91,14 @@ export class WikiPageService {
   /** Owners of the collection make a page official, which starts its review period, or a draft again. */
   async setOfficial(caller: Caller, contentId: string, official: boolean): Promise<WikiPageView> {
     const access = await this._open(caller, contentId, 'manage')
+    if (official && access.collection.access === 'personal') {
+      throw new ConflictException(
+        `Page "${access.title}" is personal; publish it to a collection to make it official`,
+        {
+          contentId
+        }
+      )
+    }
     const now = this.deps.clock.now()
     const next: WikiPageRow = official
       ? { ...access.row, state: 'official', officialAt: now, reviewedAt: now, reviewDue: this._due(access, now) }
@@ -108,33 +133,6 @@ export class WikiPageService {
     return await this.read(caller, contentId)
   }
 
-  /** The caller's official pages due within `DUE_SOON_DAYS` or past due, soonest first. */
-  async reviews(caller: Caller) {
-    const actor = await this.deps.drawGate.actorOf(caller)
-    const now = this.deps.clock.now()
-    const rows = await this.deps.pages.dueFor(actor.id, dueAfter(now, DUE_SOON_DAYS))
-    return {
-      items: rows.flatMap(({ reviewDue, ...row }) =>
-        reviewDue ? [{ ...row, reviewDue: toIso(reviewDue), overdue: reviewDue.getTime() < now.getTime() }] : []
-      )
-    }
-  }
-
-  /** The wiki pages changed last across the organization's collections. */
-  async recent(caller: Caller, limit: number) {
-    const actor = await this.deps.drawGate.actorOf(caller)
-    const now = this.deps.clock.now()
-    const rows = await this.deps.pages.recent(actor.organizationId, limit)
-    return {
-      items: rows.map(({ state, reviewDue, updatedAt, ...row }) => ({
-        ...row,
-        state: pageStateSchema.parse(state ?? 'draft'),
-        overdue: isOverdue(state ? { state, reviewDue } : undefined, now),
-        updatedAt: toIso(updatedAt)
-      }))
-    }
-  }
-
   private async _open(caller: Caller, contentId: string, action: DrawAction): Promise<PageAccess> {
     const { content } = await this.deps.drawGate.openDocument(caller, contentId, 'read')
     const access = await this.deps.collections.open(caller, content.spaceId, action).catch((error: unknown) => {
@@ -145,10 +143,15 @@ export class WikiPageService {
   }
 
   private async _view(access: PageAccess): Promise<WikiPageView> {
-    const owner = await this.deps.members.findById(access.gate.actor.organizationId, access.row.ownerId)
+    const [owner, favorite] = await Promise.all([
+      this.deps.members.findById(access.gate.actor.organizationId, access.row.ownerId),
+      this.deps.pages.isFavorite(access.gate.actor.id, access.contentId)
+    ])
     return toWikiPageView(access.row, {
       collectionId: access.gate.space.id,
       ownerName: owner?.name ?? '',
+      favorite,
+      personal: access.collection.access === 'personal',
       now: this.deps.clock.now(),
       canManage: access.gate.canManage,
       canReview: _reviews(access)

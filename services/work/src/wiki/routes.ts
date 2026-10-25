@@ -9,21 +9,24 @@ import {
   updateCollectionSchema
 } from './collection.schemas.js'
 import type { CollectionService } from './collection.service.js'
+import type { LibraryService } from './library.service.js'
 import {
   changeOwnerSchema,
   createWikiPageSchema,
+  favoriteSchema,
   officialSchema,
+  pageLinesSchema,
   publishSchema,
   recentQuerySchema,
-  recentWikiPagesSchema,
   reviewListSchema,
   wikiPageViewSchema,
   wikiTreeSchema
 } from './page.schemas.js'
 import type { WikiPageService } from './page.service.js'
+import type { WikiContentService } from './wiki-content.service.js'
 
-/** LET’S Wiki's collections (ADR-0033): list, create, change, delete, and add a page to one. */
-export const collectionRoutes = (collections: CollectionService, pages: WikiPageService): Route[] => [
+/** LET’S Wiki's collections (ADR-0033, ADR-0034): list, create, change, delete, and the caller's own. */
+export const collectionRoutes = (collections: CollectionService): Route[] => [
   defineRoute({
     method: 'GET',
     path: '/wiki/collections',
@@ -39,6 +42,14 @@ export const collectionRoutes = (collections: CollectionService, pages: WikiPage
     schemas: { body: createCollectionSchema },
     responds: collectionViewSchema,
     handler: async ({ caller, body }) => ({ statusCode: 201, body: await collections.create(caller, body) })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/wiki/me/collection',
+    requires: 'authenticated',
+    schemas: {},
+    responds: collectionViewSchema,
+    handler: async ({ caller }) => ({ statusCode: 200, body: await collections.personal(caller) })
   }),
   defineRoute({
     method: 'GET',
@@ -69,7 +80,11 @@ export const collectionRoutes = (collections: CollectionService, pages: WikiPage
       statusCode: 200,
       body: await collections.remove(caller, path.collectionId)
     })
-  }),
+  })
+]
+
+/** A collection's pages: its tree, a new one, or a copy published from Draw or a personal page. */
+export const collectionPageRoutes = (pages: WikiPageService, content: WikiContentService): Route[] => [
   defineRoute({
     method: 'GET',
     path: '/wiki/collections/{collectionId}/pages',
@@ -86,13 +101,9 @@ export const collectionRoutes = (collections: CollectionService, pages: WikiPage
     responds: contentViewSchema,
     handler: async ({ caller, path, body }) => ({
       statusCode: 201,
-      body: await collections.createPage(caller, path.collectionId, body)
+      body: await content.createPage(caller, path.collectionId, body)
     })
-  })
-]
-
-/** "Publicar na Wiki" (W8): a Draw page copied into a collection as a draft. */
-export const publishRoutes = (collections: CollectionService): Route[] => [
+  }),
   defineRoute({
     method: 'POST',
     path: '/wiki/collections/{collectionId}/published',
@@ -101,20 +112,44 @@ export const publishRoutes = (collections: CollectionService): Route[] => [
     responds: contentViewSchema,
     handler: async ({ caller, path, body }) => ({
       statusCode: 201,
-      body: await collections.publish(caller, path.collectionId, body.contentId)
+      body: await content.publish(caller, path.collectionId, body.contentId)
     })
   })
 ]
 
-/** A wiki page's owner, state and review (ADR-0033); its text goes through the content routes. */
-export const wikiPageRoutes = (pages: WikiPageService): Route[] => [
+/** The wiki's lists across collections, each only of what the caller reads (ADR-0034). */
+export const libraryRoutes = (library: LibraryService): Route[] => [
   defineRoute({
     method: 'GET',
     path: '/wiki/pages/recent',
     requires: 'authenticated',
     schemas: { query: recentQuerySchema },
-    responds: recentWikiPagesSchema,
-    handler: async ({ caller, query }) => ({ statusCode: 200, body: await pages.recent(caller, query.limit) })
+    responds: pageLinesSchema,
+    handler: async ({ caller, query }) => ({ statusCode: 200, body: await library.recent(caller, query.limit) })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/wiki/pages/opened',
+    requires: 'authenticated',
+    schemas: { query: recentQuerySchema },
+    responds: pageLinesSchema,
+    handler: async ({ caller, query }) => ({ statusCode: 200, body: await library.opened(caller, query.limit) })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/wiki/favorites',
+    requires: 'authenticated',
+    schemas: {},
+    responds: pageLinesSchema,
+    handler: async ({ caller }) => ({ statusCode: 200, body: await library.favorites(caller) })
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/wiki/shared',
+    requires: 'authenticated',
+    schemas: { query: recentQuerySchema },
+    responds: pageLinesSchema,
+    handler: async ({ caller, query }) => ({ statusCode: 200, body: await library.shared(caller, query.limit) })
   }),
   defineRoute({
     method: 'GET',
@@ -122,8 +157,12 @@ export const wikiPageRoutes = (pages: WikiPageService): Route[] => [
     requires: 'authenticated',
     schemas: {},
     responds: reviewListSchema,
-    handler: async ({ caller }) => ({ statusCode: 200, body: await pages.reviews(caller) })
-  }),
+    handler: async ({ caller }) => ({ statusCode: 200, body: await library.reviews(caller) })
+  })
+]
+
+/** A wiki page's owner, state, review and star (ADR-0033, ADR-0034); its text goes through the content routes. */
+export const wikiPageRoutes = (pages: WikiPageService): Route[] => [
   defineRoute({
     method: 'GET',
     path: '/wiki/pages/{contentId}',
@@ -160,6 +199,17 @@ export const wikiPageRoutes = (pages: WikiPageService): Route[] => [
     handler: async ({ caller, path, body }) => ({
       statusCode: 200,
       body: await pages.changeOwner(caller, path.contentId, body.ownerId)
+    })
+  }),
+  defineRoute({
+    method: 'PUT',
+    path: '/wiki/pages/{contentId}/favorite',
+    requires: 'authenticated',
+    schemas: { path: contentPathSchema, body: favoriteSchema },
+    responds: wikiPageViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await pages.favorite(caller, path.contentId, body.favorite)
     })
   })
 ]

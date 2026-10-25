@@ -6,6 +6,7 @@ import {
   applyUpdateSchema,
   contentCommentListSchema,
   contentCommentPathSchema,
+  contentIconSchema,
   contentPathSchema,
   contentTreeSchema,
   contentViewSchema,
@@ -97,6 +98,17 @@ export const contentRoutes = (contents: ContentService): Route[] => [
     handler: async ({ caller, path, body }) => ({
       statusCode: 200,
       body: await contents.rename(caller, path.contentId, body.title)
+    })
+  }),
+  defineRoute({
+    method: 'PUT',
+    path: '/draw/contents/{contentId}/icon',
+    requires: 'authenticated',
+    schemas: { path: contentPathSchema, body: contentIconSchema },
+    responds: contentViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await contents.setIcon(caller, path.contentId, body.icon)
     })
   }),
   defineRoute({

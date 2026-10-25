@@ -7,7 +7,10 @@ import { contentVisits } from '../schema-intake.js'
 import type { ContentRow, NewContentRow } from './content.schemas.js'
 
 export type ContentFields = Partial<
-  Pick<ContentRow, 'title' | 'parentId' | 'position' | 'contentJson' | 'contentText' | 'updatedBy' | 'deletedAt'>
+  Pick<
+    ContentRow,
+    'title' | 'icon' | 'parentId' | 'position' | 'contentJson' | 'contentText' | 'updatedBy' | 'deletedAt'
+  >
 >
 
 /** A content's columns but its Yjs `document`, read apart (ADR-0009). */

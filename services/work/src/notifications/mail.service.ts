@@ -1,6 +1,8 @@
+import { can } from '@jiraia/authorization'
 import type { Clock } from '@jiraia/core'
 import type { JiraiaLogger } from '@jiraia/logger'
 
+import type { AccessResolver } from '../access.js'
 import type { VersionRepository } from '../draw/version.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
@@ -25,6 +27,8 @@ type Deps = {
   weekly: WeeklyRepository
   /** Whose wiki pages wait for review, for Monday's message (ADR-0033). */
   wikiPages: WikiPageRepository
+  /** Whether the member still reads a page's collection: a closed one is never named (ADR-0034). */
+  access: AccessResolver
   mailer: Mailer
   webUrl: string
   /** How long a card's changes gather before their e-mail goes; the local harness passes 0. */
@@ -153,7 +157,7 @@ export class MailService {
     const [mentions, spaceIds, due] = await Promise.all([
       this.deps.weekly.mentionsWaiting(member.id, since),
       this.deps.weekly.spacesWorked(member.id, since),
-      this.deps.wikiPages.dueFor(member.id, dueAfter(now, DUE_SOON_DAYS))
+      this._due(member, now)
     ])
     const open = await this.deps.weekly.openCards(spaceIds)
     if (mentions.length === 0 && open.length === 0 && due.length === 0) {
@@ -169,6 +173,15 @@ export class MailService {
       reviews: due.map((page) => reviewOf(page, this.deps.webUrl, now)),
       webUrl: this.deps.webUrl
     })
+  }
+
+  /** The member's wiki pages to review, in collections they still read. */
+  private async _due(member: MemberRow, now: Date) {
+    const rows = await this.deps.wikiPages.dueFor(member.id, dueAfter(now, DUE_SOON_DAYS))
+    const reads = await Promise.all(
+      rows.map(async (row) => can(await this.deps.access.forSpace(member, row.collectionId, 'draw'), 'space:read'))
+    )
+    return rows.filter((_, index) => reads[index])
   }
 
   /** The fresh notices whose member wants them by e-mail; the rest are settled now, never looked at again. */
