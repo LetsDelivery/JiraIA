@@ -44,7 +44,7 @@ import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { holdPlace, markCurrent } from '@/ui/pending'
 import { bindSelects, closeSelectsOnOutsideClick } from '@/ui/select'
 import { openCreateSpace } from '@/ui/space-dialogs'
-import { splash } from '@/ui/splash'
+import { PRODUCT_NAME, productOf, splash } from '@/ui/splash'
 import { bindStars } from '@/ui/star'
 import {
   accessQueueView,
@@ -120,8 +120,6 @@ const ROUTES: readonly View[] = [
 ]
 
 const app = document.getElementById('app') as HTMLElement
-
-const PRODUCT_NAME = { jiraia: 'JiraIA', draw: 'LET’S Draw AI', wiki: 'LET’S Wiki' } as const
 
 /** Each render takes a ticket; a slower, older render that finishes late is dropped. */
 let ticket = 0
@@ -237,6 +235,7 @@ const render = (entering = false) => {
   }
   if (!app.querySelector('.shell')) {
     app.innerHTML = splash(path).value
+    document.title = PRODUCT_NAME[productOf(path)]
   }
   renderApp(path, entering).catch(() => {
     // `/work/me` refused: an expired token was already signed out by the API client; anything else
