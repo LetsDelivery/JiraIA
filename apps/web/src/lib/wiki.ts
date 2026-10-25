@@ -8,6 +8,7 @@ import { type ContentPaths, contentPath, DRAW_PATHS } from './draw'
  */
 export const WIKI_HOME = '/wiki'
 export const WIKI_REVIEWS = `${WIKI_HOME}/revisoes`
+export const WIKI_COLLECTIONS = `${WIKI_HOME}/colecoes`
 
 export const collectionPath = (collectionId: string): string => `${WIKI_HOME}/${collectionId}`
 
@@ -58,4 +59,19 @@ export const REVIEW_PERIODS = [
   { value: '90', label: '90 dias' },
   { value: '180', label: '6 meses' },
   { value: '365', label: '1 ano' }
+] as const
+
+/** Who reads a collection (ADR-0034): all of LET’S, only who holds a role, or its owner alone. */
+export type Access = 'organization' | 'restricted' | 'personal'
+
+export const ACCESS_LABEL: Record<Access, string> = {
+  organization: 'Toda a LET’S',
+  restricted: 'Restrita',
+  personal: 'Pessoal'
+}
+
+/** What an owner may choose for a shared collection; a personal one stays personal. */
+export const ACCESS_OPTIONS = [
+  { value: 'organization', label: 'Toda a LET’S', hint: 'Todos leem; donos e editores escrevem' },
+  { value: 'restricted', label: 'Restrita', hint: 'Só quem recebeu papel — pessoa ou grupo — lê' }
 ] as const

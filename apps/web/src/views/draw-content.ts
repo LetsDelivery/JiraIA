@@ -80,13 +80,21 @@ const breadcrumbs = (data: Loaded): Html => html`
   </nav>
 `
 
-const titleRow = (data: Loaded): Html => html`
+/**
+ * What LET’S Wiki adds around Draw's document screen (wiki-navegacao.md, "Página"): its own top bar
+ * with the whole path and the page's actions, the page's icon and state over the title, its subpages
+ * after the text, and a comments panel that opens and closes, split in two tabs.
+ */
+export type ScreenParts = { top?: Html; overTitle?: Html; after?: Html; panelOpen?: boolean; tabbedComments?: boolean }
+
+const titleRow = (data: Loaded, parts: ScreenParts): Html => html`
   <header class="page-title-row">
+    ${parts.overTitle ?? ''}
     <label class="sr-only" for="page-title">Título</label>
     <input id="page-title" class="page-title" data-page-title value="${data.content.title}" maxlength="255" />
     <div class="page-meta">
       ${data.area === 'draw' && data.content.kind === 'page' ? html`<button type="button" class="button button-ghost" data-publish-wiki title="Copiar para uma coleção da LET’S Wiki">${icon('books', 16)}Publicar na Wiki</button>` : ''}
-      <span class="page-presence" data-presence></span>
+      ${parts.top ? '' : html`<span class="page-presence" data-presence></span>`}
       <span class="page-status muted" data-page-status role="status"></span>
     </div>
   </header>
@@ -104,7 +112,7 @@ const panelTabs = (data: Loaded, current: string, comments: number): Html => {
 
 const currentSurface = () => editors?.sessions.currentSession()?.surface
 
-const panel = async (data: Loaded): Promise<Html> => {
+const panel = async (data: Loaded, tabs: boolean): Promise<Html> => {
   const id = data.content.id
   if (panelOf() === 'versoes') {
     const versions = await drawRead.versions(id)
@@ -118,26 +126,35 @@ const panel = async (data: Loaded): Promise<Html> => {
   }
   const comments = await drawRead.comments(id)
   const editor = (currentSurface() as { editor?: Editor } | undefined)?.editor
-  return commentsPanel(comments.items, { contentId: id, members: data.members, editor })
+  return commentsPanel(comments.items, { contentId: id, members: data.members, editor, tabs })
 }
 
+const surface = (board: boolean): Html =>
+  board
+    ? html`<div class="wb-stage"><div data-editor-host class="board-host"></div>
+        <div class="wb-toolbar-host" data-board-toolbar></div><div class="wb-panel-host" data-board-style></div></div>`
+    : html`<div data-editor-host></div>`
+
+const toolbarHost = html`<div class="page-toolbar" data-format-host></div>`
+
+/** Draw's order: path, title, formatting bar. The wiki's: its top bar, the formatting bar under it, then the title. */
+const pageHead = (data: Loaded, parts: ScreenParts, board: boolean): Html =>
+  parts.top
+    ? html`${parts.top}${board ? '' : toolbarHost}${titleRow(data, parts)}`
+    : html`${breadcrumbs(data)}${titleRow(data, parts)}${board ? '' : toolbarHost}`
+
 /** A page or a whiteboard: its path, its title, the surface in the middle, comments or versions beside. */
-export const documentScreen = async (data: Loaded): Promise<Html> => {
+export const documentScreen = async (data: Loaded, parts: ScreenParts = {}): Promise<Html> => {
   const open = (await drawRead.comments(data.content.id)).items.filter((each) => !each.parentId && !each.resolvedAt)
   const board = data.content.kind === 'whiteboard'
   return html`
-    <div class="page-layout ${board ? 'is-board' : ''}">
+    <div class="page-layout ${board ? 'is-board' : ''} ${parts.panelOpen === false ? 'is-panel-closed' : ''}">
       <article class="page-main">
-        ${breadcrumbs(data)}
-        ${titleRow(data)}
-        ${
-          board
-            ? html`<div class="wb-stage"><div data-editor-host class="board-host"></div>
-              <div class="wb-toolbar-host" data-board-toolbar></div><div class="wb-panel-host" data-board-style></div></div>`
-            : html`<div class="page-toolbar" data-format-host></div><div data-editor-host></div>`
-        }
+        ${pageHead(data, parts, board)}
+        ${surface(board)}
+        ${parts.after ?? ''}
       </article>
-      <aside class="page-panel">${panelTabs(data, panelOf(), open.length)}${await panel(data)}</aside>
+      <aside class="page-panel" data-page-panel>${panelTabs(data, panelOf(), open.length)}${await panel(data, Boolean(parts.tabbedComments))}</aside>
     </div>
   `
 }

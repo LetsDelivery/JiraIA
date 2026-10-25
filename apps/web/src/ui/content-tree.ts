@@ -46,16 +46,19 @@ const actions = (item: TreeItem<ContentNode>): Html => html`
   </span>
 `
 
+/** The item's emoji, when it has one; otherwise its kind's icon — an open folder when open. */
+const kindGlyph = (item: TreeItem<ContentNode>, expanded: boolean): Html | string =>
+  item.icon ?? icon(item.kind === 'folder' && expanded ? 'folderOpen' : KIND_ICON[item.kind], 16)
+
 const row = (item: TreeItem<ContentNode>, context: TreeContext, open: ReadonlySet<string>): Html => {
   const expanded = item.children.length > 0 && open.has(item.id)
   const current = item.id === context.currentId
-  const glyph = item.kind === 'folder' && expanded ? 'folderOpen' : KIND_ICON[item.kind]
   return html`
     <li role="treeitem" data-content-id="${item.id}" ${item.children.length ? html`aria-expanded="${expanded}"` : ''}>
       <div class="page-tree-row ${current ? 'is-active' : ''}" draggable="${context.canWrite}">
         ${toggle(item, expanded)}
         <a class="page-tree-link" href="${pathsIn(context.area).content(context.spaceId, item.id)}" ${current ? html`aria-current="page"` : ''}>
-          <span class="tree-kind" aria-hidden="true">${icon(glyph, 16)}</span><span class="tree-title">${item.title}</span></a>
+          <span class="tree-kind" aria-hidden="true">${kindGlyph(item, expanded)}</span><span class="tree-title">${item.title}</span></a>
         ${context.canWrite ? actions(item) : ''}
       </div>
       ${expanded ? html`<ul role="group">${item.children.map((child) => row(child, context, open))}</ul>` : ''}

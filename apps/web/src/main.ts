@@ -13,6 +13,7 @@ import './styles/page-tools.css'
 import './styles/products.css'
 import './styles/draw.css'
 import './styles/wiki.css'
+import './styles/wiki-page.css'
 import './styles/access.css'
 import './styles/governance.css'
 import './styles/reports.css'
@@ -73,7 +74,10 @@ import { spaceView } from '@/views/space'
 import { spaceSettingsHomeView, spaceSettingsView } from '@/views/space-settings'
 import { spacesView } from '@/views/spaces'
 import type { View } from '@/views/view'
-import { wikiCollectionView, wikiHomeView, wikiPageView, wikiReviewsView } from '@/views/wiki'
+import { wikiHomeView, wikiReviewsView } from '@/views/wiki'
+import { wikiCollectionView } from '@/views/wiki-collection'
+import { wikiCollectionsView } from '@/views/wiki-collections'
+import { wikiPageView } from '@/views/wiki-page'
 import { wikiShell } from '@/views/wiki-shell'
 
 /**
@@ -110,6 +114,7 @@ const ROUTES: readonly View[] = [
   wikiHomeView,
   // Before a collection's address, which has the same shape.
   wikiReviewsView,
+  wikiCollectionsView,
   wikiCollectionView,
   wikiPageView
 ]

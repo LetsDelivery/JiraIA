@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { collectionPath, contentPathIn, dayOf, pageMark, pathsIn, wikiPagePath } from './wiki'
+import {
+  ACCESS_LABEL,
+  ACCESS_OPTIONS,
+  collectionPath,
+  contentPathIn,
+  dayOf,
+  pageMark,
+  pathsIn,
+  WIKI_COLLECTIONS,
+  wikiPagePath
+} from './wiki'
 
 const now = new Date('2026-10-24T12:00:00.000Z')
 
@@ -41,5 +51,13 @@ describe('a page’s mark', () => {
 
   it('dates the review in São Paulo, not UTC', () => {
     expect(dayOf('2026-11-01T02:00:00.000Z')).toBe('31/10/2026')
+  })
+})
+
+describe('a collection’s access', () => {
+  it('names the three ways to read a collection', () => {
+    expect(ACCESS_LABEL.restricted).toBe('Restrita')
+    expect(ACCESS_OPTIONS.map((option) => option.value)).toEqual(['organization', 'restricted'])
+    expect(WIKI_COLLECTIONS).toBe('/wiki/colecoes')
   })
 })

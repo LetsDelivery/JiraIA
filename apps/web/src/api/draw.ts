@@ -68,7 +68,13 @@ export const drawRead = {
 }
 
 /** A space's tree — and, when the space is a wiki collection, its marked tree and the wiki's home (ADR-0033). */
-const treesOf = (spaceId: string) => [`draw:space:${spaceId}:tree`, `wiki:collection:${spaceId}:tree`, 'wiki:recent']
+const treesOf = (spaceId: string) => [
+  `draw:space:${spaceId}:tree`,
+  `wiki:collection:${spaceId}:tree`,
+  'wiki:recent',
+  'wiki:favorites',
+  'wiki:shared'
+]
 
 export const drawWrite = {
   createSpace: async (body: SpaceInput) => {
