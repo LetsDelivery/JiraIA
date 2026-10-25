@@ -4,26 +4,52 @@ import { join } from 'node:path'
 import type { HttpClient, OutboundRequest, OutboundResponse } from '@jiraia/http'
 
 import type { SlackNotifier } from '../../services/work/src/integrations/slack-notifier.js'
+import type { Asked, JobName } from '../../services/work/src/lambda/jobs.js'
 import type { Email, Mailer } from '../../services/work/src/notifications/mailer.js'
+import type { Wake, WakeTransport } from '../../services/work/src/wake/waker.js'
 
 /**
- * Stand-ins for what runs behind the bus in AWS (ADR-0014).
+ * Stand-ins for what runs behind the bus and the jobs queue in AWS (ADR-0014, ADR-0035).
  *
- * There is no EventBridge here: after each write the harness drains the outbox in its own process,
- * so a rule's effect shows a moment after the change that set it off — in AWS, within a minute.
+ * The jobs' wakes stay in this process: one due now runs at once, one due later on a timer — the
+ * plan AWS follows with its queue and one-time schedules. With no bus here, the dispatch hands each
+ * event to the consumers itself, so a rule's effect shows a moment after the change that set it off.
  */
-export const drainAfterWrites = (drain: () => Promise<number>) => {
-  let running = Promise.resolve()
-  return (method: string): void => {
-    if (method === 'GET' || method === 'OPTIONS') {
+export class LocalWakes implements WakeTransport {
+  private run: ((asked: Asked[]) => Promise<void>) | undefined
+  private running = Promise.resolve()
+  private readonly timers = new Map<JobName, { at: number; timer: ReturnType<typeof setTimeout> }>()
+
+  /** What runs a pass: `runWakes` on the service these wakes were handed to. */
+  bind(run: (asked: Asked[]) => Promise<void>): void {
+    this.run = run
+  }
+
+  async now(wake: Wake): Promise<void> {
+    this._pass(wake)
+  }
+
+  /** One timer per job, the earliest: a later wake would only find the work done. */
+  async later(wake: Wake): Promise<void> {
+    const kept = this.timers.get(wake.job)
+    if (kept && kept.at <= wake.at.getTime()) {
       return
     }
-    // One drain at a time: two at once would deliver the same events twice before the receipts land.
-    running = running
-      .then(async () => {
-        await drain()
-      })
-      .catch((error: unknown) => console.error('  drain failed:', error))
+    if (kept) {
+      clearTimeout(kept.timer)
+    }
+    const timer = setTimeout(() => {
+      this.timers.delete(wake.job)
+      this._pass(wake)
+    }, wake.at.getTime() - Date.now())
+    this.timers.set(wake.job, { at: wake.at.getTime(), timer })
+  }
+
+  /** One pass at a time, as a FIFO group reads its messages: two would deliver an event twice. */
+  private _pass(wake: Wake): void {
+    this.running = this.running
+      .then(() => this.run?.([{ job: wake.job, retry: wake.retry }]))
+      .catch((error: unknown) => console.error(`  ${wake.job} failed:`, error))
   }
 }
 

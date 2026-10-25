@@ -5,6 +5,7 @@ Date: 2026-10-21
 ## Status
 
 Proposed. Adds a module; leaves ADR-0012 (access to JiraIA's own spaces) as it is.
+Amended by ADR-0035: the access clock is woken by its own deadlines, not on a schedule.
 
 ## Context
 

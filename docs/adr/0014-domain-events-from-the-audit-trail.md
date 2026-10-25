@@ -8,6 +8,7 @@ Accepted. Builds on ADR-0001 (EventBridge with one SQS queue per consumer) and A
 through the Data API). Amended by ADR-0025: the consumers run in the stack's general function and
 the dispatcher in its scheduler; the schedules go through a FIFO queue instead of a reserved
 concurrency of one.
+Amended by ADR-0035: a commit wakes the dispatcher, which no longer runs every minute.
 
 ## Context
 

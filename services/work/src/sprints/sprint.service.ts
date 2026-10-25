@@ -5,7 +5,7 @@ import type { Caller } from '@jiraia/http'
 import { type AuditTrail, type Changes, diff } from '../audit/audit.js'
 import type { SystemActors } from '../members/system-actor.js'
 import type { Gate, SpaceGate } from '../spaces/space-gate.js'
-import { addDays, daysBetween, saoPauloDay } from './days.js'
+import { addDays, daysBetween, morningOf, nextMorning, saoPauloDay } from './days.js'
 import {
   type CloseSprint,
   type CreateSprint,
@@ -131,6 +131,20 @@ export class SprintService {
       await this.deps.sprints.delete(tx, sprint.id)
       await this._audit(tx, gate, sprint.id, 'deleted', { name: { before: sprint.name, after: null } })
     })
+  }
+
+  /**
+   * The morning after the earliest active sprint ends, when `sweepLate` would mark it (ADR-0035); one
+   * whose morning has passed waits for the next, so the summary never goes at another hour.
+   */
+  async nextLate(): Promise<Date | null> {
+    const day = await this.deps.sprints.firstEnd()
+    if (!day) {
+      return null
+    }
+    const morning = morningOf(addDays(day, 1))
+    const now = this.deps.clock.now()
+    return morning.getTime() > now.getTime() ? morning : nextMorning(now)
   }
 
   /** Every morning: an active sprint past its end date is marked late, once, which tells its space's lead. */

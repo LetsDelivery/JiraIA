@@ -94,6 +94,15 @@ export class ReviewRepository {
   }
 
   /** Open reviews past their window, across organizations. */
+  /** When the earliest open review runs out, come or not (ADR-0035). */
+  async nextClose(): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ at: min(accessReviews.dueAt) })
+      .from(accessReviews)
+      .where(isNull(accessReviews.closedAt))
+    return row?.at ?? null
+  }
+
   async expired(now: Date): Promise<ReviewRow[]> {
     return await this.db
       .select()

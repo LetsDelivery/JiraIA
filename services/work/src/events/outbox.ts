@@ -30,6 +30,16 @@ export class OutboxRepository {
     }))
   }
 
+  /** Whether anything committed is still waiting for the bus: what wakes the dispatch (ADR-0035). */
+  async hasPending(): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: auditEvents.id })
+      .from(auditEvents)
+      .where(isNull(auditEvents.dispatchedAt))
+      .limit(1)
+    return rows.length > 0
+  }
+
   async markDispatched(ids: readonly string[], at: Date): Promise<void> {
     if (ids.length > 0) {
       await this.db

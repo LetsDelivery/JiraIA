@@ -63,6 +63,11 @@ export class WebhookSender implements Consumer {
     }
   }
 
+  /** When the retry sweep has something to try (ADR-0035). */
+  async nextDue(): Promise<Date | null> {
+    return await this.deps.webhooks.nextAttempt()
+  }
+
   /** The retry sweep: every pending delivery whose time has come. */
   async retryDue(limit = 100): Promise<number> {
     const due = await this.deps.webhooks.due(this.deps.clock.now(), limit)

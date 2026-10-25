@@ -16,3 +16,12 @@ export const addDays = (day: string, days: number): string =>
 
 /** Whole days from `from` to `to`: 0 for the same day, negative when `to` comes first. */
 export const daysBetween = (from: string, to: string): number => Math.round((_midnight(to) - _midnight(from)) / DAY_MS)
+
+/** 08:00 in São Paulo on `day`: when the morning job runs (ADR-0035). */
+export const morningOf = (day: string): Date => new Date(`${day}T11:00:00.000Z`)
+
+/** The first 08:00 in São Paulo after `at`. */
+export const nextMorning = (at: Date): Date => {
+  const today = morningOf(saoPauloDay(at))
+  return today.getTime() > at.getTime() ? today : morningOf(addDays(saoPauloDay(at), 1))
+}

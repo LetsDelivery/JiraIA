@@ -143,3 +143,20 @@ export const describeError = (error: unknown): string => {
   }
   return parts.join(' — caused by ')
 }
+
+/**
+ * The service's own exception an error is, or carries among its causes — where a driver such as
+ * Drizzle wraps what its client threw, a paused database's 503 included (ADR-0035).
+ *
+ * @example knownCause(new Error('Failed query', { cause: new NotFoundException('Card', 'x') }))   // the NotFoundException
+ */
+export const knownCause = (error: unknown): JiraiaException | undefined => {
+  let current: unknown = error
+  for (let depth = 0; depth < CAUSE_DEPTH && current instanceof Error; depth++) {
+    if (current instanceof JiraiaException) {
+      return current
+    }
+    current = current.cause
+  }
+  return undefined
+}

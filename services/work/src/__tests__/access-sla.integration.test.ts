@@ -174,10 +174,15 @@ describe('the clock', () => {
     const { privileged } = await aws()
     await held(privileged, new Date(FRIDAY.getTime() + 3 * DAY).toISOString())
     expect(await service.accessClock.sweep()).toEqual({ expired: 0, overdue: 0 })
+    // The clock is woken for the expiry, and the privileged review 90 days after the grant (ADR-0035).
+    expect(await service.accessClock.nextDue()).toEqual(new Date(FRIDAY.getTime() + 3 * DAY))
+    expect(await service.reviews.nextDue()).toEqual(new Date(FRIDAY.getTime() + 90 * DAY))
 
     clock.advance(3 * DAY + HOUR)
     expect((await service.accessClock.sweep()).expired).toBe(1)
     expect((await service.accessClock.sweep()).expired).toBe(0)
+    // Now the removal it opened is what the clock waits for: its deadline, a business day on.
+    expect((await service.accessClock.nextDue())?.getTime()).toBeGreaterThan(clock.now().getTime())
     expect((await requests()).filter((each) => each.origin === 'expiry')).toHaveLength(1)
   })
 
@@ -188,10 +193,14 @@ describe('the clock', () => {
       201
     )
     await ok(bruno({ method: 'POST', path: `${PATH}/${request.id}/decision`, body: { approve: true } }))
+    const due = await service.accessClock.nextDue()
+    expect(due?.getTime()).toBeGreaterThan(FRIDAY.getTime())
+    expect(due?.getTime()).toBeLessThan(FRIDAY.getTime() + 5 * DAY)
     clock.advance(5 * DAY)
 
     expect((await service.accessClock.sweep()).overdue).toBe(1)
     expect((await service.accessClock.sweep()).overdue).toBe(0)
+    expect(await service.accessClock.nextDue()).toBeNull()
     await service.drain()
     const inbox = await ok(as('carla')({ method: 'GET', path: '/me/notifications' }))
     await ok(

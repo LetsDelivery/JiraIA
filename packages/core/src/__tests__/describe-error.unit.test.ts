@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { describeError } from '../exception.js'
+import { DependencyUnavailableException, describeError, knownCause, NotFoundException } from '../exception.js'
 
 describe('describeError', () => {
   it('keeps the reason a driver hides behind its own message', () => {
@@ -15,5 +15,16 @@ describe('describeError', () => {
     looped.cause = looped
     expect(describeError(looped).split(' — caused by ')).toHaveLength(5)
     expect(describeError('plain')).toBe('plain')
+  })
+})
+
+describe('knownCause', () => {
+  it("finds the service's own exception behind a driver's wrapper, or none (ADR-0035)", () => {
+    const paused = new DependencyUnavailableException('Database', 'resuming from a pause')
+    expect(knownCause(new Error('Failed query: select …', { cause: paused }))).toBe(paused)
+    const missing = new NotFoundException('Card', 'REQ-9')
+    expect(knownCause(missing)).toBe(missing)
+    expect(knownCause(new Error('Failed query', { cause: new Error('syntax error') }))).toBeUndefined()
+    expect(knownCause('a string')).toBeUndefined()
   })
 })

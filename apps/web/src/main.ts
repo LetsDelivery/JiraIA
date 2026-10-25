@@ -32,6 +32,7 @@ import { read } from '@/api/requests'
 import { session, signOut, signOutEverywhere } from '@/auth/session'
 import { clearCache, onInvalidate } from '@/lib/cache'
 import { html } from '@/lib/html'
+import { presence, watchPresence } from '@/lib/presence'
 import { refusalSentence } from '@/lib/refusal'
 import { rememberReturn, takeReturn } from '@/lib/return-to'
 import { findRoute, interceptLinks, navigate, onNavigate } from '@/lib/router'
@@ -391,10 +392,19 @@ onNavigate(() => {
   render(true)
 })
 
-// The bell keeps up with new notices between renders (escopo-mvp 4.6), only while the tab is seen.
-setInterval(() => {
-  if (document.visibilityState === 'visible' && session.get()) {
+// The bell keeps up with new notices between renders (escopo-mvp 4.6), only while someone is at the
+// panel: a tab left alone lets the database pause, and the bell catches up when they are back (ADR-0035).
+watchPresence()
+const ringBell = () => {
+  if (session.get()) {
     void refreshBell().catch(() => undefined)
+  }
+}
+setInterval(() => {
+  if (presence.isHere()) {
+    ringBell()
+  } else {
+    presence.onReturn(ringBell)
   }
 }, 60_000)
 onInvalidate(() => render())

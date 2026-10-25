@@ -167,6 +167,26 @@
   }
 }
 
+/* ---------- Waking ---------- */
+/* While a request waits for the database to resume (ui/waking.ts, ADR-0035): a toast that stays. */
+.waking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 400;
+  color: var(--fg-secondary);
+}
+
+.waking-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busy-spin 0.7s linear infinite;
+}
+
 /* ---------- Splash ---------- */
 /* A tab's first wait: the brand, large and centred, with a spinner under it (ui/splash.ts). */
 .splash {

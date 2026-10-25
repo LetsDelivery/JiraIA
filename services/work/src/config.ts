@@ -61,7 +61,15 @@ const configSchema = z.intersection(
     /** 32 bytes, base64: encrypts the bot token at rest and signs the OAuth state. */
     SLACK_TOKEN_KEY: z.string().min(40).optional(),
     /** Slack's Web API; the suites point it at a mocked host. */
-    SLACK_API_URL: z.url().optional()
+    SLACK_API_URL: z.url().optional(),
+    /**
+     * What wakes the jobs (ADR-0035): the FIFO jobs queue, and the role and group of the one-time
+     * schedules for later. Without them, wakes are held and no job runs.
+     */
+    JOBS_QUEUE_URL: z.url().optional(),
+    JOBS_QUEUE_ARN: z.string().startsWith('arn:').optional(),
+    WAKE_ROLE_ARN: z.string().startsWith('arn:').optional(),
+    WAKE_SCHEDULE_GROUP: z.string().min(1).optional()
   })
 )
 

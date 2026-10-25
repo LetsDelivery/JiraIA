@@ -1,7 +1,9 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 
 import { freshSession, session, signOut } from '@/auth/session'
+import { wakingNotice } from '@/ui/waking'
 
+import { resumingFetch } from './resume'
 import type { paths } from './schema'
 
 /**
@@ -37,7 +39,11 @@ const authenticate: Middleware = {
   }
 }
 
-export const api = createClient<paths>({ baseUrl: API_BASE, fetch: (request) => fetch(request) })
+// A paused database answers 503 while it resumes; the request is asked again under a notice (ADR-0035).
+export const api = createClient<paths>({
+  baseUrl: API_BASE,
+  fetch: resumingFetch((request) => fetch(request), wakingNotice())
+})
 api.use(authenticate)
 
 export type ApiError = { error: { code: string; message: string; details?: Record<string, unknown> } }

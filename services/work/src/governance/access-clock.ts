@@ -2,6 +2,7 @@ import { type Clock, NotFoundException } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 
 import type { SystemActors } from '../members/system-actor.js'
+import { earliestOf } from '../wake/times.js'
 import type { CatalogRepository } from './catalog.repository.js'
 import type { SystemRow } from './catalog.schemas.js'
 import type { SlaClock } from './holidays.js'
@@ -47,6 +48,11 @@ export class AccessClock {
       const system = await this._system(input.organizationId, entitlement.systemId)
       await this.deps.removals.open(tx, cause, entitlement, this.deps.sla.departure(system, input.at))
     }
+  }
+
+  /** When the next grant expires or the next approved request falls due, come or not (ADR-0035). */
+  async nextDue(): Promise<Date | null> {
+    return earliestOf(await this.deps.requests.nextExpiry(), await this.deps.requests.nextOverdue())
   }
 
   /** One pass of the schedule; returns what it opened and what it found late. */

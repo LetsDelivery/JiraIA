@@ -6,6 +6,8 @@ import type { AccessResolver } from '../access.js'
 import type { VersionRepository } from '../draw/version.repository.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
+import { nextMorning } from '../sprints/days.js'
+import { earliestOf } from '../wake/times.js'
 import type { WikiPageRepository } from '../wiki/page.repository.js'
 import { DUE_SOON_DAYS, dueAfter } from '../wiki/page.schemas.js'
 import { ACCESS_KINDS, accessEmail } from './email/access-emails.js'
@@ -64,7 +66,25 @@ type Outgoing = { member: MemberRow; rows: readonly NotificationWithActor[]; mes
 export class MailService {
   constructor(private readonly deps: Deps) {}
 
-  /** Every minute: mentions and access notices now, a card's changes once the window has passed. */
+  /**
+   * When there is mail to send (ADR-0035): a mention or an access notice at once, a card's changes when
+   * the window of its oldest has passed, the LET’S Draw AI summary the next morning. With no sender,
+   * nothing is ever due.
+   */
+  async nextDue(): Promise<{ mail: Date | null; morning: Date | null }> {
+    if (!this.deps.mailer.ready) {
+      return { mail: null, morning: null }
+    }
+    const single = await this.deps.notifications.oldestUnmailed(NOW_KINDS)
+    const grouped = await this.deps.notifications.oldestUnmailed(CARD_KINDS)
+    const morning = await this.deps.notifications.oldestUnmailed(MORNING_KINDS)
+    return {
+      mail: earliestOf(single, grouped && new Date(grouped.getTime() + this.deps.windowMs)),
+      morning: morning && nextMorning(this.deps.clock.now())
+    }
+  }
+
+  /** Mentions and access notices now, a card's changes once the window has passed. */
   async sendDue(): Promise<MailResult> {
     if (!this._ready()) {
       return { sent: 0, failed: 0 }

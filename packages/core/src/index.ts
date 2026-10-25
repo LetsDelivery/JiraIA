@@ -10,6 +10,7 @@ export {
   isJiraiaException,
   isRetryable,
   JiraiaException,
+  knownCause,
   NotFoundException,
   RateLimitedException,
   UnauthenticatedException,

@@ -3,14 +3,18 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { fixedClock } from '@jiraia/core'
 import type { OutboundRequest } from '@jiraia/http'
 import { createLogger } from '@jiraia/logger'
 import type { SQSEvent } from 'aws-lambda'
 
 import type { Consumer, DomainEvent } from '../../events/event.js'
+import { CommitSignal } from '../../wake/commit-signal.js'
+import { HeldWakes, Waker } from '../../wake/waker.js'
+import type { DeployDeps } from '../deploy.js'
 import { cloudFormationResponder, type DeployRequest, deploy } from '../deploy.js'
-import { triggerOf } from '../invoke.js'
-import { consumeJobs, type JobDeps } from '../jobs.js'
+import { invoke, triggerOf } from '../invoke.js'
+import { consumeJobs, type JobDeps, type JobName } from '../jobs.js'
 import { InMemoryPanelBucket, publishPanel } from '../panel.js'
 import { consumeQueue, type QueueDeps, queueOf } from '../queues.js'
 
@@ -40,15 +44,28 @@ const event: DomainEvent = {
   occurredAt: '2026-10-21T12:00:00.000Z'
 }
 
-/** A fake of what the queues need: records which job ran and which consumer got which event. */
+const NOW = new Date('2026-10-25T15:00:00.000Z')
+const LATER = new Date('2026-10-25T15:40:00.000Z')
+
+/**
+ * A fake of what the queues need: records which job ran and which consumer got which event, plans
+ * what `plan` says and keeps the wakes it is asked for.
+ */
 class RecordingWork {
   readonly ran: string[] = []
   readonly delivered: Array<{ consumer: string; id: string }> = []
+  readonly wakes = new HeldWakes()
+  readonly commits = new CommitSignal()
+  plan = new Map<JobName, Date>()
+  failing: string | undefined
 
   /** A step that notes it ran, then answers `result`. */
   private _step<T>(job: string, result: T) {
     return async (): Promise<T> => {
       this.ran.push(job)
+      if (this.failing === job) {
+        throw new Error(`${job} broke`)
+      }
       return result
     }
   }
@@ -65,7 +82,10 @@ class RecordingWork {
       sprints: { sweepLate: async () => ({ late: 0 }) },
       webhookSender: { retryDue: this._step('webhook-retry', 0) },
       accessClock: { sweep: this._step('access-clock', { expired: 0, overdue: 0 }) },
-      reviews: { sweep: async () => ({ opened: 0, closed: 0 }) }
+      reviews: { sweep: async () => ({ opened: 0, closed: 0 }) },
+      planner: { plan: async () => this.plan },
+      waker: new Waker({ clock: fixedClock(NOW), transport: this.wakes }),
+      clock: fixedClock(NOW)
     } as unknown as JobDeps
     return {
       ...jobs,
@@ -119,17 +139,43 @@ describe('consumeQueue', () => {
 })
 
 describe('consumeJobs', () => {
-  it('runs the job a schedule put in the jobs queue', async () => {
+  it('runs the job a wake put in the jobs queue', async () => {
     const work = new RecordingWork()
     const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"weekly","at":"t"}'))
     expect(work.ran).toEqual(['weekly'])
     expect(result.batchItemFailures).toEqual([])
   })
 
-  it('hands a job message it cannot read back to its queue', async () => {
+  it('runs a burst of wakes for one job as one pass', async () => {
     const work = new RecordingWork()
-    const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"reboot"}'))
-    expect(result.batchItemFailures).toEqual([{ itemIdentifier: 'm0' }])
+    const wake = '{"job":"dispatch","at":"t"}'
+    await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', wake, wake, '{"job":"mail"}', wake))
+    expect(work.ran).toEqual(['dispatch', 'mail'])
+  })
+
+  it('drops a message that is no wake instead of handing it back forever', async () => {
+    const work = new RecordingWork()
+    const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"reboot"}', 'not json'))
+    expect(work.ran).toEqual([])
+    expect(result.batchItemFailures).toEqual([])
+  })
+
+  it('ends by waking each job for its next work, and nothing when none is pending (ADR-0035)', async () => {
+    const work = new RecordingWork()
+    await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"dispatch"}'))
+    expect(work.wakes.held).toEqual([])
+    work.plan = new Map([['mail', LATER]])
+    await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"dispatch"}'))
+    expect(work.wakes.held).toEqual([{ job: 'mail', at: LATER, retry: 0 }])
+  })
+
+  it('backs a job off when its pass failed and left it due, rather than run it again at once', async () => {
+    const work = new RecordingWork()
+    work.failing = 'mail'
+    work.plan = new Map([['mail', NOW]])
+    const result = await consumeJobs(work.deps(), logger, _batch('jiraia-jobs.fifo', '{"job":"mail","retry":2}'))
+    expect(result.batchItemFailures).toEqual([])
+    expect(work.wakes.held).toEqual([{ job: 'mail', at: new Date('2026-10-25T15:04:00.000Z'), retry: 3 }])
   })
 
   it('refuses a queue other than the jobs queue, naming it', async () => {
@@ -266,5 +312,50 @@ describe('cloudFormationResponder', () => {
     await expect(cloudFormationResponder(_http(403).http)('https://cfn.counterparty.test/a', '{}')).rejects.toThrow(
       '403'
     )
+  })
+})
+
+describe('invoke', () => {
+  const deployDeps = {} as DeployDeps
+  const http = { version: '2.0', requestContext: { http: { method: 'POST' } }, rawPath: '/cards', headers: {} }
+
+  /** The service as `invoke` reads it: a router that may commit, and what wakes the dispatch. */
+  const service = (work: RecordingWork, commits: boolean) =>
+    ({
+      ...work.deps(),
+      commits: work.commits,
+      router: async () => {
+        if (commits) {
+          work.commits.mark()
+        }
+        return { statusCode: 200 }
+      }
+    }) as unknown as Parameters<typeof invoke>[0]
+
+  it('wakes the dispatch after a request that committed, once (ADR-0035)', async () => {
+    const work = new RecordingWork()
+    await invoke(service(work, true), deployDeps, logger, http)
+    expect(work.wakes.held).toEqual([{ job: 'dispatch', at: NOW, retry: 0 }])
+    expect(work.commits.take()).toBe(false)
+  })
+
+  it('wakes nothing after a request that only read, so the database is left to pause', async () => {
+    const work = new RecordingWork()
+    await invoke(service(work, false), deployDeps, logger, { ...http, requestContext: { http: { method: 'GET' } } })
+    expect(work.wakes.held).toEqual([])
+  })
+
+  it('wakes the dispatch after every queue batch: a consumer may write outside a transaction', async () => {
+    const work = new RecordingWork()
+    await invoke(service(work, false), deployDeps, logger, _batch('jiraia-webhooks', JSON.stringify({ detail: event })))
+    expect(work.wakes.held.map((wake) => wake.job)).toEqual(['dispatch'])
+  })
+
+  it('answers even when the wake cannot be sent, and says so in the log', async () => {
+    const work = new RecordingWork()
+    work.wakes.now = async () => {
+      throw new Error('SQS is down')
+    }
+    expect(await invoke(service(work, true), deployDeps, logger, http)).toEqual({ statusCode: 200 })
   })
 })

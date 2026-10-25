@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { type Clock, type IdGenerator, systemClock, uuidGenerator } from '@jiraia/core'
-import { connectDatabase, type Database } from '@jiraia/db'
+import type { Database, ResumePolicy } from '@jiraia/db'
 import { cognitoIdentity, createRouter, type HttpClient, type Route } from '@jiraia/http'
 import { createLogger } from '@jiraia/logger'
 import { AccessResolver } from './access.js'
@@ -30,6 +30,7 @@ import { WorkflowRepository } from './cards/workflow.repository.js'
 import { WorkflowService } from './cards/workflow.service.js'
 import type { Config } from './config.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
+import { buildWake, connectSignalled } from './container-wake.js'
 import { buildWiki } from './container-wiki.js'
 import { AnthropicDraftWriter } from './draw/anthropic-writer.js'
 import { ApiGatewayBroadcaster, type Broadcaster } from './draw/broadcaster.js'
@@ -121,6 +122,7 @@ import { tokenRoutes } from './tokens/routes.js'
 import { viewRoutes } from './views/routes.js'
 import { ViewRepository } from './views/view.repository.js'
 import { ViewService } from './views/view.service.js'
+import type { WakeTransport } from './wake/waker.js'
 import { webhookRoutes } from './webhooks/routes.js'
 import { collectionPageRoutes, collectionRoutes, libraryRoutes, wikiPageRoutes } from './wiki/routes.js'
 
@@ -133,6 +135,10 @@ import { collectionPageRoutes, collectionRoutes, libraryRoutes, wikiPageRoutes }
  */
 export type Overrides = {
   db?: Database
+  /** How long a statement waits for a paused database; the general function sets it per trigger (ADR-0035). */
+  resume?: ResumePolicy
+  /** How a job is woken: the harness runs it in its process; the suites read what was asked. */
+  wakes?: WakeTransport
   clock?: Clock
   ids?: IdGenerator
   files?: FileStore
@@ -154,7 +160,7 @@ export type Overrides = {
 }
 
 export const buildService = (config: Config, overrides: Overrides = {}) => {
-  const db = overrides.db ?? connectDatabase(config)
+  const { db, commits } = connectSignalled(config, overrides)
   const clock = overrides.clock ?? systemClock
   const ids = overrides.ids ?? uuidGenerator
   const files = overrides.files ?? new S3FileStore({ bucket: config.ATTACHMENTS_BUCKET, region: config.AWS_REGION })
@@ -330,8 +336,12 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...oauthRoutes({ server: oauth.server, tokens: oauth.tokens, apiUrl: config.API_URL, webUrl })
   ]
 
+  const jobs = { ...services, ...intake, mail: notices.mail, webhookSender: outward.sender }
   return {
     db,
+    clock,
+    commits,
+    ...buildWake({ config, clock, ids, transport: overrides.wakes, jobs }),
     routes,
     ...services,
     ...intake,
