@@ -26,6 +26,7 @@ import './styles/loading.css'
 import './styles/responsive.css'
 import '@fontsource/caveat/400.css'
 
+import { warmer } from '@/api/client'
 import { noticesRead } from '@/api/notifications'
 import { proposalsRead } from '@/api/proposals'
 import { read } from '@/api/requests'
@@ -393,8 +394,9 @@ onNavigate(() => {
 })
 
 // The bell keeps up with new notices between renders (escopo-mvp 4.6), only while someone is at the
-// panel: a tab left alone lets the database pause, and the bell catches up when they are back (ADR-0035).
-watchPresence()
+// panel: a tab left alone lets the database pause, and the bell catches up when they are back. Their
+// first sign after a quiet spell sets a paused database resuming before they click (ADR-0035).
+watchPresence(() => warmer.nudge())
 const ringBell = () => {
   if (session.get()) {
     void refreshBell().catch(() => undefined)

@@ -59,13 +59,17 @@ data is on its way.
   while the tab is in view and was touched in the last ten minutes, and a page's socket closed by API
   Gateway's idle timeout reconnects at the next touch, not on its own. A tab left open overnight lets
   the database pause.
+- **The panel starts the resume before the person clicks.** At their first sign after the tab has been
+  four minutes without an answer from the API — the mouse moving, a key, the tab coming back — it sends
+  one quiet `GET /work/me`, with no notice and no retries (`api/warm.ts`). The resume then runs while
+  they decide where to click, and most of its seconds are never seen.
 
 ## Consequences
 
 - Idle costs nothing in Aurora compute: dev drops from about US$ 48 a month to what is used; prod's
   floor of about US$ 44 goes too. Storage and backups are still billed.
 - The first request after a pause waits for the resume, typically about 15 seconds and longer after a
-  long pause; the panel shows the notice for that time. A client of the public API (`/v1`, MCP) gets
+  long pause, less what the early ping already took; the panel shows the notice for what is left. A client of the public API (`/v1`, MCP) gets
   the 503 and is expected to retry, as with any 503.
 - Events leave for the bus seconds after their commit instead of within a minute; a mention's e-mail
   goes as soon as the pass that follows it.

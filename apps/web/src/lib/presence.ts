@@ -47,9 +47,16 @@ export class Presence {
 /** The panel's one presence, fed by the window's own events. */
 export const presence = new Presence(() => document.visibilityState === 'visible')
 
-export const watchPresence = (): void => {
-  for (const sign of SIGNS) {
-    window.addEventListener(sign, () => presence.seen(), { passive: true })
+/** Feeds the presence from the window's events; `onSign` hears each sign too, with the tab in view. */
+export const watchPresence = (onSign: () => void = () => {}): void => {
+  const sign = () => {
+    presence.seen()
+    if (document.visibilityState === 'visible') {
+      onSign()
+    }
   }
-  document.addEventListener('visibilitychange', () => presence.seen())
+  for (const event of SIGNS) {
+    window.addEventListener(event, sign, { passive: true })
+  }
+  document.addEventListener('visibilitychange', sign)
 }
