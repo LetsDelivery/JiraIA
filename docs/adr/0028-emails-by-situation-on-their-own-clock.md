@@ -5,6 +5,8 @@ Date: 2026-10-23
 ## Status
 
 Accepted. Replaces the daily summary of Etapa 5b (`DigestService`, `email-copy.ts`).
+Amended by ADR-0035: `mail` and `morning` run when their work is due, not every minute or every
+morning.
 
 ## Context
 

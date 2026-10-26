@@ -5,7 +5,9 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from '
 import { buildService as buildWork } from '../../services/work/src/container.js'
 import { OfflineDraftWriter } from '../../services/work/src/draw/draft.js'
 import { WebhookSlackNotifier } from '../../services/work/src/integrations/slack-notifier.js'
-import { drainAfterWrites, LocalMailbox, PrintedSlack, PrintedWebhooks } from './bus.js'
+import { wakeDispatch } from '../../services/work/src/lambda/invoke.js'
+import { runWakes } from '../../services/work/src/lambda/jobs.js'
+import { LocalMailbox, LocalWakes, PrintedSlack, PrintedWebhooks } from './bus.js'
 import {
   ALLOWED_EMAIL_DOMAIN,
   ALLOWED_EMAIL_DOMAINS,
@@ -33,8 +35,8 @@ import { LocalSlackApi, localSlackConfig } from './slack.js'
  * `assertDevDatabase` refuses to start against anything but the dev container. **S3 is a folder:**
  * attachments go to `LOCAL_FILES_DIR`, uploaded and downloaded through `/files` (`LocalFileStore`).
  * **The WebSocket API is Bun's:** `/realtime` runs the realtime handler (`realtime.ts`, ADR-0009).
- * **The bus is this process:** each write drains the outbox into the consumers, and Slack is printed
- * (`bus.ts`, ADR-0014).
+ * **The bus and the jobs are this process:** a write wakes the dispatch, which hands each event to the
+ * consumers, and every job runs when its work is due; Slack is printed (`bus.ts`, ADR-0014, ADR-0035).
  */
 const url = process.env.DATABASE_URL ?? DEV_DATABASE_URL
 assertDevDatabase(url)
@@ -55,8 +57,10 @@ const files = new LocalFileStore(LOCAL_FILES_DIR)
 const broadcaster = new LocalBroadcaster()
 // Without a key, drafts come from the offline stand-in, which says so in its reply (ADR-0011).
 const anthropic = process.env.ANTHROPIC_API_KEY
+const wakes = new LocalWakes()
 const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } : config, {
   db,
+  wakes,
   files,
   broadcaster,
   mailer: new LocalMailbox(LOCAL_MAIL_DIR),
@@ -72,24 +76,11 @@ const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } :
   // A real Slack app's settings in the environment talk to Slack; otherwise the stand-in prints.
   ...(process.env.SLACK_CLIENT_ID ? {} : { slackApi: new LocalSlackApi() })
 })
-const afterWrite = drainAfterWrites(work.drain)
-// Access governance's own clock (ADR-0024): expiries and overdue requests, as its job runs in AWS.
-setInterval(
-  () =>
-    void work.accessClock
-      .sweep()
-      .then(() => work.reviews.sweep())
-      .then(() => afterWrite('POST'))
-      .catch((error: unknown) => console.error('  access clock failed:', error)),
-  60_000
-)
-// The e-mails that are due, as the mail job runs in AWS; the summaries wait for `bun run local:digest`.
-setInterval(() => void work.mail.sendDue().catch((error: unknown) => console.error('  mail failed:', error)), 60_000)
-// The webhook retry sweep, as its job runs in AWS.
-setInterval(
-  () => void work.webhookSender.retryDue().catch((error: unknown) => console.error('  webhook retry failed:', error)),
-  60_000
-)
+// The jobs run in this process, woken as in AWS: a commit wakes the dispatch, each pass plans the rest (ADR-0035).
+wakes.bind((asked) => runWakes(work, createLogger('local', 'jobs'), asked))
+const afterRequest = () => (work.commits.take() ? wakeDispatch(work, createLogger('local', 'wake')) : undefined)
+// What was pending when the harness last stopped is planned again, as a deploy does in AWS.
+void wakeDispatch(work, createLogger('local', 'wake'))
 const routers: Record<string, (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyStructuredResultV2>> = {
   work: work.router
 }
@@ -158,7 +149,7 @@ const _route = async (request: Request): Promise<Response> => {
   const claims = header ? localClaims(header) : undefined
 
   const result = await router(_event(request, `/${rest.join('/')}`, body, claims))
-  afterWrite(request.method)
+  await afterRequest()
   return _answer(result)
 }
 

@@ -14,6 +14,11 @@ const BATCH = 100
 export class Dispatcher {
   constructor(private readonly deps: { clock: Clock; outbox: OutboxRepository; publisher: EventPublisher }) {}
 
+  /** Now, while the outbox holds anything; otherwise nothing to wake for (ADR-0035). */
+  async nextDue(): Promise<Date | null> {
+    return (await this.deps.outbox.hasPending()) ? this.deps.clock.now() : null
+  }
+
   /** One pass: how many events left. */
   async dispatch(): Promise<number> {
     const events = await this.deps.outbox.pending(BATCH)

@@ -20,6 +20,8 @@ export type Template = {
       }
     }
   >
+  /** Per-account values, by account id (ADR-0025). */
+  Mappings?: Record<string, Record<string, Record<string, unknown>>>
 }
 
 /** The one template (ADR-0025): the whole stack, at the repository root, where the pipeline reads it. */

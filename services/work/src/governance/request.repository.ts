@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, desc, eq, exists, inArray, isNull, lte, not, or, type SQL } from 'drizzle-orm'
+import { and, desc, eq, exists, inArray, isNull, lte, min, not, or, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { members } from '../schema.js'
@@ -149,6 +149,33 @@ export class EntitlementRequestRepository {
 
   /** Grants whose expiry has come and that no open removal is ending yet, across organizations. */
   async expired(now: Date): Promise<EntitlementRow[]> {
+    return await this.db
+      .select()
+      .from(entitlements)
+      .where(and(this._expiring(), lte(entitlements.expiresAt, now)))
+      .limit(200)
+  }
+
+  /** When the earliest grant that `expired` would find expires, come or not (ADR-0035). */
+  async nextExpiry(): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ at: min(entitlements.expiresAt) })
+      .from(entitlements)
+      .where(this._expiring())
+    return row?.at ?? null
+  }
+
+  /** When the earliest approved request that `overdue` would find falls due (ADR-0035). */
+  async nextOverdue(): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ at: min(entitlementRequests.dueAt) })
+      .from(entitlementRequests)
+      .where(and(eq(entitlementRequests.status, 'approved'), isNull(entitlementRequests.overdueAt)))
+    return row?.at ?? null
+  }
+
+  /** Held, and no open removal is ending it yet. */
+  private _expiring(): SQL | undefined {
     const removing = this.db
       .select({ id: entitlementRequests.id })
       .from(entitlementRequests)
@@ -158,11 +185,7 @@ export class EntitlementRequestRepository {
           inArray(entitlementRequests.status, ['requested', 'approved'])
         )
       )
-    return await this.db
-      .select()
-      .from(entitlements)
-      .where(and(isNull(entitlements.removedAt), lte(entitlements.expiresAt, now), not(exists(removing))))
-      .limit(200)
+    return and(isNull(entitlements.removedAt), not(exists(removing)))
   }
 
   /** Approved requests past their due moment that nobody was told about yet, across organizations. */

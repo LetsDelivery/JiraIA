@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, or, type SQL, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, min, or, type SQL, sql } from 'drizzle-orm'
 
 import { members } from '../schema.js'
 import { notificationPreferences, notifications } from '../schema-intake.js'
@@ -104,18 +104,20 @@ export class NotificationRepository {
       .select({ notification: notifications, actorName: members.name })
       .from(notifications)
       .innerJoin(members, eq(members.id, notifications.actorId))
-      .where(
-        and(
-          inArray(notifications.kind, [...kinds]),
-          isNull(notifications.emailedAt),
-          isNull(notifications.readAt),
-          isNull(notifications.archivedAt),
-          lte(notifications.createdAt, before)
-        )
-      )
+      .where(and(_unmailed(kinds), lte(notifications.createdAt, before)))
       .orderBy(notifications.createdAt)
       .limit(limit)
     return rows.map((row) => ({ ...row.notification, actorName: row.actorName }))
+  }
+
+  /** When the oldest notice `unmailed` would find was written: what the mail job is woken by (ADR-0035). */
+  async oldestUnmailed(kinds: readonly string[]): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ at: min(notifications.createdAt) })
+      .from(notifications)
+      .innerJoin(members, eq(members.id, notifications.actorId))
+      .where(_unmailed(kinds))
+    return row?.at ?? null
   }
 
   /** Who already has an unread, unmailed notice of this kind about this page: one is enough. */
@@ -143,3 +145,12 @@ export class NotificationRepository {
     }
   }
 }
+
+/** Of these kinds, neither mailed nor read nor archived: what is still to be told by e-mail. */
+const _unmailed = (kinds: readonly string[]): SQL | undefined =>
+  and(
+    inArray(notifications.kind, [...kinds]),
+    isNull(notifications.emailedAt),
+    isNull(notifications.readAt),
+    isNull(notifications.archivedAt)
+  )

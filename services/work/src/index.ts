@@ -4,7 +4,7 @@ import { createLogger } from '@jiraia/logger'
 import { readConfig } from './config.js'
 import { buildService } from './container.js'
 import { cloudFormationResponder } from './lambda/deploy.js'
-import { invoke } from './lambda/invoke.js'
+import { invoke, type Trigger, triggerOf } from './lambda/invoke.js'
 import { applyMigrations } from './lambda/migrate.js'
 import { publishPanel, S3PanelBucket } from './lambda/panel.js'
 
@@ -17,8 +17,15 @@ import { publishPanel, S3PanelBucket } from './lambda/panel.js'
  * variable kills the cold start with a message naming it.
  */
 const config = readConfig()
-const service = buildService(config)
+/**
+ * How long a statement waits for a paused database (ADR-0035): a person's request or a page's socket
+ * not at all — the panel says the data is on its way and asks again; a queue or the deploy as long
+ * as the function may run.
+ */
+const resume = { waitMs: 0 }
+const service = buildService(config, { resume: { waitMs: () => resume.waitMs } })
 const logger = createLogger('work', 'lambda')
+const WAITS_MS: Record<Trigger, number> = { http: 0, websocket: 0, queue: 240_000, deploy: 240_000 }
 
 const deployDeps = {
   migrate: () => applyMigrations(),
@@ -36,4 +43,7 @@ const deployDeps = {
   respond: cloudFormationResponder(createHttpClient({ provider: 'cloudformation', logger }))
 }
 
-export const handler = async (event: unknown) => await invoke(service, deployDeps, logger, event)
+export const handler = async (event: unknown) => {
+  resume.waitMs = WAITS_MS[triggerOf(event)]
+  return await invoke(service, deployDeps, logger, event)
+}

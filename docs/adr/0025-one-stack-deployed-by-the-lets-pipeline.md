@@ -7,6 +7,8 @@ Date: 2026-10-21
 Accepted. Amends ADR-0001 (SAM and SSM), ADR-0002 (where the migrations run), ADR-0003 (a Lambda and
 an HTTP API per bounded context), ADR-0009, ADR-0014, ADR-0015 and ADR-0018 (a Lambda per entry
 point). Sign-in is ADR-0026.
+Amended by ADR-0035: wakes fill the jobs queue instead of schedules, and prod's database starts at
+zero capacity.
 
 ## Context
 

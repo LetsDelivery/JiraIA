@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { ForbiddenException } from '@jiraia/core'
+import { DependencyUnavailableException, ForbiddenException } from '@jiraia/core'
 import { createLogger } from '@jiraia/logger'
 import { answer, apiEvent } from '@jiraia/testing'
 import { z } from 'zod'
@@ -34,6 +34,18 @@ const routes: Route[] = [
     schemas: {},
     handler: async () => {
       throw new ForbiddenException('No', { action: 'space:manage' })
+    }
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/paused',
+    requires: 'public',
+    schemas: {},
+    handler: async () => {
+      // What Drizzle throws when the Data API client failed: its own error, the reason as the cause.
+      throw new Error('Failed query: select 1', {
+        cause: new DependencyUnavailableException('Database', 'resuming from a pause')
+      })
     }
   }),
   defineRoute({
@@ -77,6 +89,15 @@ describe('createRouter', () => {
     const result = answer(await router(apiEvent({ method: 'POST', path: '/refuse', subject: 's' })))
 
     expect(result).toMatchObject({ status: 403, body: { error: { code: 'FORBIDDEN', traceId: expect.any(String) } } })
+  })
+
+  it('answers a paused database as a 503 naming it, though the driver wrapped it (ADR-0035)', async () => {
+    const result = answer(await router(apiEvent({ method: 'GET', path: '/paused' })))
+
+    expect(result).toMatchObject({
+      status: 503,
+      body: { error: { code: 'DEPENDENCY_UNAVAILABLE', details: { dependency: 'Database' } } }
+    })
   })
 
   it('refuses a handler that answers something other than its declared response (VALIDATE_RESPONSES)', async () => {

@@ -1,3 +1,4 @@
+import { describeError } from '@jiraia/core'
 import { requestPath } from '@jiraia/http'
 import type { JiraiaLogger } from '@jiraia/logger'
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, SQSEvent } from 'aws-lambda'
@@ -59,20 +60,49 @@ const _http = async (service: Service, event: APIGatewayProxyEventV2): Promise<A
 }
 
 /**
- * The general function's whole job: hand the invocation to the part of `work` that answers it.
+ * The general function's whole job: hand the invocation to the part of `work` that answers it, then
+ * wake the dispatch if anything committed (ADR-0035). A queue's consumers may write outside a
+ * transaction — a webhook's next try — so a queue batch always wakes it; and a deploy does, so the
+ * work pending when it landed is planned again.
  *
  * @example export const handler = (event: unknown) => invoke(service, deployDeps, logger, event)
  */
 export const invoke = async (service: Service, deployDeps: DeployDeps, logger: JiraiaLogger, event: unknown) => {
   const trigger = triggerOf(event)
+  const answer = await _answer(service, deployDeps, logger.child({ trigger }), trigger, event)
+  if (service.commits.take() || trigger === 'queue' || trigger === 'deploy') {
+    await wakeDispatch(service, logger)
+  }
+  return answer
+}
+
+const _answer = async (
+  service: Service,
+  deployDeps: DeployDeps,
+  logger: JiraiaLogger,
+  trigger: Trigger,
+  event: unknown
+) => {
   if (trigger === 'deploy') {
-    return await deploy(deployDeps, logger.child({ trigger }), deployRequestSchema.parse(event))
+    return await deploy(deployDeps, logger, deployRequestSchema.parse(event))
   }
   if (trigger === 'queue') {
-    return await consumeQueue(service, logger.child({ trigger }), event as SQSEvent)
+    return await consumeQueue(service, logger, event as SQSEvent)
   }
   if (trigger === 'websocket') {
-    return await handleRealtime(service.realtime, logger.child({ trigger }), event as WebsocketEvent)
+    return await handleRealtime(service.realtime, logger, event as WebsocketEvent)
   }
   return await _http(service, event as APIGatewayProxyEventV2)
+}
+
+/**
+ * The dispatch, now; its pass plans every other job. A wake that fails is logged, not thrown: the
+ * answer stands, and the work waits for the next commit to wake it.
+ */
+export const wakeDispatch = async (service: Pick<Service, 'waker' | 'clock'>, logger: JiraiaLogger) => {
+  try {
+    await service.waker.wake([{ job: 'dispatch', at: service.clock.now(), retry: 0 }])
+  } catch (error) {
+    logger.error('Wake failed', { job: 'dispatch', error: describeError(error) })
+  }
 }

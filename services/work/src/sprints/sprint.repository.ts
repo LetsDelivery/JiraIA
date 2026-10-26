@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, asc, desc, eq, inArray, isNull, lt, max } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, lt, max, min } from 'drizzle-orm'
 
 import { cards, sprints, workflowStates } from '../schema.js'
 import type { SprintRow, SprintState } from './schemas.js'
@@ -81,6 +81,15 @@ export class SprintRepository {
   }
 
   /** Active sprints whose end date is before `today` and whose lead has not been told yet. */
+  /** The earliest end of an active sprint not yet marked late (ADR-0035). */
+  async firstEnd(): Promise<string | null> {
+    const [row] = await this.db
+      .select({ day: min(sprints.endsOn) })
+      .from(sprints)
+      .where(and(eq(sprints.state, 'active'), isNull(sprints.lateNoticeAt)))
+    return row?.day ?? null
+  }
+
   async late(today: string): Promise<SprintRow[]> {
     return await this.db
       .select()

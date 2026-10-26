@@ -44,7 +44,7 @@ describe('template.yml', () => {
     expect(read.filter(([fn]) => fn === 'SchedulerFunction').map(([, queue]) => queue)).toEqual([JOBS_QUEUE])
   })
 
-  it('schedules only jobs the function runs, each in its own FIFO group', () => {
+  it("keeps only Monday's summary on a clock, in its own FIFO group; work wakes every other job", () => {
     const scheduled = _ofType('AWS::Events::Rule')
       .filter(([, rule]) => _props(rule).ScheduleExpression)
       .flatMap(([, rule]) => _props(rule).Targets as Array<Record<string, Record<string, unknown>>>)
@@ -52,8 +52,26 @@ describe('template.yml', () => {
         job: JSON.parse(String(target.InputTransformer?.InputTemplate).replace('<at>', 'tick')).job,
         group: target.SqsParameters?.MessageGroupId
       }))
-    expect(scheduled.map((entry) => entry.job).sort()).toEqual([...JOBS].sort())
-    expect(scheduled.every((entry) => entry.job === entry.group)).toBe(true)
+    expect(scheduled).toEqual([{ job: 'weekly', group: 'weekly' }])
+    expect(JOBS).toContain('weekly')
+  })
+
+  it('lets the database pause in every account, and nothing poll it awake (ADR-0035)', () => {
+    const accounts = Object.values(load(source).Mappings?.EnvConfig ?? {}) as Array<Record<string, unknown>>
+    expect(accounts.length).toBeGreaterThan(0)
+    expect(accounts.every((account) => account.DatabaseMinCapacity === '0')).toBe(true)
+    const scaling = _props(resources.DatabaseCluster).ServerlessV2ScalingConfiguration as Record<string, unknown>
+    expect(scaling.SecondsUntilAutoPause).toBe(300)
+    expect(source).not.toMatch(/rate\(\d+ minutes?\)/)
+  })
+
+  it('tells both functions where to send a wake', () => {
+    for (const [, fn] of _ofType('AWS::Lambda::Function')) {
+      const variables = (_props(fn).Environment as { Variables: Record<string, unknown> }).Variables
+      expect(Object.keys(variables)).toEqual(
+        expect.arrayContaining(['JOBS_QUEUE_URL', 'JOBS_QUEUE_ARN', 'WAKE_ROLE_ARN', 'WAKE_SCHEDULE_GROUP'])
+      )
+    }
   })
 
   it('gives every queue at least the timeout of the function that reads it', () => {

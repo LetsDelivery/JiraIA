@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, asc, desc, eq, lte } from 'drizzle-orm'
+import { and, asc, desc, eq, lte, min } from 'drizzle-orm'
 
 import { webhookDeliveries, webhooks } from '../schema-intake.js'
 import type { DeliveryRow, WebhookRow } from './schemas.js'
@@ -71,6 +71,15 @@ export class WebhookRepository {
       .where(eq(webhookDeliveries.webhookId, webhookId))
       .orderBy(desc(webhookDeliveries.createdAt))
       .limit(limit)
+  }
+
+  /** When the earliest pending delivery is tried again, due or not: what wakes the retry (ADR-0035). */
+  async nextAttempt(): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ at: min(webhookDeliveries.nextAttemptAt) })
+      .from(webhookDeliveries)
+      .where(eq(webhookDeliveries.status, 'pending'))
+    return row?.at ?? null
   }
 
   /** Pending deliveries whose next try is due, oldest first. */

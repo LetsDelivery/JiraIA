@@ -3,6 +3,7 @@ import * as Y from 'yjs'
 
 import { drawRead, drawWrite } from '@/api/draw'
 import { fromBase64, toBase64 } from '@/lib/base64'
+import { presence } from '@/lib/presence'
 
 import { UpdateBatcher } from './batcher'
 
@@ -102,6 +103,11 @@ export class ContentProvider {
     }
     this.socket = undefined
     this.options.onStatus('offline')
+    // Nobody at the page: it waits for them, so an idle tab never wakes the database (ADR-0035).
+    if (!presence.isHere()) {
+      presence.onReturn(() => void (this.stopped ? undefined : this.connect()))
+      return
+    }
     const wait = RETRY_MS[Math.min(this.attempt, RETRY_MS.length - 1)]
     this.attempt += 1
     setTimeout(() => void this.connect(), wait)

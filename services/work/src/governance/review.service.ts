@@ -6,6 +6,7 @@ import type { AccessResolver } from '../access.js'
 import type { AuditTrail, Changes } from '../audit/audit.js'
 import type { MemberRow } from '../members/schemas.js'
 import type { SystemActors } from '../members/system-actor.js'
+import { earliestOf } from '../wake/times.js'
 import { addBusinessDays } from './calendar.js'
 import type { CatalogRepository } from './catalog.repository.js'
 import type { SystemRow } from './catalog.schemas.js'
@@ -110,16 +111,34 @@ export class ReviewService {
     return { opened, closed: expired.length }
   }
 
+  /** When the sweep next has a review to open or to close, come or not (ADR-0035). */
+  async nextDue(): Promise<Date | null> {
+    const times = [await this.deps.reviews.nextClose()]
+    for (const candidate of await this.deps.reviews.candidates()) {
+      times.push(await this._opensAt(candidate))
+    }
+    return earliestOf(...times)
+  }
+
   private async _openIfDue(candidate: ReviewCandidate): Promise<boolean> {
-    const privilege = candidate.privilege === 'privileged' ? 'privileged' : 'standard'
-    const anchor = (await this.deps.reviews.lastOpened(candidate.systemId, privilege)) ?? candidate.firstGranted
-    const due = anchor.getTime() + REVIEW_PERIOD_DAYS[privilege] * DAY_MS <= this.deps.clock.now().getTime()
-    if (!due || (await this.deps.reviews.openFor(candidate.systemId, privilege))) {
+    const opensAt = await this._opensAt(candidate)
+    if (!opensAt || opensAt.getTime() > this.deps.clock.now().getTime()) {
       return false
     }
+    const privilege = candidate.privilege === 'privileged' ? 'privileged' : 'standard'
     const automation = await this.deps.system.automation(candidate.organizationId)
     await this._open(await this._system(candidate.organizationId, candidate.systemId), privilege, automation.member.id)
     return true
+  }
+
+  /** When a candidate's next review opens: a period after the last one, or after its first grant; none while one is open. */
+  private async _opensAt(candidate: ReviewCandidate): Promise<Date | null> {
+    const privilege = candidate.privilege === 'privileged' ? 'privileged' : 'standard'
+    if (await this.deps.reviews.openFor(candidate.systemId, privilege)) {
+      return null
+    }
+    const anchor = (await this.deps.reviews.lastOpened(candidate.systemId, privilege)) ?? candidate.firstGranted
+    return new Date(anchor.getTime() + REVIEW_PERIOD_DAYS[privilege] * DAY_MS)
   }
 
   private async _open(system: SystemRow, privilege: Privilege, openedBy: string): Promise<string> {

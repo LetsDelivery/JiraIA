@@ -1,8 +1,11 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 
 import { freshSession, session, signOut } from '@/auth/session'
+import { wakingNotice } from '@/ui/waking'
 
+import { resumingFetch } from './resume'
 import type { paths } from './schema'
+import { Warmer } from './warm'
 
 /**
  * The one way this app talks to the API, typed from the contract (`bun run api:types`).
@@ -29,6 +32,7 @@ const authenticate: Middleware = {
     return request
   },
   onResponse: ({ response }) => {
+    warmer.heard()
     // A token the API no longer accepts ends the session; the app then shows the sign-in screen.
     if (response.status === 401 && session.get()) {
       signOut()
@@ -37,7 +41,19 @@ const authenticate: Middleware = {
   }
 }
 
-export const api = createClient<paths>({ baseUrl: API_BASE, fetch: (request) => fetch(request) })
+// A paused database answers 503 while it resumes; the request is asked again under a notice (ADR-0035).
+export const api = createClient<paths>({
+  baseUrl: API_BASE,
+  fetch: resumingFetch((request) => fetch(request), wakingNotice())
+})
 api.use(authenticate)
+
+/**
+ * Wakes a paused database ahead of the person's first click (ADR-0035): `GET /work/me`, sent without
+ * the notice or the retries, its answer thrown away.
+ */
+const quiet = createClient<paths>({ baseUrl: API_BASE, fetch: (request) => fetch(request) })
+quiet.use(authenticate)
+export const warmer = new Warmer(async () => (session.get() ? await quiet.GET('/work/me') : undefined))
 
 export type ApiError = { error: { code: string; message: string; details?: Record<string, unknown> } }

@@ -1,4 +1,4 @@
-import { isJiraiaException, type JiraiaException } from '@jiraia/core'
+import { type JiraiaException, knownCause } from '@jiraia/core'
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { z } from 'zod'
 
@@ -40,8 +40,11 @@ export const unexpected = (traceId: string): APIGatewayProxyStructuredResultV2 =
     error: { code: 'INTERNAL', message: 'The request could not be completed', details: {}, traceId }
   } satisfies Failure)
 
-export const toResponse = (error: unknown, traceId: string): APIGatewayProxyStructuredResultV2 =>
-  isJiraiaException(error) ? failure(error, traceId) : unexpected(traceId)
+/** A known exception, even one a driver wrapped (ADR-0035), answers as itself; anything else is a 500. */
+export const toResponse = (error: unknown, traceId: string): APIGatewayProxyStructuredResultV2 => {
+  const known = knownCause(error)
+  return known ? failure(known, traceId) : unexpected(traceId)
+}
 
 /**
  * What every service's `/health` answers.

@@ -8,6 +8,8 @@ Accepted. Deviates from uselets ADR-0002 (one DynamoDB table per service). Amend
 cluster is in the root `template.yml`, and the migrations are applied by the stack's `Deploy` custom
 resource. Amended by ADR-0027: no row is read with a Yjs document, and the local `pg` wire refuses a
 result over the Data API's 1 MiB.
+Amended by ADR-0035: the cluster pauses when idle, and the client sends a statement again while it
+resumes, within the wait its caller allows.
 
 ## Context
 
