@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-rds-data": "3.1095.0",
+    "@aws-sdk/client-rds-data": "3.1152.0",
     "@jiraia/core": "workspace:*",
     "drizzle-orm": "0.45.4",
     "pg": "8.23.1"
