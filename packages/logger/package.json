@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@aws-lambda-powertools/logger": "2.33.1",
-    "@aws-lambda-powertools/metrics": "2.33.1"
+    "@aws-lambda-powertools/logger": "2.36.0",
+    "@aws-lambda-powertools/metrics": "2.36.0"
   }
 }
