@@ -41,6 +41,8 @@ export type AtlassianSource = {
   issue(id: string): Promise<IssueRecord>
   /** An attachment's bytes, as uploaded. */
   attachment(id: string): Promise<Uint8Array>
+  /** Accounts by id, as Jira describes them (name, e-mail when shown, active, type). */
+  users(accountIds: string[]): Promise<Raw[]>
 }
 
 /** A fake issue for the suite: Jira's shape, only what the importer reads. */
@@ -70,7 +72,13 @@ export class InMemoryAtlassian implements AtlassianSource {
   readonly fetched: string[] = []
 
   constructor(
-    readonly data: { projects: JiraProject[]; issues: IssueRecord[]; fields?: Raw[]; files?: Map<string, Uint8Array> }
+    readonly data: {
+      projects: JiraProject[]
+      issues: IssueRecord[]
+      fields?: Raw[]
+      files?: Map<string, Uint8Array>
+      users?: Raw[]
+    }
   ) {}
 
   async projects(): Promise<JiraProject[]> {
@@ -107,6 +115,10 @@ export class InMemoryAtlassian implements AtlassianSource {
       throw new Error(`Attachment "${id}" is not in the fake`)
     }
     return bytes
+  }
+
+  async users(accountIds: string[]): Promise<Raw[]> {
+    return (this.data.users ?? []).filter((user) => accountIds.includes(String(user.accountId)))
   }
 
   private inProject(key: string | undefined): IssueRecord[] {

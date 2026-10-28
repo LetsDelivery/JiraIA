@@ -87,6 +87,17 @@ export class HttpAtlassianSource implements AtlassianSource {
     return await this.jira.bytes(`/attachment/content/${id}?redirect=false`)
   }
 
+  /** At most 90 ids a call; an id Jira no longer knows is simply absent. */
+  async users(accountIds: string[]): Promise<Raw[]> {
+    const users: Raw[] = []
+    for (let start = 0; start < accountIds.length; start += 90) {
+      const query = accountIds.slice(start, start + 90).map((id) => `accountId=${encodeURIComponent(id)}`)
+      const page = await this.jira.object(`/user/bulk?maxResults=90&${query.join('&')}`)
+      users.push(...z.array(rawSchema).parse(page.values ?? []))
+    }
+    return users
+  }
+
   /** Every item of an endpoint paged by `startAt`/`total`, under the list's own name. */
   private async offsetPages(path: string, list: string, extra = ''): Promise<Raw[]> {
     const items: Raw[] = []

@@ -9,6 +9,8 @@ export type ImportStore = {
   /** The document under the key, or `undefined` when there is none. */
   getJson(key: string): Promise<unknown>
   putBytes(key: string, bytes: Uint8Array, contentType: string): Promise<void>
+  /** The text under the key, or `undefined` when there is none. */
+  getText(key: string): Promise<string | undefined>
   /** Whether anything is stored under the key. */
   has(key: string): Promise<boolean>
 }
@@ -31,6 +33,11 @@ export class InMemoryImportStore implements ImportStore {
 
   async putBytes(key: string, bytes: Uint8Array): Promise<void> {
     this.documents.set(key, bytes)
+  }
+
+  async getText(key: string): Promise<string | undefined> {
+    const found = this.documents.get(key)
+    return found instanceof Uint8Array ? new TextDecoder().decode(found) : undefined
   }
 
   async has(key: string): Promise<boolean> {
@@ -60,9 +67,14 @@ export class S3ImportStore implements ImportStore {
   }
 
   async getJson(key: string): Promise<unknown> {
+    const text = await this.getText(key)
+    return text === undefined ? undefined : JSON.parse(text)
+  }
+
+  async getText(key: string): Promise<string | undefined> {
     try {
       const object = await this.s3.send(new GetObjectCommand({ Bucket: this.config.bucket, Key: key }))
-      return JSON.parse((await object.Body?.transformToString()) ?? 'null')
+      return (await object.Body?.transformToString()) ?? ''
     } catch (error) {
       if ((error as { name?: string }).name === 'NoSuchKey') {
         return undefined
