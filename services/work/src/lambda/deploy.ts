@@ -31,7 +31,18 @@ export type DeployDeps = {
 const PHYSICAL_ID = 'jiraia-deploy'
 
 /** CloudFormation shows `Reason` in the stack's events, and refuses an answer over 4 KB. */
-const _reason = (error: unknown): string => String(error).slice(0, 1000)
+/**
+ * The error and what caused it: drizzle wraps the Data API's own error as the `cause` of a "Failed
+ * query", which alone says nothing of why.
+ *
+ * @example describeError(new Error('Failed query: …', { cause: new Error('DatabaseResumingException') }))   // 'Error: Failed query: … — Error: DatabaseResumingException'
+ */
+export const describeError = (error: unknown): string => {
+  const cause = error instanceof Error && error.cause !== undefined ? ` — ${String(error.cause)}` : ''
+  return `${String(error)}${cause}`
+}
+
+const _reason = (error: unknown): string => describeError(error).slice(0, 1000)
 
 const _answer = (request: DeployRequest, status: 'SUCCESS' | 'FAILED', extra: Record<string, unknown>) =>
   JSON.stringify({
@@ -63,7 +74,7 @@ export const deploy = async (deps: DeployDeps, logger: JiraiaLogger, request: De
     logger.info('Deploy applied', { requestType: request.RequestType, ...data })
     await deps.respond(request.ResponseURL, _answer(request, 'SUCCESS', { Data: data }))
   } catch (error) {
-    logger.error('Deploy failed', { requestType: request.RequestType, error: String(error) })
+    logger.error('Deploy failed', { requestType: request.RequestType, error: describeError(error) })
     await deps.respond(request.ResponseURL, _answer(request, 'FAILED', { Reason: _reason(error) }))
   }
 }
