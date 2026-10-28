@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, asc, eq, inArray, max, type SQL, sql } from 'drizzle-orm'
+import { and, asc, eq, getTableColumns, gt, inArray, isNull, max, type SQL, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { cardKeyAliases, cards, groups, labels, members, spaces } from '../schema.js'
@@ -31,6 +31,9 @@ export type CardFields = Partial<
     | 'number'
   >
 >
+
+/** How many cards one read brings; without descriptions, such a read stays far under the Data API's 1 MiB. */
+const LIST_PAGE = 500
 
 export class CardRepository {
   constructor(private readonly db: Database) {}
@@ -66,9 +69,55 @@ export class CardRepository {
     )
   }
 
-  /** Every card of a space. */
-  async list(spaceId: string): Promise<CardWithPeople[]> {
-    return await this._rows(eq(cards.spaceId, spaceId))
+  /**
+   * A space's cards for a board, a list or a backlog, in board order — those of one sprint, or with
+   * none, when `sprintId` says so. Read in pages and without the description, which only a card's own
+   * read carries: a space of thousands of cards would pass the Data API's 1 MiB answer (ADR-0027).
+   */
+  async list(spaceId: string, sprintId?: string | null): Promise<CardWithPeople[]> {
+    const inSprint =
+      sprintId === undefined ? undefined : sprintId === null ? isNull(cards.sprintId) : eq(cards.sprintId, sprintId)
+    const rows: CardWithPeople[] = []
+    for (let after = ''; ; ) {
+      const page = await this._listPage(
+        and(eq(cards.spaceId, spaceId), inSprint, after ? gt(cards.id, after) : undefined)
+      )
+      rows.push(...page)
+      if (page.length < LIST_PAGE) {
+        return rows.sort((a, b) => a.rank - b.rank)
+      }
+      after = (page.at(-1) as CardWithPeople).id
+    }
+  }
+
+  private async _listPage(where: SQL | undefined): Promise<CardWithPeople[]> {
+    const { description: _description, ...listed } = getTableColumns(cards)
+    const rows = await this.db
+      .select({
+        card: listed,
+        spaceKey: spaces.key,
+        assigneeName: assignee.name,
+        reporterName: reporter.name,
+        groupName: groups.name
+      })
+      .from(cards)
+      .innerJoin(spaces, eq(spaces.id, cards.spaceId))
+      .innerJoin(reporter, eq(reporter.id, cards.reporterId))
+      .leftJoin(assignee, eq(assignee.id, cards.assigneeId))
+      .leftJoin(groups, eq(groups.id, cards.groupId))
+      .where(where)
+      .orderBy(asc(cards.id))
+      .limit(LIST_PAGE)
+    return rows.map(
+      (row): CardWithPeople => ({
+        ...row.card,
+        description: '',
+        spaceKey: row.spaceKey,
+        assigneeName: row.assigneeName,
+        reporterName: row.reporterName,
+        groupName: row.groupName
+      })
+    )
   }
 
   /** Cards across spaces, for a filter built by `search/card-query.ts` (3.4). */

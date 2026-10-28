@@ -165,7 +165,8 @@ describe('intake forms', () => {
     expect(sent.card.key).toBe('REQ-1')
     const [card] = await cardsOf(req)
     expect(card).toMatchObject({ title: 'Exportar faturas em lote', labels: ['business-form'], dueDate: '2026-11-30' })
-    expect(card?.description).toBe('**Qual é o problema hoje?**\nHoje é uma por uma.')
+    const opened = (await ok(admin({ method: 'GET', path: `/cards/${card?.id}` }), 200)) as { description: string }
+    expect(opened.description).toBe('**Qual é o problema hoje?**\nHoje é uma por uma.')
     expect(
       await as('ana@uselets.com')({ method: 'POST', path: `/spaces/${req.id}/cards`, body: { title: 'x' } })
     ).toMatchObject({ status: 403 })

@@ -66,6 +66,7 @@ export const cardViewSchema = z.object({
 export type CardView = z.infer<typeof cardViewSchema>
 /** A space's cards, or only those of a sprint: the active one, one by id, or none — the backlog (ADR-0029). */
 export const cardListQuerySchema = z.object({ sprint: z.union([z.enum(['active', 'none']), z.uuid()]).optional() })
+/** A space's cards, each without its description (empty): only reading the card itself carries it. */
 export const cardListSchema = z.object({ items: z.array(cardViewSchema) })
 
 /** Story points: Jira's 1, 2, 3, 5, 8, 13 or any other number a team uses, halves included. */

@@ -1,9 +1,10 @@
 import type { IdGenerator } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
-
+import { eq } from 'drizzle-orm'
 import { lookOf } from '../cards/card-type.schemas.js'
 import type { FieldKind } from '../cards/field.schemas.js'
 import type { StateGroup } from '../cards/schemas.js'
+
 import { cardTypes, customFields, spaces, sprints, workflowStates } from '../schema.js'
 import type { IssueRecord, JiraProject } from './atlassian-source.js'
 import type { ImportRepository } from './import.repository.js'
@@ -11,6 +12,8 @@ import type { People } from './import-members.js'
 import {
   dayOf,
   fieldsOf,
+  isSprint,
+  isStoryPoints,
   type JiraField,
   type JiraSprint,
   kindOf,
@@ -47,6 +50,19 @@ const statusesOf = (records: IssueRecord[]): { name: string; group: StateGroup }
   ...new Map(records.map((record) => statusOf(record)).map((status) => [status.name, status])).values()
 ]
 
+/**
+ * How the space plans, as its Jira project did: in sprints when a card was in one, and in story points
+ * when a card was estimated in them (ADR-0029). It only turns these on, never off.
+ */
+const planningOf = (input: Input): { usesSprints?: true; estimation?: 'points' } => {
+  const sprintField = input.jiraFields.find(isSprint)?.id
+  const pointsField = input.jiraFields.find(isStoryPoints)?.id
+  const sprinted = input.records.some((record) => sprintsOf(record, sprintField).length > 0)
+  const pointed =
+    pointsField !== undefined && input.records.some((record) => typeof fieldsOf(record)[pointsField] === 'number')
+  return { ...(sprinted ? { usesSprints: true } : {}), ...(pointed ? { estimation: 'points' } : {}) }
+}
+
 const earliest = (records: IssueRecord[], at: Date): Date =>
   records.map((record) => new Date(String(fieldsOf(record).created))).reduce((a, b) => (b < a ? b : a), at)
 
@@ -70,9 +86,15 @@ export class ImportCatalogue {
 
   private async space(input: Input): Promise<string> {
     const found = await this.deps.repository.spaceByKey(input.organizationId, input.project.key)
-    if (found) {
-      return found.id
+    const id = found?.id ?? (await this.createSpace(input))
+    const planning = planningOf(input)
+    if (Object.keys(planning).length > 0) {
+      await this.deps.db.update(spaces).set(planning).where(eq(spaces.id, id))
     }
+    return id
+  }
+
+  private async createSpace(input: Input): Promise<string> {
     const id = this.deps.ids.next()
     const type = String(input.project.projectTypeKey ?? 'software')
     const lead = (input.project.lead as { accountId?: string } | undefined)?.accountId

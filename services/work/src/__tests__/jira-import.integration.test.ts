@@ -115,7 +115,13 @@ const fields = [
     custom: true,
     schema: { custom: 'com.pyxis.greenhopper.jira:gh-lexo-rank' }
   },
-  { id: 'customfield_10020', name: 'Sprint', custom: true, schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } }
+  { id: 'customfield_10020', name: 'Sprint', custom: true, schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } },
+  {
+    id: 'customfield_10016',
+    name: 'Story point estimate',
+    custom: true,
+    schema: { custom: 'com.pyxis.greenhopper.jira:jsw-story-points' }
+  }
 ]
 
 let store: InMemoryImportStore
@@ -239,7 +245,8 @@ describe('Jira import', () => {
         ...story.issue,
         fields: {
           ...(story.issue.fields as object),
-          customfield_10020: [sprint(1, 'Sprint 31', 'closed'), sprint(2, 'Sprint 32', 'active')]
+          customfield_10020: [sprint(1, 'Sprint 31', 'closed'), sprint(2, 'Sprint 32', 'active')],
+          customfield_10016: 5
         }
       }
     }
@@ -256,6 +263,8 @@ describe('Jira import', () => {
       [32, 'active', '2026-10-20']
     ])
     expect((await card(3538))?.sprintId).toBe(String(rows.find((row) => row.number === 32)?.id))
+    expect((await card(3538))?.points).toBe(5)
+    expect(space).toMatchObject({ usesSprints: true, estimation: 'points' })
   })
 
   it('holds Jira’s active sprint as planned when the space already runs one of its own', async () => {
