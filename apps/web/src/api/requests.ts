@@ -118,6 +118,8 @@ export const read = {
   view: (viewId: string) => unwrap(api.GET('/work/views/{viewId}', { params: { path: { viewId } } })),
   viewCards: (viewId: string) => unwrap(api.GET('/work/views/{viewId}/cards', { params: { path: { viewId } } })),
   search: (q: string) => unwrap(api.GET('/work/search', { params: { query: { q, limit: '30' } } })),
+  /** One card with its description, which the space's card list leaves out. */
+  card: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}', { params: { path: { cardId } } })),
   cardByKey: (key: string) => unwrap(api.GET('/work/cards/by-key/{key}', { params: { path: { key } } })),
   relations: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/relations', { params: { path: { cardId } } })),
   attachments: (cardId: string) =>

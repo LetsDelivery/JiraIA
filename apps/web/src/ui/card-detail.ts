@@ -38,6 +38,8 @@ import { typeIcon } from './type-look'
 const descriptions = new WeakMap<HTMLDialogElement, DescriptionHandle>()
 
 type Loaded = {
+  /** The card as read on opening, with its description — the board's copy has none (ADR-0027). */
+  card: Card
   /** Agents' proposals about this card still waiting for someone (ADR-0019). */
   proposals: readonly Proposal[]
   comments: Comment[]
@@ -141,7 +143,8 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
 }
 
 const load = async (cardId: string): Promise<Loaded> => {
-  const [proposals, comments, events, relations, attachments, watchers, star, groups, me] = await Promise.all([
+  const [card, proposals, comments, events, relations, attachments, watchers, star, groups, me] = await Promise.all([
+    read.card(cardId),
     proposalsRead.forCard(cardId).catch(() => ({ items: [] })),
     read.comments(cardId),
     read.history(cardId),
@@ -153,6 +156,7 @@ const load = async (cardId: string): Promise<Loaded> => {
     read.me()
   ])
   return {
+    card,
     proposals: proposals.items,
     comments: comments.items,
     history: events.items,
@@ -167,11 +171,12 @@ const load = async (cardId: string): Promise<Loaded> => {
 
 const render = async (
   dialog: HTMLDialogElement,
-  card: Card,
+  listed: Card,
   context: BoardContext,
   close: () => void
 ): Promise<void> => {
-  const loaded = await load(card.id)
+  const loaded = await load(listed.id)
+  const card = loaded.card
   const again = (next = card) => void render(dialog, next, context, close)
   const attachContext = {
     cardId: card.id,
