@@ -68,9 +68,16 @@ const assigneeProp = (card: Card, canWrite: boolean): Html => {
  * priority, due date, estimate, labels, who has it — each a chip that changes it right there.
  */
 /** What a tile needs from its board: whether the card can change, its column's group, the space's labels, its type. */
-export type TileLook = { canWrite: boolean; group: StateGroup; labels: readonly Label[]; type: CardType | undefined }
+export type TileLook = {
+  canWrite: boolean
+  group: StateGroup
+  labels: readonly Label[]
+  type: CardType | undefined
+  /** The card's state, shown when its board column groups several (ADR-0037). */
+  state?: string | undefined
+}
 
-export const tile = (card: Card, { canWrite, group, labels, type }: TileLook): Html => html`
+export const tile = (card: Card, { canWrite, group, labels, type, state }: TileLook): Html => html`
   <li class="card-tile" data-card-id="${card.id}" ${canWrite ? html`draggable="true"` : ''}
     data-search="${`${card.key} ${card.title}`.toLowerCase()}" data-assignee="${card.assignee?.id ?? ''}">
     <button type="button" class="card-open" data-open-card="${card.id}">
@@ -78,6 +85,7 @@ export const tile = (card: Card, { canWrite, group, labels, type }: TileLook): H
         ${type ? typeIcon(type, 14) : ''}
         <span class="card-key">${card.key}</span>
         ${card.parentId ? html`<span class="faint" title="Subtarefa">${icon('subtask', 14)}</span>` : ''}
+        ${state ? html`<span class="badge card-tile-state">${state}</span>` : ''}
       </span>
       <span class="card-tile-title">${card.title}</span>
     </button>

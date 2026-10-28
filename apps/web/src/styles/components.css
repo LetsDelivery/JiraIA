@@ -1125,6 +1125,10 @@ nav.tabs {
   flex: none;
 }
 
+.card-tile-state {
+  margin-left: auto;
+}
+
 .card-tile-title {
   font-size: var(--text-base);
   font-weight: 600;
