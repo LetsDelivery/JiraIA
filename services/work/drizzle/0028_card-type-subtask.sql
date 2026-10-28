@@ -1,0 +1,1 @@
+ALTER TABLE "work"."card_types" ADD COLUMN "is_subtask" boolean DEFAULT false NOT NULL;

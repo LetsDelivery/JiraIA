@@ -87,14 +87,14 @@ export const inPool = async <T>(items: T[], size: number, work: (item: T) => Pro
  * Etapa 8a: copies Jira as it is to the migration bucket, before anything is converted (ADR-0036),
  * and counts both sides per project for the reconciliation report.
  *
- *     import/<run>/jira/projects.json · fields.json · issues/<id>.json · manifest.json · report.json
+ *     import/<run>/jira/projects.json · fields.json · statuses/<KEY>.json · issues/<id>.json · manifest.json · report.json
  */
 export class JiraRawCopy {
   constructor(private readonly deps: Deps) {}
 
   async run(input: { run: string; projects: string[]; previousRun?: string }): Promise<JiraReport> {
     const startedAt = toIso(this.deps.clock.now())
-    const visible = await this.copyCatalogue(input.run)
+    const visible = await this.copyCatalogue(input.run, input.projects)
     const previous = await this.manifestOf(input.previousRun)
     const manifest: Manifest = { run: input.run, issues: {} }
     const projects: ProjectReport[] = []
@@ -108,12 +108,19 @@ export class JiraRawCopy {
     return report
   }
 
-  /** Projects and fields as Jira lists them; answers the keys the account can see. */
-  private async copyCatalogue(run: string): Promise<Set<string>> {
+  /** Projects, fields and each project's statuses as Jira lists them; answers the keys the account can see. */
+  private async copyCatalogue(run: string, wanted: string[]): Promise<Set<string>> {
     const projects = await this.deps.source.projects()
     await this.deps.store.putJson(`import/${run}/jira/projects.json`, projects)
     await this.deps.store.putJson(`import/${run}/jira/fields.json`, await this.deps.source.fields())
-    return new Set(projects.map((project) => project.key))
+    const visible = new Set(projects.map((project) => project.key))
+    for (const key of wanted.filter((project) => visible.has(project))) {
+      await this.deps.store.putJson(
+        `import/${run}/jira/statuses/${key}.json`,
+        await this.deps.source.projectStatuses(key)
+      )
+    }
+    return visible
   }
 
   private async manifestOf(run: string | undefined): Promise<Manifest | undefined> {

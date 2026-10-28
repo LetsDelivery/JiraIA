@@ -12,9 +12,11 @@ import { PEOPLE_MAPPING } from '../import/people-scan.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
 import {
   auditEvents,
+  boardColumns,
   cardComments,
   cardKeyAliases,
   cards,
+  cardTypes,
   members,
   spaces,
   sprints,
@@ -307,6 +309,109 @@ describe('Jira import', () => {
       ['Do JiraIA', 'active'],
       ['Sprint 32', 'planned']
     ])
+  })
+
+  it('shows the columns of the Jira board, and leaves the other states off the board', async () => {
+    await store.putJson('import/raw1/jira/boards.json', [
+      {
+        project: 'TEC',
+        board: { id: 31, name: 'quadro TDV3' },
+        columns: [{ name: 'BLOQUEIO', statuses: ['IMPEDIMENTO'] }]
+      }
+    ])
+    await run('i1')
+    const columns = await db.select().from(boardColumns)
+    const states = await db.select().from(workflowStates)
+
+    expect(columns.map((column) => column.name)).toEqual(['BLOQUEIO'])
+    expect(states.find((state) => state.name === 'IMPEDIMENTO')?.columnId).toBe(String(columns[0]?.id))
+    expect(states.find((state) => state.name === 'DOWNSTREAM')?.columnId).toBeNull()
+  })
+
+  it('removes a column the Jira board does not have', async () => {
+    await run('i1')
+    await store.putJson('import/raw1/jira/boards.json', [
+      {
+        project: 'TEC',
+        board: { id: 31, name: 'quadro TDV3' },
+        columns: [{ name: 'BLOQUEIO', statuses: ['IMPEDIMENTO'] }]
+      }
+    ])
+    await run('i2')
+
+    expect((await db.select().from(boardColumns)).map((column) => column.name)).toEqual(['BLOQUEIO'])
+  })
+
+  it('gives a project without a Jira board one column per status, from not started to done', async () => {
+    await run('i1')
+    const columns = await db.select().from(boardColumns)
+
+    expect(columns.sort((a, b) => a.position - b.position).map((column) => column.name)).toEqual([
+      'IMPEDIMENTO',
+      'DOWNSTREAM'
+    ])
+  })
+
+  it('makes an existing space’s workflow Jira’s: every declared status, the sub-task level, and nothing JiraIA added', async () => {
+    const spaceId = uuidGenerator.next()
+    await db.insert(spaces).values({
+      id: spaceId,
+      organizationId,
+      key: 'TEC',
+      name: 'Delivery Board',
+      type: 'software',
+      createdAt: clock.now()
+    })
+    const unused = uuidGenerator.next()
+    const named = uuidGenerator.next()
+    await db.insert(workflowStates).values([
+      { id: unused, spaceId, name: 'A fazer', group: 'not_started', position: 0, createdAt: clock.now() },
+      { id: named, spaceId, name: 'Em teste', group: 'in_progress', position: 1, createdAt: clock.now() }
+    ])
+    const typeId = uuidGenerator.next()
+    await db.insert(cardTypes).values({ id: typeId, spaceId, name: 'Tarefa', position: 0, createdAt: clock.now() })
+    await db.insert(cards).values({
+      id: uuidGenerator.next(),
+      organizationId,
+      spaceId,
+      number: 1,
+      typeId,
+      stateId: named,
+      title: 'Feito no JiraIA',
+      reporterId: actorId,
+      priority: 'medium',
+      rank: 1,
+      createdAt: clock.now(),
+      updatedAt: clock.now()
+    })
+    await store.putJson('import/raw1/jira/projects.json', [
+      {
+        id: '10132',
+        key: 'TEC',
+        name: 'Delivery Board',
+        projectTypeKey: 'software',
+        issueTypes: [{ name: 'História' }, { name: 'Subtarefa', subtask: true }]
+      }
+    ])
+    await store.putJson('import/raw1/jira/statuses/TEC.json', [
+      {
+        name: 'Story',
+        statuses: [
+          { name: 'IMPEDIMENTO', statusCategory: { key: 'new' } },
+          { name: 'IMERSÃO', statusCategory: { key: 'indeterminate' } }
+        ]
+      }
+    ])
+
+    const report = await run('i1')
+    const states = (await db.select().from(workflowStates).where(eq(workflowStates.spaceId, spaceId))).map(
+      (state) => state.name
+    )
+    const subtask = (await db.select().from(cardTypes).where(eq(cardTypes.name, 'Subtarefa')))[0]
+
+    expect(states.sort()).toEqual(['DOWNSTREAM', 'Em teste', 'IMERSÃO', 'IMPEDIMENTO'])
+    expect(subtask?.isSubtask).toBe(true)
+    expect(report.spaces[0]?.workflow).toEqual({ removed: ['state A fazer'], kept: ['state Em teste', 'type Tarefa'] })
   })
 
   it('changes only what Jira changed when run again', async () => {

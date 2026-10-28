@@ -1,14 +1,13 @@
 import type { IdGenerator } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 import { eq } from 'drizzle-orm'
-import { lookOf } from '../cards/card-type.schemas.js'
 import type { FieldKind } from '../cards/field.schemas.js'
-import type { StateGroup } from '../cards/schemas.js'
 
-import { cardTypes, customFields, spaces, sprints, workflowStates } from '../schema.js'
+import { customFields, spaces, sprints } from '../schema.js'
 import type { IssueRecord, JiraProject } from './atlassian-source.js'
 import type { ImportRepository } from './import.repository.js'
 import type { People } from './import-members.js'
+import { ImportWorkflow, type WorkflowReconciliation } from './import-workflow.js'
 import {
   dayOf,
   fieldsOf,
@@ -18,16 +17,17 @@ import {
   type JiraSprint,
   kindOf,
   sprintStateOf,
-  sprintsOf,
-  statusOf,
-  typeNameOf
+  sprintsOf
 } from './jira-mapping.js'
+import type { JiraWorkflow } from './jira-workflow.js'
 
 /** Where a project's cards go: the space and the ids of its states, types, fields and sprints. */
 export type Catalogue = {
   spaceId: string
   stateId: Map<string, string>
   typeId: Map<string, string>
+  /** What the space had that Jira has not: removed, or kept off the board because something names it. */
+  reconciliation: WorkflowReconciliation
   fields: { jiraId: string; id: string; name: string; kind: FieldKind; options: string[] }[]
   sprintId: Map<number, string>
 }
@@ -39,16 +39,12 @@ type Input = {
   records: IssueRecord[]
   jiraFields: JiraField[]
   people: People
+  workflow: JiraWorkflow
   at: Date
 }
 
 const SPACE_TYPES = ['software', 'business', 'product_discovery', 'service_desk']
 const MAX_OPTIONS = 100
-
-/** Statuses in the order cards first used them, each once, with Jira's category as the group. */
-const statusesOf = (records: IssueRecord[]): { name: string; group: StateGroup }[] => [
-  ...new Map(records.map((record) => statusOf(record)).map((status) => [status.name, status])).values()
-]
 
 /**
  * How the space plans, as its Jira project did: in sprints when a card was in one, and in story points
@@ -75,10 +71,12 @@ export class ImportCatalogue {
 
   async ensure(input: Input): Promise<Catalogue> {
     const spaceId = await this.space(input)
+    const workflow = await new ImportWorkflow(this.deps).apply(spaceId, input.workflow, input.at)
     return {
       spaceId,
-      stateId: await this.states(spaceId, statusesOf(input.records), input.at),
-      typeId: await this.types(spaceId, [...new Set(input.records.map(typeNameOf))], input.at),
+      stateId: workflow.stateId,
+      typeId: workflow.typeId,
+      reconciliation: workflow.reconciliation,
       fields: await this.fields(spaceId, input),
       sprintId: await this.sprints(spaceId, input)
     }
@@ -109,43 +107,6 @@ export class ImportCatalogue {
       createdAt: earliest(input.records, input.at)
     })
     return id
-  }
-
-  private async states(spaceId: string, wanted: { name: string; group: StateGroup }[], at: Date) {
-    const existing = await this.deps.repository.states(spaceId)
-    const byName = new Map(existing.map((state) => [state.name, state.id]))
-    const missing = wanted.filter((state) => !byName.has(state.name))
-    const rows = missing.map((state, index) => ({
-      id: this.deps.ids.next(),
-      spaceId,
-      name: state.name,
-      group: state.group,
-      position: existing.length + index,
-      createdAt: at
-    }))
-    if (rows.length > 0) {
-      await this.deps.db.insert(workflowStates).values(rows)
-    }
-    return new Map([...byName, ...rows.map((row) => [row.name, row.id] as const)])
-  }
-
-  private async types(spaceId: string, wanted: string[], at: Date) {
-    const existing = await this.deps.repository.types(spaceId)
-    const byName = new Map(existing.map((type) => [type.name, type.id]))
-    const rows = wanted
-      .filter((name) => !byName.has(name))
-      .map((name, index) => ({
-        id: this.deps.ids.next(),
-        spaceId,
-        name,
-        ...lookOf(name),
-        position: existing.length + index,
-        createdAt: at
-      }))
-    if (rows.length > 0) {
-      await this.deps.db.insert(cardTypes).values(rows)
-    }
-    return new Map([...byName, ...rows.map((row) => [row.name, row.id] as const)])
   }
 
   /** Custom fields the project's cards fill in, with the options their values use. */

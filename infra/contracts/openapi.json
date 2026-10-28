@@ -5794,13 +5794,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -5855,6 +5868,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -5862,6 +5878,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -5870,7 +5912,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -5972,13 +6015,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6033,6 +6089,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6040,6 +6099,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6048,7 +6133,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -6144,13 +6230,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6205,6 +6304,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6212,6 +6314,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6220,7 +6348,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -6328,13 +6457,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6389,6 +6531,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6396,6 +6541,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6404,7 +6575,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -6494,13 +6666,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6555,6 +6740,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6562,6 +6750,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6570,7 +6784,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -6697,13 +6912,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6758,6 +6986,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6765,6 +6996,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6773,7 +7030,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -6869,13 +7127,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -6930,6 +7201,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -6937,6 +7211,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -6945,7 +7245,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -7079,13 +7380,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -7140,6 +7454,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -7147,6 +7464,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -7155,7 +7498,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }
@@ -7245,13 +7589,26 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "columnId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "group",
-                          "position"
+                          "position",
+                          "columnId"
                         ],
                         "additionalProperties": false
                       }
@@ -7306,6 +7663,9 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "isSubtask": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -7313,6 +7673,32 @@
                           "name",
                           "icon",
                           "color",
+                          "position",
+                          "isSubtask"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
                           "position"
                         ],
                         "additionalProperties": false
@@ -7321,7 +7707,8 @@
                   },
                   "required": [
                     "states",
-                    "types"
+                    "types",
+                    "columns"
                   ],
                   "additionalProperties": false
                 }

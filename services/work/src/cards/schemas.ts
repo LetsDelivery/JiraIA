@@ -23,16 +23,27 @@ export const stateViewSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   group: stateGroupSchema,
-  position: z.number()
+  position: z.number(),
+  /** The board column it shows in; in a space with columns, `null` keeps it off the board (ADR-0037). */
+  columnId: z.uuid().nullable()
 })
+/** A board column: the states it shows are those whose `columnId` is its id, in workflow order. */
+export const columnViewSchema = z.object({ id: z.uuid(), name: z.string(), position: z.number() })
 export const cardTypeViewSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   icon: typeIconSchema,
   color: typeColorSchema,
-  position: z.number()
+  position: z.number(),
+  /** A sub-task type: its cards show under their parent, not on the board (ADR-0037). */
+  isSubtask: z.boolean()
 })
-export const workflowViewSchema = z.object({ states: z.array(stateViewSchema), types: z.array(cardTypeViewSchema) })
+/** A space's states, card types and board columns; no columns means one column per state. */
+export const workflowViewSchema = z.object({
+  states: z.array(stateViewSchema),
+  types: z.array(cardTypeViewSchema),
+  columns: z.array(columnViewSchema)
+})
 export type WorkflowView = z.infer<typeof workflowViewSchema>
 
 const personSchema = z.object({ id: z.uuid(), name: z.string() })
@@ -184,14 +195,16 @@ export const toStateView = (row: StateRow) => ({
   id: row.id,
   name: row.name,
   group: stateGroupSchema.parse(row.group),
-  position: row.position
+  position: row.position,
+  columnId: row.columnId
 })
 export const toTypeView = (row: CardTypeRow) => ({
   id: row.id,
   name: row.name,
   icon: typeIconSchema.parse(row.icon),
   color: typeColorSchema.parse(row.color),
-  position: row.position
+  position: row.position,
+  isSubtask: row.isSubtask
 })
 
 export type CardWithPeople = CardRow & {

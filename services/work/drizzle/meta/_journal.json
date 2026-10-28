@@ -190,6 +190,20 @@
       "when": 1793221283957,
       "tag": "0026_import-refs",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793229167855,
+      "tag": "0027_board-columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793230796808,
+      "tag": "0028_card-type-subtask",
+      "breakpoints": true
     }
   ]
 }
