@@ -69,7 +69,7 @@ Mappings:
     # AccountId (prod)
     '009485101578':
       AllowedEmailDomains: 'uselets.com,lets.delivery'
-      GoogleClientId: ''
+      GoogleClientId: '721914026671-170ki7n7n6b50i5nsserj255ftete0oi.apps.googleusercontent.com'
       AlarmEmail: ''
       MailFrom: ''
       SlackClientId: ''
