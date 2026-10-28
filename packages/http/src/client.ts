@@ -17,9 +17,12 @@ export type OutboundRequest = {
   body?: string
   /** Gives up after this long; the default suits a webhook. */
   timeoutMs?: number
+  /** Answers the body as `bytes`, untouched, instead of text — a file being downloaded. */
+  binary?: boolean
 }
 
-export type OutboundResponse = { status: number; body: string }
+/** `bytes` only when the request asked for `binary`; `body` is then empty. */
+export type OutboundResponse = { status: number; body: string; bytes?: Uint8Array }
 
 /** Header names whose values never reach a log line, matched without case. */
 const SENSITIVE = /^(authorization|cookie|x-api-key|x-jiraia-signature|x-slack-signature)$/i
@@ -57,9 +60,11 @@ export const createHttpClient = (options: { provider: string; logger: JiraiaLogg
         body: request.body ?? null,
         signal: AbortSignal.timeout(request.timeoutMs ?? 10_000)
       })
-      const body = await response.text()
+      const answer = request.binary
+        ? { status: response.status, body: '', bytes: new Uint8Array(await response.arrayBuffer()) }
+        : { status: response.status, body: await response.text() }
       options.logger.info('Outbound call', { ...context, status: response.status, durationMs: Date.now() - started })
-      return { status: response.status, body }
+      return answer
     } catch (error) {
       options.logger.warn('Outbound call failed', {
         ...context,
