@@ -40,10 +40,12 @@ export class CardService {
 
   async list(caller: Caller, spaceId: string, sprint?: string): Promise<{ items: CardView[] }> {
     await this.deps.gate.check(caller, spaceId, 'space:read')
-    const rows = await this.deps.cards.list(spaceId)
-    const sprintId = sprint === 'active' ? ((await this.deps.rules.activeSprint(spaceId)) ?? '') : sprint
-    const wanted = sprintId === undefined ? rows : rows.filter((row) => (row.sprintId ?? 'none') === sprintId)
-    return { items: wanted.map(toCardView) }
+    const sprintId = sprint === 'active' ? ((await this.deps.rules.activeSprint(spaceId)) ?? null) : sprint
+    if (sprint === 'active' && sprintId === null) {
+      return { items: [] }
+    }
+    const rows = await this.deps.cards.list(spaceId, sprintId === 'none' ? null : sprintId)
+    return { items: rows.map(toCardView) }
   }
 
   /** Lands at the bottom of its state's column and of the backlog, numbered from the space's counter. */
