@@ -33,6 +33,7 @@
     "contracts": "bun run infra/contracts/openapi.ts",
     "db:generate": "drizzle-kit generate --config services/work/drizzle.config.ts",
     "db:migrate": "bun run infra/local/migrate.ts",
+    "import:atlassian": "bun run infra/import/atlassian.ts",
     "local:digest": "bun run infra/local/digest.ts",
     "local:email-preview": "bun run infra/local/email-preview.ts",
     "local:down": "docker compose down",
