@@ -4,16 +4,18 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { systemClock, toIso } from '@jiraia/core'
+import { systemClock, toIso, uuidGenerator } from '@jiraia/core'
+import { connectDatabase, type Database } from '@jiraia/db'
 import { createHttpClient } from '@jiraia/http'
 import { createLogger } from '@jiraia/logger'
 import { z } from 'zod'
-
 import { ConfluenceRawCopy, type ConfluenceReport } from '../../services/work/src/import/confluence-raw-copy.js'
 import { HttpAtlassianSource } from '../../services/work/src/import/http-atlassian-source.js'
 import { HttpConfluenceSource } from '../../services/work/src/import/http-confluence-source.js'
+import { ImportRepository } from '../../services/work/src/import/import.repository.js'
 import { S3ImportStore } from '../../services/work/src/import/import-store.js'
 import { JiraAttachmentCopy } from '../../services/work/src/import/jira-attachment-copy.js'
+import { JiraImport, type JiraImportReport } from '../../services/work/src/import/jira-import.js'
 import { JiraRawCopy, type JiraReport } from '../../services/work/src/import/jira-raw-copy.js'
 import { type Person, peopleFromCsv, peopleToCsv } from '../../services/work/src/import/people.js'
 import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/people-scan.js'
@@ -27,13 +29,15 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  *     bun run import:atlassian -- confluence [--only CS,Produto] [--run <id>]
  *     bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
  *     bun run import:atlassian -- people-accept <reviewed.csv>
+ *     bun run import:atlassian -- jira-import --raw-run <id> --as <email> [--only TEC,PRD] [--run <id>]
  *
  * Reads the read-only tokens from the secret `jiraia/atlassian`, copies as it is to
  * `s3://<bucket>/import/<run>/`, prints the reconciliation and exits 1 when something is missing or a
  * count differs. `jira --previous` asks Jira only for what changed; `jira-attachments` stores the bytes
  * of every attachment of a run, each once, by its id. `people` proposes who each account becomes and
  * writes a CSV to review outside the repository (it holds e-mails); `people-accept` stores the
- * reviewed one for 8c.
+ * reviewed one for 8c. `jira-import` writes a raw Jira copy into the database — the local one when
+ * `DATABASE_URL` is set, otherwise the account's Aurora, found in the `jiraia` function's settings.
  */
 const PROJECTS = 'TEC,MARKETING,PRD,ORQ,TASK,PERF,JUR,SDDEC,REQ,OLS,MS,LP,FIB,GB'.split(',')
 const SPACES = 'BA,Produto,LD,CS,CSB,DEMO,team9e949cb32355422b970994e76dcc60a1,PERF'.split(',')
@@ -42,7 +46,8 @@ const USAGE = `usage:
   bun run import:atlassian -- jira-attachments --run <id>
   bun run import:atlassian -- confluence [--only CS,Produto] [--run <id>]
   bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
-  bun run import:atlassian -- people-accept <reviewed.csv>`
+  bun run import:atlassian -- people-accept <reviewed.csv>
+  bun run import:atlassian -- jira-import --raw-run <id> --as <email> [--only TEC,PRD] [--run <id>]`
 const REVIEW_DIR = join(homedir(), 'Documents/lets-workspace/jiraia-migracao/people')
 
 const secretSchema = z.object({
@@ -64,7 +69,9 @@ const { values, positionals } = parseArgs({
     secret: { type: 'string', default: 'jiraia/atlassian' },
     'jira-run': { type: 'string' },
     'confluence-run': { type: 'string' },
-    directory: { type: 'string', default: 'backups/2026-10-28/jira-export-users.csv' }
+    directory: { type: 'string', default: 'backups/2026-10-28/jira-export-users.csv' },
+    'raw-run': { type: 'string' },
+    as: { type: 'string' }
   }
 })
 
@@ -135,8 +142,10 @@ const step = positionals[0] ?? ''
 const incomplete =
   (step === 'jira-attachments' && !values.run) ||
   (step === 'people' && !(values['jira-run'] && values['confluence-run'])) ||
-  (step === 'people-accept' && !positionals[1])
-if (!['jira', 'jira-attachments', 'confluence', 'people', 'people-accept'].includes(step) || incomplete) {
+  (step === 'people-accept' && !positionals[1]) ||
+  (step === 'jira-import' && !(values['raw-run'] && values.as && values.only))
+const STEPS = ['jira', 'jira-attachments', 'confluence', 'people', 'people-accept', 'jira-import']
+if (!STEPS.includes(step) || incomplete) {
   console.error(USAGE)
   process.exit(2)
 }
@@ -145,6 +154,59 @@ const byRule = (people: Person[]) =>
   Object.entries(Object.groupBy(people, (person) => person.rule))
     .map(([rule, rows]) => `${rule} ${rows?.length ?? 0}`)
     .join(', ')
+
+/** The local database when `DATABASE_URL` is set; otherwise the Aurora the `jiraia` function uses. */
+const openDatabase = (): Database => {
+  if (process.env.DATABASE_URL) {
+    return connectDatabase({ DATABASE_URL: process.env.DATABASE_URL })
+  }
+  const args = ['lambda', 'get-function-configuration', '--function-name', 'jiraia', '--region', 'us-east-1']
+  const output = execFileSync('aws', [...args, '--query', 'Environment.Variables', '--output', 'json'], {
+    env: { AWS_PROFILE: 'lets-dev', ...process.env }
+  })
+  const env = z
+    .object({ DB_CLUSTER_ARN: z.string(), DB_SECRET_ARN: z.string(), DB_NAME: z.string() })
+    .parse(JSON.parse(output.toString()))
+  return connectDatabase(env, { waitMs: () => 60_000 })
+}
+
+const printImport = (report: JiraImportReport) => {
+  console.error(`run ${report.run} from ${report.rawRun}`)
+  for (const s of report.spaces) {
+    console.error(
+      `${s.key}: cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}, comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}, aliases ${s.aliases}`
+    )
+    if (s.cards.conflicts.length > 0) {
+      console.error(`  number already used by a card not from Jira: ${s.cards.conflicts.join(', ')}`)
+    }
+    if (s.parentsOutside.length > 0) {
+      console.error(`  parent in another project (not linked): ${s.parentsOutside.length}`)
+    }
+  }
+  if (report.unmappedAccounts.length > 0) {
+    console.error(`accounts not in the reviewed mapping, imported as inactive: ${report.unmappedAccounts.length}`)
+  }
+}
+
+if (step === 'jira-import') {
+  const db = openDatabase()
+  const actor = await new ImportRepository(db).actor(values.as ?? '')
+  if (!actor) {
+    console.error(`No member "${values.as}" in that database`)
+    process.exit(1)
+  }
+  const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
+  const logger = createLogger('work', 'import')
+  const report = await new JiraImport({ db, store, clock: systemClock, ids: uuidGenerator, logger }).run({
+    organizationId: actor.organizationId,
+    actorId: actor.memberId,
+    rawRun: values['raw-run'] ?? '',
+    run: values.run ?? toIso(systemClock.now()).replace(/[:.]/g, '-'),
+    projects: (values.only ?? '').split(',')
+  })
+  printImport(report)
+  process.exit(report.spaces.every((space) => space.cards.conflicts.length === 0) ? 0 : 1)
+}
 
 if (step === 'people-accept') {
   const people = peopleFromCsv(readFileSync(positionals[1] ?? '', 'utf8'))
