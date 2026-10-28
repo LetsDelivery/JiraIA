@@ -65,9 +65,10 @@ attachments. It is fit for inventory and reconciliation, not for the import.
   highest imported. Every earlier key in the changelog (`LD-17` for `TEC-216`) goes to
   `card_key_aliases`, so old links still resolve.
 - **People are matched by corporate e-mail** (7.3). Whoever is active in Atlassian becomes a member,
-  invited if they never signed in. Whoever left is not a member: their name, as Atlassian still
-  returns it with `active: false`, is written on the card, comment or event they authored — never
-  "anonymous". Atlassian may hide e-mails behind profile privacy; the export of active users is the
+  invited if they never signed in. Whoever left, and every Atlassian app, becomes an **inactive
+  member with no e-mail**, under the name Atlassian still returns (decided 2026-10-28): every author
+  column needs a member, the name shows where they acted — never "anonymous" — and an inactive member
+  cannot sign in or be assigned. Atlassian may hide e-mails behind profile privacy; the export of active users is the
   source of the mapping, and an active account with no e-mail is listed for a decision, not guessed. One person often has
   several Atlassian accounts (`parceiro.lets.delivery`, `lets.delivery`, `uselets.com`): a reviewed
   table merges them into one member, keyed by the `uselets.com` address the person signs in with
@@ -76,9 +77,12 @@ attachments. It is fit for inventory and reconciliation, not for the import.
   `via: 'Jira'` or `via: 'Confluence'`. They are written already dispatched (`dispatched_at` set at
   import), so no notice, e-mail, webhook or Slack message leaves for the past; reports and dashboards
   that read the trail (ADR-0016) see it whole. The import itself is audited once per run.
+- **A project's workflow comes as Jira has it**: every status its cards use becomes a state, grouped by
+  Jira's category (new, in progress, done), after the states LET'S already defined for REQ, PRD and
+  TEC; nothing is merged by guess (decided 2026-10-28). Each area tidies its own workflow afterwards.
 - **Everything a card had comes with it**: description and comments in Markdown (ADR-0030) with their
   authors and dates, attachments to object storage, typed links, labels, sprints, parents, custom fields
-  (Product Discovery's included) into `custom_fields`. **Worklogs**, outside the MVP's scope, are kept in
+  (Product Discovery's included, and TEC's Squad as a select) into `custom_fields`. **Worklogs**, outside the MVP's scope, are kept in
   a table of their own (`card_worklogs`) and shown read-only on the card; tracking time is not added.
 - **Confluence goes to Draw** (ADR-0011): a space per Confluence space, folders as folders, pages as
   pages, live docs as pages, whiteboards as whiteboards with the exported image when their shapes
