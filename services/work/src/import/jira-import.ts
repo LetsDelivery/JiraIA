@@ -7,8 +7,10 @@ import { cards } from '../schema.js'
 import { type IssueRecord, type JiraProject, jiraProjectSchema } from './atlassian-source.js'
 import { type CardInsert, ImportRepository, type Ref, type RefRow } from './import.repository.js'
 import { ImportCatalogue } from './import-catalogue.js'
+import { ImportColumns, type JiraBoard, jiraBoardSchema, wantedColumns } from './import-columns.js'
 import { ImportMembers } from './import-members.js'
 import type { ImportStore } from './import-store.js'
+import type { WorkflowReconciliation } from './import-workflow.js'
 import { type CardContext, cardRowOf } from './jira-card-rows.js'
 import { type CommentTally, JiraComments } from './jira-comments.js'
 import {
@@ -24,6 +26,7 @@ import {
   statusOf
 } from './jira-mapping.js'
 import { inPool, manifestSchema } from './jira-raw-copy.js'
+import { type JiraWorkflow, jiraWorkflowOf } from './jira-workflow.js'
 import { collectAccounts, type Person, personSchema } from './people.js'
 import { PEOPLE_MAPPING } from './people-scan.js'
 
@@ -35,13 +38,15 @@ export type SpaceImportReport = {
   aliases: number
   /** `TEC-9→LD-4`: a parent in another project, which a space's hierarchy cannot hold. */
   parentsOutside: string[]
+  /** What the space had that Jira has not: removed, or kept off the board because something names it. */
+  workflow: WorkflowReconciliation
 }
 export type JiraImportReport = { run: string; rawRun: string; spaces: SpaceImportReport[]; unmappedAccounts: string[] }
 
 type Deps = { db: Database; store: ImportStore; clock: Clock; ids: IdGenerator; logger: JiraiaLogger }
 type Input = { organizationId: string; actorId: string; rawRun: string; run: string; projects: string[] }
-type Loaded = { project: JiraProject; records: IssueRecord[] }
-type Shared = { jiraFields: JiraField[]; mapping: Person[]; unmapped: Set<string> }
+type Loaded = { project: JiraProject; records: IssueRecord[]; workflow: JiraWorkflow }
+type Shared = { jiraFields: JiraField[]; mapping: Person[]; boards: JiraBoard[]; unmapped: Set<string> }
 type CardPlan = {
   inserts: CardInsert[]
   updates: CardInsert[]
@@ -73,6 +78,7 @@ export class JiraImport {
     const shared: Shared = {
       jiraFields: fieldListSchema.parse(await this.deps.store.getJson(`${prefix}/fields.json`)) as JiraField[],
       mapping: z.array(personSchema).parse((await this.deps.store.getJson(PEOPLE_MAPPING)) ?? []),
+      boards: z.array(jiraBoardSchema).parse((await this.deps.store.getJson(`${prefix}/boards.json`)) ?? []),
       unmapped: new Set()
     }
     const spaces: SpaceImportReport[] = []
@@ -100,16 +106,16 @@ export class JiraImport {
           records.push((await this.deps.store.getJson(entry.path)) as IssueRecord)
         }
       )
-      loaded.push({
-        project,
-        records: records.sort((a, b) => numberOf(String(a.issue.key)) - numberOf(String(b.issue.key)))
-      })
+      const statuses = await this.deps.store.getJson(`${prefix}/statuses/${project.key}.json`)
+      records.sort((a, b) => numberOf(String(a.issue.key)) - numberOf(String(b.issue.key)))
+      loaded.push({ project, records, workflow: jiraWorkflowOf(project, statuses, records) })
     }
     return loaded
   }
 
   private async importProject(input: Input, loaded: Loaded, shared: Shared): Promise<SpaceImportReport> {
     const context = await this.contextOf(input, loaded, shared)
+    await this.applyColumns(loaded, shared, context.catalogue.spaceId)
     const ordered = [...loaded.records].sort((a, b) =>
       rankOf(a, this.rankField(shared)).localeCompare(rankOf(b, this.rankField(shared)))
     )
@@ -129,6 +135,7 @@ export class JiraImport {
     const report: SpaceImportReport = {
       key: loaded.project.key,
       cards: plan.tally,
+      workflow: context.catalogue.reconciliation,
       parentsOutside: await this.linkParents(ordered, plan.ids),
       aliases: await this.writeAliases(input, ordered, plan.ids),
       comments: await comments.import({ run: input.run, records: ordered, cardIds: plan.ids, context })
@@ -140,6 +147,13 @@ export class JiraImport {
       updated: report.cards.updated
     })
     return report
+  }
+
+  /** The board shows the columns of the project's Jira board, or one per status it draws (ADR-0037). */
+  private async applyColumns(loaded: Loaded, shared: Shared, spaceId: string): Promise<void> {
+    const board = shared.boards.find((entry) => entry.project === loaded.project.key)
+    const columns = new ImportColumns({ db: this.deps.db, ids: this.deps.ids })
+    await columns.apply(spaceId, wantedColumns(board, loaded.workflow.boardStates), this.deps.clock.now())
   }
 
   private rankField(shared: Shared): string | undefined {
@@ -164,6 +178,7 @@ export class JiraImport {
       organizationId: input.organizationId,
       project: loaded.project,
       records: loaded.records,
+      workflow: loaded.workflow,
       jiraFields: shared.jiraFields,
       people,
       at

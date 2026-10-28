@@ -87,6 +87,10 @@ export class HttpAtlassianSource implements AtlassianSource {
     return await this.jira.bytes(`/attachment/content/${id}?redirect=false`)
   }
 
+  async projectStatuses(projectKey: string): Promise<Raw[]> {
+    return z.array(rawSchema).parse(await this.jira.json('GET', `/project/${projectKey}/statuses`))
+  }
+
   /** At most 90 ids a call; an id Jira no longer knows is simply absent. */
   async users(accountIds: string[]): Promise<Raw[]> {
     const users: Raw[] = []

@@ -11,6 +11,7 @@ import {
   write
 } from '@/api/requests'
 import { type Sprint, sprintsRead } from '@/api/sprints'
+import { type BoardColumn as Column, columnsOf } from '@/lib/board-columns'
 import { invalidate } from '@/lib/cache'
 import { dropIndex } from '@/lib/cards'
 import { assignableIds, type CardFilter, isEmpty } from '@/lib/filters'
@@ -64,64 +65,78 @@ export const setLanes = (spaceId: string, lanes: LaneBy): void => {
 /** What every tile of the board needs from it: whether cards can be changed, and the types they wear. */
 type Drawing = Pick<BoardContext, 'canWrite' | 'workflow' | 'labels'>
 
-const cardsList = (state: State, cards: readonly Card[], drawing: Drawing, lane: string): Html => html`
-  <ol class="column-cards" data-drop-state="${state.id}" data-lane="${lane}" aria-label="${state.name}">${cards.map(
-    (card) =>
-      tile(card, {
+const firstOf = (column: Column): State => column.states[0] as State
+
+/** A column's cards, grouped by its states in workflow order, each state's in board order. */
+const inColumn = (cards: readonly Card[], column: Column): Card[] =>
+  column.states.flatMap((state) => cards.filter((card) => card.stateId === state.id))
+
+const cardsList = (column: Column, cards: readonly Card[], drawing: Drawing, lane: string): Html => html`
+  <ol class="column-cards" data-drop-state="${firstOf(column).id}" data-column-states="${column.states.map((state) => state.id).join(' ')}"
+    data-lane="${lane}" aria-label="${column.name}">${cards.map((card) => {
+      const state = column.states.find((each) => each.id === card.stateId) ?? firstOf(column)
+      return tile(card, {
         canWrite: drawing.canWrite,
         group: state.group,
         labels: drawing.labels,
-        type: drawing.workflow.types.find((type) => type.id === card.typeId)
+        type: drawing.workflow.types.find((type) => type.id === card.typeId),
+        state: column.states.length > 1 ? state.name : undefined
       })
-  )}</ol>
+    })}</ol>
 `
 
-const columnHead = (state: State, total: number): Html => html`
+const columnHead = (column: Column, total: number): Html => html`
   <header class="column-head">
-    <span class="group-dot group-${state.group}" aria-hidden="true"></span>
-    <h3>${state.name}</h3>
+    <span class="group-dot group-${firstOf(column).group}" aria-hidden="true"></span>
+    <h3>${column.name}</h3>
     <span class="count">${total}</span>
   </header>
 `
 
-const quickAdd = (state: State): Html => html`
-  <form class="quick-add" data-quick-add="${state.id}">
-    <input class="input quick-add-input" name="title" placeholder="+ Criar card" aria-label="Novo card em ${state.name}" maxlength="255" />
+const quickAdd = (column: Column): Html => html`
+  <form class="quick-add" data-quick-add="${firstOf(column).id}">
+    <input class="input quick-add-input" name="title" placeholder="+ Criar card" aria-label="Novo card em ${column.name}" maxlength="255" />
   </form>
 `
 
-const column = (state: State, cards: readonly Card[], drawing: Drawing): Html => html`
-  <section class="column" aria-label="${state.name}">
-    ${columnHead(state, cards.length)}
-    ${cardsList(state, cards, drawing, '')}
-    ${drawing.canWrite ? quickAdd(state) : ''}
+const columnOf = (column: Column, cards: readonly Card[], drawing: Drawing): Html => html`
+  <section class="column" aria-label="${column.name}">
+    ${columnHead(column, cards.length)}
+    ${cardsList(column, cards, drawing, '')}
+    ${drawing.canWrite ? quickAdd(column) : ''}
   </section>
 `
 
-const inState = (cards: readonly Card[], state: State) => cards.filter((card) => card.stateId === state.id)
-
 /** The board in lanes: column heads once on top, then one row of columns per lane (escopo-mvp 3.1). */
-const laned = (context: BoardContext, lanes: Lane<Card>[]): Html => html`
-  <div class="board board-laned" style="--columns: ${context.workflow.states.length}">
-    ${context.workflow.states.map((state) => html`<div class="column column-top">${columnHead(state, inState(context.cards, state).length)}</div>`)}
-    ${lanes.map(
-      (lane) => html`
-        <h4 class="lane-title">${lane.label} <span class="count">${lane.cards.length}</span></h4>
-        ${context.workflow.states.map((state) => html`<div class="column column-lane">${cardsList(state, inState(lane.cards, state), context, lane.value)}</div>`)}
-      `
-    )}
-  </div>
-`
+const laned = (context: BoardContext, lanes: Lane<Card>[]): Html => {
+  const columns = columnsOf(context.workflow)
+  return html`
+    <div class="board board-laned" style="--columns: ${columns.length}">
+      ${columns.map((column) => html`<div class="column column-top">${columnHead(column, inColumn(context.cards, column).length)}</div>`)}
+      ${lanes.map(
+        (lane) => html`
+          <h4 class="lane-title">${lane.label} <span class="count">${lane.cards.length}</span></h4>
+          ${columns.map((column) => html`<div class="column column-lane">${cardsList(column, inColumn(lane.cards, column), context, lane.value)}</div>`)}
+        `
+      )}
+    </div>
+  `
+}
 
 const LANE_OPTIONS = LANE_BY.map((by) => ({ value: by, label: LANE_LABEL[by] }))
 
-/** The cards the board shows: the sprint on screen's, or every card of a space without sprints (ADR-0029). */
+/**
+ * The cards the board shows: the sprint on screen's, or every card of a space without sprints
+ * (ADR-0029) — never a sub-task's, which belongs under its parent, as on a Jira board (ADR-0037).
+ */
 const boardScope = (context: BoardContext): { cards: readonly Card[]; sprint: Sprint | undefined } => {
+  const subtasks = new Set(context.workflow.types.filter((type) => type.isSubtask).map((type) => type.id))
+  const drawn = context.cards.filter((card) => !subtasks.has(card.typeId))
   if (!context.space.usesSprints) {
-    return { cards: context.cards, sprint: undefined }
+    return { cards: drawn, sprint: undefined }
   }
   const sprint = shownSprint(context.sprints, new URLSearchParams(location.search).get('sprint'))
-  return { cards: sprint ? context.cards.filter((card) => card.sprintId === sprint.id) : context.cards, sprint }
+  return { cards: sprint ? drawn.filter((card) => card.sprintId === sprint.id) : drawn, sprint }
 }
 
 const scopeOf = (context: BoardContext, cards: readonly Card[]): SprintScope => ({
@@ -132,7 +147,7 @@ const scopeOf = (context: BoardContext, cards: readonly Card[]): SprintScope => 
   canWrite: context.canWrite
 })
 
-/** The kanban: one column per state, in the workflow's order, optionally in lanes (escopo-mvp 3.1). */
+/** The kanban: the space's board columns, or one per state, optionally in lanes (escopo-mvp 3.1, ADR-0037). */
 export const board = (context: BoardContext): Html => {
   const by = laneOf(context.spaceId)
   const { cards, sprint } = boardScope(context)
@@ -152,7 +167,7 @@ export const board = (context: BoardContext): Html => {
     </div>
     ${
       by === 'none'
-        ? html`<div class="board">${context.workflow.states.map((state) => column(state, inState(cards, state), context))}</div>`
+        ? html`<div class="board">${columnsOf(context.workflow).map((column) => columnOf(column, inColumn(cards, column), context))}</div>`
         : laned({ ...context, cards }, lanesOf(cards, by, names))
     }
   `
@@ -351,7 +366,7 @@ const bindDragAndDrop = (root: HTMLElement, context: BoardContext): void => {
       list.insertBefore(dragged, marker)
       marker.remove()
       write
-        .moveCard(card, list.dataset.dropState ?? '', index)
+        .moveCard(card, dropTarget(list, card), index)
         .then(() => (lane ? write.updateCard(card, lane) : undefined))
         .catch((refusal: unknown) => {
           toast(refusalSentence(refusal), 'error')
@@ -359,6 +374,12 @@ const bindDragAndDrop = (root: HTMLElement, context: BoardContext): void => {
         })
     })
   }
+}
+
+/** A card keeps its state when dropped in the column that already holds it; elsewhere it takes the column's first. */
+const dropTarget = (list: HTMLElement, card: Card): string => {
+  const states = (list.dataset.columnStates ?? '').split(' ')
+  return states.includes(card.stateId) ? card.stateId : (list.dataset.dropState ?? '')
 }
 
 const createCard = (context: BoardContext): void =>

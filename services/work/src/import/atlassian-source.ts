@@ -43,6 +43,8 @@ export type AtlassianSource = {
   attachment(id: string): Promise<Uint8Array>
   /** Accounts by id, as Jira describes them (name, e-mail when shown, active, type). */
   users(accountIds: string[]): Promise<Raw[]>
+  /** Every status of a project's workflows, per issue type — those no card uses yet included. */
+  projectStatuses(projectKey: string): Promise<Raw[]>
 }
 
 /** A fake issue for the suite: Jira's shape, only what the importer reads. */
@@ -78,6 +80,7 @@ export class InMemoryAtlassian implements AtlassianSource {
       fields?: Raw[]
       files?: Map<string, Uint8Array>
       users?: Raw[]
+      statuses?: Record<string, Raw[]>
     }
   ) {}
 
@@ -115,6 +118,10 @@ export class InMemoryAtlassian implements AtlassianSource {
       throw new Error(`Attachment "${id}" is not in the fake`)
     }
     return bytes
+  }
+
+  async projectStatuses(projectKey: string): Promise<Raw[]> {
+    return this.data.statuses?.[projectKey] ?? []
   }
 
   async users(accountIds: string[]): Promise<Raw[]> {

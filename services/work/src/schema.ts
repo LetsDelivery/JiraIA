@@ -190,10 +190,30 @@ export const spaceVisits = work.table(
 )
 
 /**
+ * A column of a space's board (ADR-0037): one or more states shown together, as a Jira board groups
+ * REVISAR under EM PROGRESSO. A space without columns draws one column per state.
+ */
+export const boardColumns = work.table(
+  'board_columns',
+  {
+    id: uuid('id').primaryKey(),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+    createdAt: createdAt()
+  },
+  (table) => [uniqueIndex('board_columns_name_unique').on(table.spaceId, table.name)]
+)
+
+/**
  * A space's workflow: its states, in board order (escopo-mvp 2.2, 2.3).
  *
  * The name is free — emoji included, as REQ's "🚨 Itens priorizados" — and the group is what reports
  * across spaces read: not started, in progress, done, cancelled. Transitions are free (2.3).
+ * `columnId` is the board column the state shows in; in a space with columns, a state with none stays
+ * off the board (ADR-0037) — still a state cards can be in, as Jira's BACKLOG.
  */
 export const workflowStates = work.table(
   'workflow_states',
@@ -205,6 +225,7 @@ export const workflowStates = work.table(
     name: text('name').notNull(),
     group: text('group').notNull(),
     position: integer('position').notNull(),
+    columnId: uuid('column_id').references(() => boardColumns.id),
     createdAt: createdAt()
   },
   (table) => [uniqueIndex('workflow_states_name_unique').on(table.spaceId, table.name)]
@@ -223,6 +244,8 @@ export const cardTypes = work.table(
     icon: text('icon').notNull().default('checkbox'),
     color: text('color').notNull().default('gray'),
     position: integer('position').notNull(),
+    /** Jira's sub-task level: such a card belongs under its parent, and the board does not draw it. */
+    isSubtask: boolean('is_subtask').notNull().default(false),
     createdAt: createdAt()
   },
   (table) => [uniqueIndex('card_types_name_unique').on(table.spaceId, table.name)]

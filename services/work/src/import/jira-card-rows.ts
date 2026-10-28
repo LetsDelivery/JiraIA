@@ -6,6 +6,7 @@ import type { CardInsert, CommentInsert } from './import.repository.js'
 import type { Catalogue } from './import-catalogue.js'
 import type { People } from './import-members.js'
 import {
+  currentSprintOf,
   dueDateOf,
   fieldsOf,
   fieldValueOf,
@@ -67,10 +68,10 @@ const pointsOf = (record: IssueRecord, field: string | undefined): number | null
   return typeof value === 'number' ? value : null
 }
 
-/** The sprint a card is in now: the last one Jira lists for it. */
+/** The sprint a card is in now (`currentSprintOf`), as the space's sprint. */
 const sprintOf = (record: IssueRecord, context: CardContext): string | null => {
-  const last = sprintsOf(record, context.sprintField).at(-1)
-  return last ? (context.catalogue.sprintId.get(last.id) ?? null) : null
+  const current = currentSprintOf(sprintsOf(record, context.sprintField))
+  return current ? (context.catalogue.sprintId.get(current.id) ?? null) : null
 }
 
 /** A Jira issue as a JiraIA card, with Jira's own number, authors and dates; parents come in a second pass. */

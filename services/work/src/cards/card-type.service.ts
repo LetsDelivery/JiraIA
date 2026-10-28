@@ -5,7 +5,7 @@ import type { Caller } from '@jiraia/http'
 import { type AuditInput, type AuditTrail, diff } from '../audit/audit.js'
 import type { Gate, SpaceGate } from '../spaces/space-gate.js'
 import { lookOf, type TypeColor, type TypeIcon } from './card-type.schemas.js'
-import { type CardTypeRow, toStateView, toTypeView, type WorkflowView } from './schemas.js'
+import type { CardTypeRow, WorkflowView } from './schemas.js'
 import type { WorkflowRepository } from './workflow.repository.js'
 
 type Deps = {
@@ -38,6 +38,7 @@ export class CardTypeService {
       name: input.name,
       icon: input.icon ?? look.icon,
       color: input.color ?? look.color,
+      isSubtask: false,
       position: types.length,
       createdAt: this.deps.clock.now()
     }
@@ -118,8 +119,7 @@ export class CardTypeService {
   }
 
   private async _view(spaceId: string): Promise<WorkflowView> {
-    const [states, types] = await Promise.all([this.deps.workflows.states(spaceId), this.deps.workflows.types(spaceId)])
-    return { states: states.map(toStateView), types: types.map(toTypeView) }
+    return await this.deps.workflows.view(spaceId)
   }
 
   private async _audit(tx: Database, gate: Gate, entityId: string, action: string, changes: AuditInput['changes']) {

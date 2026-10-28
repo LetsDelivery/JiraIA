@@ -4,7 +4,7 @@ import type { Caller } from '@jiraia/http'
 
 import { type AuditInput, type AuditTrail, diff } from '../audit/audit.js'
 import type { Gate, SpaceGate } from '../spaces/space-gate.js'
-import { type StateGroup, type StateRow, toStateView, toTypeView, type WorkflowView } from './schemas.js'
+import type { StateGroup, StateRow, WorkflowView } from './schemas.js'
 import type { WorkflowRepository } from './workflow.repository.js'
 
 type Deps = {
@@ -26,19 +26,30 @@ export class WorkflowService {
     return await this._view(spaceId)
   }
 
+  /** In a space with board columns, a new state gets a column of its own, so it does not leave the board. */
   async addState(caller: Caller, spaceId: string, input: { name: string; group: StateGroup }): Promise<WorkflowView> {
     const gate = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
     const states = await this.deps.workflows.states(spaceId)
     this._assertNameFree(states, input.name)
+    const columns = await this.deps.workflows.columns(spaceId)
+    const at = this.deps.clock.now()
+    const column =
+      columns.length > 0
+        ? { id: this.deps.ids.next(), spaceId, name: input.name, position: columns.length, createdAt: at }
+        : undefined
     const row: StateRow = {
       id: this.deps.ids.next(),
       spaceId,
       ...input,
       position: states.length,
-      createdAt: this.deps.clock.now()
+      columnId: column?.id ?? null,
+      createdAt: at
     }
 
     await this.deps.db.transaction(async (tx) => {
+      if (column) {
+        await this.deps.workflows.insertColumn(tx, column)
+      }
       await this.deps.workflows.insertState(tx, row)
       await this._audit(tx, gate, row.id, 'created', diff({}, input))
     })
@@ -130,8 +141,7 @@ export class WorkflowService {
   }
 
   private async _view(spaceId: string): Promise<WorkflowView> {
-    const [states, types] = await Promise.all([this.deps.workflows.states(spaceId), this.deps.workflows.types(spaceId)])
-    return { states: states.map(toStateView), types: types.map(toTypeView) }
+    return await this.deps.workflows.view(spaceId)
   }
 
   private async _audit(tx: Database, gate: Gate, entityId: string, action: string, changes: AuditInput['changes']) {

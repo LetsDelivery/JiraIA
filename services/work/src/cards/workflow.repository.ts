@@ -2,14 +2,48 @@ import type { IdGenerator } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 import { and, asc, count, eq, type SQLWrapper, sql } from 'drizzle-orm'
 
-import { cards, cardTypes, customFields, savedViews, workflowStates } from '../schema.js'
+import { boardColumns, cards, cardTypes, customFields, savedViews, workflowStates } from '../schema.js'
 import { automations, forms } from '../schema-intake.js'
 import { lookOf, swapId, type TypeColor, type TypeIcon } from './card-type.schemas.js'
-import type { CardTypeRow, StateGroup, StateRow } from './schemas.js'
+import {
+  type CardTypeRow,
+  type StateGroup,
+  type StateRow,
+  toStateView,
+  toTypeView,
+  type WorkflowView
+} from './schemas.js'
 import type { WorkflowTemplate } from './workflow-defaults.js'
 
 export class WorkflowRepository {
   constructor(private readonly db: Database) {}
+
+  /** The space's states, types and board columns, as the API answers them. */
+  async view(spaceId: string): Promise<WorkflowView> {
+    const [states, types, columns] = await Promise.all([
+      this.states(spaceId),
+      this.types(spaceId),
+      this.columns(spaceId)
+    ])
+    return {
+      states: states.map(toStateView),
+      types: types.map(toTypeView),
+      columns: columns.map(({ id, name, position }) => ({ id, name, position }))
+    }
+  }
+
+  /** The space's board columns, left to right; none means one column per state (ADR-0037). */
+  async columns(spaceId: string) {
+    return await this.db
+      .select()
+      .from(boardColumns)
+      .where(eq(boardColumns.spaceId, spaceId))
+      .orderBy(asc(boardColumns.position))
+  }
+
+  async insertColumn(tx: Database, row: typeof boardColumns.$inferInsert): Promise<void> {
+    await tx.insert(boardColumns).values(row)
+  }
 
   async states(spaceId: string): Promise<StateRow[]> {
     return await this.db

@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, type SQLWrapper, sql } from 'drizzle-orm'
 
 import { labelColorSql } from '../cards/card.repository.js'
 import {
@@ -11,11 +11,13 @@ import {
   customFields,
   labels,
   members,
+  savedViews,
   spaces,
   sprints,
   workflowStates
 } from '../schema.js'
 import { importRefs } from '../schema-import.js'
+import { automations, forms } from '../schema-intake.js'
 
 export type RefRow = typeof importRefs.$inferSelect
 export type CardInsert = typeof cards.$inferInsert
@@ -152,6 +154,34 @@ export class ImportRepository {
         next_card_number = greatest(next_card_number, coalesce((select max(number) + 1 from ${cards} where ${eq(cards.spaceId, spaceId)}), 1)),
         last_card_activity_at = (select max(updated_at) from ${cards} where ${eq(cards.spaceId, spaceId)})
       where ${eq(spaces.id, spaceId)}`)
+  }
+
+  /**
+   * Whether anything still names this state or type: a card, a form, a custom field, an automation or a
+   * saved view. Only what nothing names may be removed to make a space's workflow Jira's.
+   */
+  async isNamed(id: string, kind: 'state' | 'type'): Promise<boolean> {
+    const like = (column: SQLWrapper) => sql`${column}::text like ${`%${id}%`}`
+    const checks = [
+      this.db
+        .select({ id: cards.id })
+        .from(cards)
+        .where(kind === 'state' ? eq(cards.stateId, id) : eq(cards.typeId, id))
+        .limit(1),
+      this.db
+        .select({ id: forms.id })
+        .from(forms)
+        .where(kind === 'state' ? eq(forms.stateId, id) : eq(forms.typeId, id))
+        .limit(1),
+      this.db.select({ id: customFields.id }).from(customFields).where(like(customFields.typeIds)).limit(1),
+      this.db
+        .select({ id: automations.id })
+        .from(automations)
+        .where(like(sql`(${automations.conditions} || ${automations.actions})`))
+        .limit(1),
+      this.db.select({ id: savedViews.id }).from(savedViews).where(like(savedViews.filter)).limit(1)
+    ]
+    return (await Promise.all(checks)).some((rows) => rows.length > 0)
   }
 
   async audit(tx: Database, row: typeof auditEvents.$inferInsert): Promise<void> {

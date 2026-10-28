@@ -85,8 +85,18 @@ export const dayOf = (instant: string): string | null => {
   return Number.isNaN(at.getTime()) ? null : DAY.format(at)
 }
 
-/** A stable fingerprint of a raw record: a later run skips the rows whose source did not change. */
-export const hashOf = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+/**
+ * Which rules wrote a row. Raised whenever the mapping changes what a row holds, so the next run
+ * writes every row again instead of skipping those whose source did not change. 2: a card's sprint is
+ * its active one, not the last Jira lists.
+ */
+export const IMPORTER_VERSION = 2
+
+/** A stable fingerprint of a raw record under these rules: a later run skips the rows it already wrote. */
+export const hashOf = (value: unknown): string =>
+  createHash('sha256')
+    .update(`${IMPORTER_VERSION}:${JSON.stringify(value)}`)
+    .digest('hex')
 
 /** Jira's own field kinds that become a JiraIA field kind; the rest stay in the raw copy only. */
 const KINDS: Record<string, FieldKind> = {
@@ -148,6 +158,19 @@ export const sprintsOf = (record: IssueRecord, sprintFieldId: string | undefined
   const value = sprintFieldId ? fieldsOf(record)[sprintFieldId] : undefined
   return Array.isArray(value) ? (value as JiraSprint[]).filter((sprint) => typeof sprint?.id === 'number') : []
 }
+
+const STATE_ORDER: Record<string, number> = { active: 0, future: 1 }
+
+/**
+ * The sprint a card is in now. Jira lists every sprint a card went through, not in time order: the
+ * active one first, then a future one, then the closed one that ended last.
+ */
+export const currentSprintOf = (sprints: JiraSprint[]): JiraSprint | undefined =>
+  [...sprints].sort((a, b) => {
+    const byState = (STATE_ORDER[a.state] ?? 2) - (STATE_ORDER[b.state] ?? 2)
+    const ended = (sprint: JiraSprint) => sprint.completeDate ?? sprint.endDate ?? sprint.startDate ?? ''
+    return byState !== 0 ? byState : ended(b).localeCompare(ended(a))
+  })[0]
 
 /** Splits rows into batches small enough for one Data API statement. */
 export const chunk = <T>(items: T[], size: number): T[][] =>
