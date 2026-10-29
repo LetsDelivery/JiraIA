@@ -81,10 +81,13 @@ const nameOf = (context: HistoryContext, field: string, value: unknown): string 
   return lookups[field]?.() ?? (Array.isArray(value) ? value.join(', ') : String(value))
 }
 
-const fieldLabel = (context: HistoryContext, field: string): string =>
-  field.startsWith('field:')
-    ? (context.fields.find((each) => each.id === field.slice(6))?.name ?? 'Campo removido')
-    : (FIELD_LABEL[field] ?? field)
+/** A field's name: the space's custom field, Jira's own name for what JiraIA has no field for, or ours. */
+const fieldLabel = (context: HistoryContext, field: string): string => {
+  if (field.startsWith('field:')) {
+    return context.fields.find((each) => each.id === field.slice(6))?.name ?? 'Campo removido'
+  }
+  return field.startsWith('jira:') ? field.slice(5) : (FIELD_LABEL[field] ?? field)
+}
 
 const historyLine = (context: HistoryContext, event: HistoryEvent): Html => {
   const actor = context.members.find((member) => member.id === event.actorId)?.name ?? 'Alguém'
