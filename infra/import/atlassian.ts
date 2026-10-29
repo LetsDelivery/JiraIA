@@ -220,7 +220,7 @@ const printImport = (report: JiraImportReport) => {
     const cards = `cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}`
     const comments = `comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}`
     const files = `attachments +${s.attachments.inserted} (${mb(s.attachments.bytes)} MB)`
-    const watching = `watchers +${s.watchers.watchers}, worklogs +${s.watchers.worklogs}`
+    const watching = `watchers +${s.watchers.watchers}, worklogs +${s.watchers.worklogs}, history +${s.history.events}`
     console.error(`${s.key}: ${cards}, ${comments}, ${files}, ${watching}, aliases ${s.aliases}`)
     printNotes(s)
   }
