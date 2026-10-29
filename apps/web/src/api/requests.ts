@@ -20,6 +20,7 @@ export type MyCard = Json<'/work/me/cards', 'get'>['items'][number]
 export type MyCardTab = NonNullable<paths['/work/me/cards']['get']['parameters']['query']>['tab']
 export type SpaceSummary = MySpaces['starred'][number]
 export type RoleHolder = Json<'/work/spaces/{spaceId}/members', 'get'>['items'][number]
+export type Worklog = Json<'/work/cards/{cardId}/worklogs', 'get'>['items'][number]
 export type Workflow = Json<'/work/spaces/{spaceId}/workflow', 'get'>
 export type State = Workflow['states'][number]
 export type CardType = Workflow['types'][number]
@@ -125,6 +126,7 @@ export const read = {
   attachments: (cardId: string) =>
     unwrap(api.GET('/work/cards/{cardId}/attachments', { params: { path: { cardId } } })),
   watchers: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/watchers', { params: { path: { cardId } } })),
+  worklogs: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/worklogs', { params: { path: { cardId } } })),
   /** "Suas tarefas" on Para você: never cached, it changes with every card the caller touches. */
   myCards: (tab: MyCardTab) => unwrap(api.GET('/work/me/cards', { params: { query: { tab } } })),
   cardStar: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/star', { params: { path: { cardId } } })),

@@ -17,3 +17,7 @@ Ideias fora do MVP (prompt de construção, "Fora do escopo"). Registrar aqui em
   concluídos" gera um release note com IA a partir da descrição (O que mudou / Por que importa / Como
   usar) e publica no mesmo canal; falta uma ação de IA no motor, que depende da pendência #8. No Jira, a
   conexão do Slack dessas duas pede nova autenticação.
+- Ver anexos sem baixar (pedido do Stênio em 2026-10-29, ao abrir a TEC-1222 importada): imagens com
+  miniatura e visualização ampliada no próprio card, e PDFs, vídeos e textos abertos numa prévia, sem
+  forçar o download. Junto, as imagens embutidas nas descrições do Jira (315 cards), que hoje aparecem
+  como "📎 nome", passam a aparecer no lugar.

@@ -6,8 +6,6 @@ import { createLogger } from '@jiraia/logger'
 import { AccessResolver } from './access.js'
 import { AuditTrail } from './audit/audit.js'
 import { automationRoutes } from './automations/routes.js'
-import { AttachmentRepository } from './cards/attachment.repository.js'
-import { AttachmentService } from './cards/attachment.service.js'
 import { BulkEditService } from './cards/bulk.service.js'
 import { CardRepository } from './cards/card.repository.js'
 import { CardService } from './cards/card.service.js'
@@ -17,7 +15,7 @@ import { cardTypeRoutes } from './cards/card-type.routes.js'
 import { CardTypeService } from './cards/card-type.service.js'
 import { CommentRepository } from './cards/comment.repository.js'
 import { CommentService } from './cards/comment.service.js'
-import { attachmentRoutes, conversationRoutes } from './cards/conversation.routes.js'
+import { attachmentRoutes, conversationRoutes, worklogRoutes } from './cards/conversation.routes.js'
 import { FieldRepository } from './cards/field.repository.js'
 import { FieldService } from './cards/field.service.js'
 import { LinkRepository } from './cards/link.repository.js'
@@ -25,10 +23,10 @@ import { LinkService } from './cards/link.service.js'
 import { fieldRoutes, linkRoutes } from './cards/relation.routes.js'
 import { cardRoutes, workflowRoutes } from './cards/routes.js'
 import { WatcherRepository } from './cards/watcher.repository.js'
-import { WatcherService } from './cards/watcher.service.js'
 import { WorkflowRepository } from './cards/workflow.repository.js'
 import { WorkflowService } from './cards/workflow.service.js'
 import type { Config } from './config.js'
+import { buildCardRecords } from './container-card-records.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
 import { buildWake, connectSignalled } from './container-wake.js'
 import { buildWiki } from './container-wiki.js'
@@ -222,8 +220,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     cards: cardService,
     links,
     comments,
-    watchers: new WatcherService({ db, clock, cardGate, watchers }),
-    attachments: new AttachmentService({ ...onCards, attachments: new AttachmentRepository(db), files }),
+    ...buildCardRecords({ ...onCards, watchers, files }),
     personal: new PersonalService({ clock, access, spaces, personal }),
     myCards: new MyCardsService({ clock, access, cardGate, myCards: new MyCardsRepository(db) }),
     search,
@@ -304,6 +301,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...conversationRoutes(services.comments, services.watchers),
     ...myCardRoutes(services.myCards),
     ...attachmentRoutes(services.attachments),
+    ...worklogRoutes(services.worklogs),
     ...searchRoutes(services.search, services.bulk),
     ...viewRoutes(services.views),
     ...reportRoutes(services.dashboards, services.reports),

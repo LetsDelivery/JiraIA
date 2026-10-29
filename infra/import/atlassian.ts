@@ -22,6 +22,7 @@ import { S3ImportStore } from '../../services/work/src/import/import-store.js'
 import { JiraAttachmentCopy } from '../../services/work/src/import/jira-attachment-copy.js'
 import { JiraImport, type JiraImportReport } from '../../services/work/src/import/jira-import.js'
 import { JiraRawCopy, type JiraReport } from '../../services/work/src/import/jira-raw-copy.js'
+import { JiraWatcherCopy } from '../../services/work/src/import/jira-watcher-copy.js'
 import { type Person, peopleFromCsv, peopleToCsv } from '../../services/work/src/import/people.js'
 import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/people-scan.js'
 
@@ -31,6 +32,7 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  *
  *     bun run import:atlassian -- jira [--only TEC,REQ] [--previous <run>] [--run <id>]
  *     bun run import:atlassian -- jira-attachments --run <id>
+ *     bun run import:atlassian -- jira-watchers --run <id>
  *     bun run import:atlassian -- confluence [--only CS,Produto] [--run <id>]
  *     bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
  *     bun run import:atlassian -- people-accept <reviewed.csv>
@@ -39,7 +41,8 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  * Reads the read-only tokens from the secret `jiraia/atlassian`, copies as it is to
  * `s3://<bucket>/import/<run>/`, prints the reconciliation and exits 1 when something is missing or a
  * count differs. `jira --previous` asks Jira only for what changed; `jira-attachments` stores the bytes
- * of every attachment of a run, each once, by its id. `people` proposes who each account becomes and
+ * of every attachment of a run, each once, by its id; `jira-watchers` who watches each issue.
+ * `people` proposes who each account becomes and
  * writes a CSV to review outside the repository (it holds e-mails); `people-accept` stores the
  * reviewed one for 8c. `jira-import` writes a raw Jira copy into the database — the local one when
  * `DATABASE_URL` is set, otherwise the account's Aurora, found in the `jiraia` function's settings.
@@ -49,6 +52,7 @@ const SPACES = 'BA,Produto,LD,CS,CSB,DEMO,team9e949cb32355422b970994e76dcc60a1,P
 const USAGE = `usage:
   bun run import:atlassian -- jira [--only TEC,REQ] [--previous <run>] [--run <id>]
   bun run import:atlassian -- jira-attachments --run <id>
+  bun run import:atlassian -- jira-watchers --run <id>
   bun run import:atlassian -- confluence [--only CS,Produto] [--run <id>]
   bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
   bun run import:atlassian -- people-accept <reviewed.csv>
@@ -146,11 +150,11 @@ const expired = (date: string) => date < toIso(systemClock.now()).slice(0, 10)
 
 const step = positionals[0] ?? ''
 const incomplete =
-  (step === 'jira-attachments' && !values.run) ||
+  ((step === 'jira-attachments' || step === 'jira-watchers') && !values.run) ||
   (step === 'people' && !(values['jira-run'] && values['confluence-run'])) ||
   (step === 'people-accept' && !positionals[1]) ||
   (step === 'jira-import' && !(values['raw-run'] && values.as && values.only))
-const STEPS = ['jira', 'jira-attachments', 'confluence', 'people', 'people-accept', 'jira-import']
+const STEPS = ['jira', 'jira-attachments', 'jira-watchers', 'confluence', 'people', 'people-accept', 'jira-import']
 if (!STEPS.includes(step) || incomplete) {
   console.error(USAGE)
   process.exit(2)
@@ -216,7 +220,8 @@ const printImport = (report: JiraImportReport) => {
     const cards = `cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}`
     const comments = `comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}`
     const files = `attachments +${s.attachments.inserted} (${mb(s.attachments.bytes)} MB)`
-    console.error(`${s.key}: ${cards}, ${comments}, ${files}, aliases ${s.aliases}`)
+    const watching = `watchers +${s.watchers.watchers}, worklogs +${s.watchers.worklogs}`
+    console.error(`${s.key}: ${cards}, ${comments}, ${files}, ${watching}, aliases ${s.aliases}`)
     printNotes(s)
   }
   if (report.unmappedAccounts.length > 0) {
@@ -269,6 +274,16 @@ const credentials = {
 const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
 const run = values.run ?? toIso(systemClock.now()).replace(/[:.]/g, '-')
 const only = values.only?.split(',')
+
+if (step === 'jira-watchers') {
+  const report = await new JiraWatcherCopy({ source: new HttpAtlassianSource(http, credentials), store, logger }).run(
+    run
+  )
+  console.error(
+    `run ${report.run}: ${report.issues} issues, ${report.asked} with watchers, ${report.watchers} watchers`
+  )
+  process.exit(0)
+}
 
 if (step === 'jira-attachments') {
   const report = await new JiraAttachmentCopy({

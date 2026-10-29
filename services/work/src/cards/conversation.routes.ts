@@ -10,6 +10,7 @@ import type { AttachmentService } from './attachment.service.js'
 import type { CommentService } from './comment.service.js'
 import { cardPathSchema, commentListSchema, commentPathSchema, createCommentSchema, reactSchema } from './schemas.js'
 import type { WatcherService } from './watcher.service.js'
+import { type WorklogService, worklogListSchema } from './worklog.js'
 
 const watcherListSchema = z.object({ items: z.array(z.object({ id: z.uuid(), name: z.string() })) })
 
@@ -123,5 +124,16 @@ export const attachmentRoutes = (attachments: AttachmentService): Route[] => [
       statusCode: 200,
       body: await attachments.remove(caller, path.cardId, path.attachmentId)
     })
+  })
+]
+
+export const worklogRoutes = (worklogs: WorklogService): Route[] => [
+  defineRoute({
+    method: 'GET',
+    path: '/cards/{cardId}/worklogs',
+    requires: 'authenticated',
+    schemas: { path: cardPathSchema },
+    responds: worklogListSchema,
+    handler: async ({ caller, path }) => ({ statusCode: 200, body: await worklogs.list(caller, path.cardId) })
   })
 ]
