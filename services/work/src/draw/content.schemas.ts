@@ -142,7 +142,9 @@ export const contentCommentViewSchema = z.object({
 export type ContentCommentView = z.infer<typeof contentCommentViewSchema>
 export const contentCommentListSchema = z.object({ items: z.array(contentCommentViewSchema) })
 
-export const toContentNode = (row: ContentRow) => ({
+export const toContentNode = (
+  row: Pick<ContentRow, 'id' | 'parentId' | 'kind' | 'title' | 'icon' | 'position' | 'updatedAt'>
+) => ({
   id: row.id,
   parentId: row.parentId,
   kind: contentKindSchema.parse(row.kind),

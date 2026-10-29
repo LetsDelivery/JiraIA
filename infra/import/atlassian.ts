@@ -14,6 +14,7 @@ import {
   DiskAttachmentFiles,
   S3AttachmentFiles
 } from '../../services/work/src/import/attachment-files.js'
+import { ConfluenceImport, type ConfluenceImportReport } from '../../services/work/src/import/confluence-import.js'
 import { ConfluenceRawCopy, type ConfluenceReport } from '../../services/work/src/import/confluence-raw-copy.js'
 import { HttpAtlassianSource } from '../../services/work/src/import/http-atlassian-source.js'
 import { HttpConfluenceSource } from '../../services/work/src/import/http-confluence-source.js'
@@ -37,6 +38,7 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  *     bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
  *     bun run import:atlassian -- people-accept <reviewed.csv>
  *     bun run import:atlassian -- jira-import --raw-run <id> --as <email> [--only TEC,PRD] [--run <id>]
+ *     bun run import:atlassian -- confluence-import --raw-run <id> --as <email> [--only BA,CS] [--run <id>]
  *
  * Reads the read-only tokens from the secret `jiraia/atlassian`, copies as it is to
  * `s3://<bucket>/import/<run>/`, prints the reconciliation and exits 1 when something is missing or a
@@ -46,6 +48,7 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  * writes a CSV to review outside the repository (it holds e-mails); `people-accept` stores the
  * reviewed one for 8c. `jira-import` writes a raw Jira copy into the database — the local one when
  * `DATABASE_URL` is set, otherwise the account's Aurora, found in the `jiraia` function's settings.
+ * `confluence-import` writes a raw Confluence copy and the site backup's whiteboards into LET'S Draw.
  */
 const PROJECTS = 'TEC,MARKETING,PRD,ORQ,TASK,PERF,JUR,SDDEC,REQ,OLS,MS,LP,FIB,GB'.split(',')
 const SPACES = 'BA,Produto,LD,CS,CSB,DEMO,team9e949cb32355422b970994e76dcc60a1,PERF'.split(',')
@@ -56,7 +59,8 @@ const USAGE = `usage:
   bun run import:atlassian -- confluence [--only CS,Produto] [--run <id>]
   bun run import:atlassian -- people --jira-run <id> --confluence-run <id>
   bun run import:atlassian -- people-accept <reviewed.csv>
-  bun run import:atlassian -- jira-import --raw-run <id> --as <email> [--only TEC,PRD] [--run <id>]`
+  bun run import:atlassian -- jira-import --raw-run <id> --as <email> [--only TEC,PRD] [--run <id>]
+  bun run import:atlassian -- confluence-import --raw-run <id> --as <email> [--only BA,CS] [--run <id>]`
 const REVIEW_DIR = join(homedir(), 'Documents/lets-workspace/jiraia-migracao/people')
 
 const secretSchema = z.object({
@@ -153,8 +157,18 @@ const incomplete =
   ((step === 'jira-attachments' || step === 'jira-watchers') && !values.run) ||
   (step === 'people' && !(values['jira-run'] && values['confluence-run'])) ||
   (step === 'people-accept' && !positionals[1]) ||
-  (step === 'jira-import' && !(values['raw-run'] && values.as && values.only))
-const STEPS = ['jira', 'jira-attachments', 'jira-watchers', 'confluence', 'people', 'people-accept', 'jira-import']
+  (step === 'jira-import' && !(values['raw-run'] && values.as && values.only)) ||
+  (step === 'confluence-import' && !(values['raw-run'] && values.as))
+const STEPS = [
+  'jira',
+  'jira-attachments',
+  'jira-watchers',
+  'confluence',
+  'people',
+  'people-accept',
+  'jira-import',
+  'confluence-import'
+]
 if (!STEPS.includes(step) || incomplete) {
   console.error(USAGE)
   process.exit(2)
@@ -250,6 +264,50 @@ if (step === 'jira-import') {
   })
   printImport(report)
   process.exit(report.spaces.every((space) => space.cards.conflicts.length === 0) ? 0 : 1)
+}
+
+/** What one Draw space's import could not bring whole. */
+const confluenceNotes = (s: ConfluenceImportReport['spaces'][number]) =>
+  [
+    s.missingFiles.length > 0 ? `files not in the backup, shown by name: ${s.missingFiles.length}` : '',
+    s.withoutBackup.length > 0 ? `not in the backup, imported empty: ${s.withoutBackup.join(', ')}` : '',
+    s.boardComments > 0 ? `comments pinned on whiteboards (not in the backup): ${s.boardComments}` : ''
+  ].filter(Boolean)
+
+const printConfluenceImport = (report: ConfluenceImportReport) => {
+  console.error(`run ${report.run} from ${report.rawRun}`)
+  for (const s of report.spaces) {
+    const contents = `contents +${s.contents.inserted} ~${s.contents.updated} =${s.contents.unchanged}`
+    console.error(
+      `${s.key.slice(0, 12)} (${s.name}): ${contents}, files +${s.files}, versions +${s.versions}, comments +${s.comments}`
+    )
+    for (const note of confluenceNotes(s)) {
+      console.error(`  ${note}`)
+    }
+  }
+  if (report.unmappedAccounts.length > 0) {
+    console.error(`accounts not in the reviewed mapping, imported as inactive: ${report.unmappedAccounts.length}`)
+  }
+}
+
+if (step === 'confluence-import') {
+  const { db, files } = openTarget(values.bucket)
+  const actor = await new ImportRepository(db).actor(values.as ?? '')
+  if (!actor) {
+    console.error(`No member "${values.as}" in that database`)
+    process.exit(1)
+  }
+  const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
+  const logger = createLogger('work', 'import')
+  const report = await new ConfluenceImport({ db, store, files, clock: systemClock, ids: uuidGenerator, logger }).run({
+    organizationId: actor.organizationId,
+    actorId: actor.memberId,
+    rawRun: values['raw-run'] ?? '',
+    run: values.run ?? toIso(systemClock.now()).replace(/[:.]/g, '-'),
+    ...(values.only ? { spaces: values.only.split(',') } : {})
+  })
+  printConfluenceImport(report)
+  process.exit(0)
 }
 
 if (step === 'people-accept') {

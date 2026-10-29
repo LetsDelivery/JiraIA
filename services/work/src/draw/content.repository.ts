@@ -17,6 +17,24 @@ export type ContentFields = Partial<
 const { document: _document, ...contentColumns } = getTableColumns(contents)
 
 /**
+ * What a tree or a list shows of a content: never its document or JSON, which for a large board or page
+ * reach megabytes — a space of them would pass the Data API's 1 MiB answer (ADR-0027).
+ */
+const nodeColumns = {
+  id: contents.id,
+  spaceId: contents.spaceId,
+  parentId: contents.parentId,
+  kind: contents.kind,
+  title: contents.title,
+  icon: contents.icon,
+  position: contents.position,
+  createdBy: contents.createdBy,
+  createdAt: contents.createdAt,
+  updatedAt: contents.updatedAt
+}
+export type ContentNodeRow = Pick<ContentRow, keyof typeof nodeColumns>
+
+/**
  * How much text one read brings back: well under the Data API's 1 MiB answer (ADR-0002), so a document
  * or a run of updates of any size is read in several statements instead of failing in one.
  */
@@ -60,7 +78,7 @@ export class ContentRepository {
   /** The pages and whiteboards changed last across the organization's Draw spaces (ADR-0011). */
   async recent(organizationId: string, limit: number) {
     return await this.db
-      .select({ content: contentColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
+      .select({ content: nodeColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
       .from(contents)
       .innerJoin(drawSpaces, eq(drawSpaces.id, contents.spaceId))
       .where(
@@ -87,7 +105,7 @@ export class ContentRepository {
   /** The pages and whiteboards the member opened last, most recent first; those deleted since are left out. */
   async opened(memberId: string, limit: number) {
     return await this.db
-      .select({ content: contentColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
+      .select({ content: nodeColumns, spaceName: drawSpaces.name, spaceIcon: drawSpaces.icon })
       .from(contentVisits)
       .innerJoin(contents, eq(contents.id, contentVisits.contentId))
       .innerJoin(drawSpaces, eq(drawSpaces.id, contents.spaceId))
@@ -104,9 +122,9 @@ export class ContentRepository {
   }
 
   /** The space's whole tree, siblings in their order (5.1). */
-  async tree(spaceId: string): Promise<ContentRow[]> {
+  async tree(spaceId: string): Promise<ContentNodeRow[]> {
     return await this.db
-      .select(contentColumns)
+      .select(nodeColumns)
       .from(contents)
       .where(and(eq(contents.spaceId, spaceId), isNull(contents.deletedAt)))
       .orderBy(asc(contents.position))
