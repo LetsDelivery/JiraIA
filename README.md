@@ -64,6 +64,48 @@ To get a token:
 
 Routes and bodies are in [`infra/contracts/openapi.json`](infra/contracts/openapi.json).
 
+### Connect an AI assistant (MCP)
+
+The MCP server is at `<panel>/api/work/v1/mcp` (ADR-0020). Dev:
+`https://dev-jiraia.uselets.com/api/work/v1/mcp`. Prod, when it is live:
+`https://jiraia.uselets.com/api/work/v1/mcp`.
+
+**Claude Code:**
+
+```sh
+claude mcp add --transport http jiraia https://dev-jiraia.uselets.com/api/work/v1/mcp
+```
+
+Then open `/mcp` in a Claude Code session, choose `jiraia` and select *Authenticate*. The browser
+opens the Google sign-in and a consent page. Allow it, and the server shows as connected.
+
+- By default the server is local to the project where you ran the command. Add `--scope user` to use
+  it in every project.
+- Check it with `claude mcp list`, then ask the assistant to list your spaces.
+
+**Other MCP clients:** any client that speaks Streamable HTTP and OAuth only needs the address. It
+registers itself, and you allow it on the same consent page (ADR-0021).
+
+**With a token instead of OAuth:** for a client that cannot open a browser, send a personal API token
+(see [The API for programs](#the-api-for-programs)) in the header:
+
+```sh
+claude mcp add --transport http jiraia https://dev-jiraia.uselets.com/api/work/v1/mcp \
+  --header "Authorization: Bearer jia_…"
+```
+
+**What the assistant can do (ADR-0022):**
+
+- It acts as you, with exactly your roles. It reads what you read and writes where you write.
+- A person gets the read tools plus `create_card`, `update_card`, `comment_on_card` and `link_cards`.
+  These write at once, with no approval step. Ask the assistant before it changes a space you care about.
+- Every write records the application in the history, for example "Ana criou o card (via Claude Code)".
+- A service-account token gets `propose_changes` instead. Its changes wait for a person (ADR-0019).
+
+To disconnect, open your profile in the panel and remove the application under *Aplicativos
+conectados*. Access tokens last one hour and refresh tokens 30 days; removing the application stops
+both.
+
 ## Run it locally
 
 ### Prerequisites
