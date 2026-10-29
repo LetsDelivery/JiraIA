@@ -4,14 +4,17 @@ import type { JiraiaLogger } from '@jiraia/logger'
 import { z } from 'zod'
 
 import { type IssueRecord, type JiraProject, jiraProjectSchema } from './atlassian-source.js'
+import type { AttachmentFiles } from './attachment-files.js'
 import { type CardInsert, ImportRepository, type Ref, type RefRow } from './import.repository.js'
 import { ImportCatalogue } from './import-catalogue.js'
 import { ImportColumns, type JiraBoard, jiraBoardSchema, wantedColumns } from './import-columns.js'
-import { ImportMembers } from './import-members.js'
+import { ImportMembers, type People } from './import-members.js'
 import type { ImportStore } from './import-store.js'
 import type { WorkflowReconciliation } from './import-workflow.js'
+import { type AttachmentTally, JiraAttachments } from './jira-attachments.js'
 import { type CardContext, cardRowOf } from './jira-card-rows.js'
 import { type CommentTally, JiraComments } from './jira-comments.js'
+import { JiraLinks, type LinkTally } from './jira-links.js'
 import {
   chunk,
   formerKeysOf,
@@ -39,13 +42,35 @@ export type SpaceImportReport = {
   parentsOutside: string[]
   /** What the space had that Jira has not: removed, or kept off the board because something names it. */
   workflow: WorkflowReconciliation
+  attachments: AttachmentTally
 }
-export type JiraImportReport = { run: string; rawRun: string; spaces: SpaceImportReport[]; unmappedAccounts: string[] }
+export type JiraImportReport = {
+  run: string
+  rawRun: string
+  spaces: SpaceImportReport[]
+  /** Links between imported cards; `waiting` ones join a card of a project not imported yet. */
+  links: LinkTally
+  unmappedAccounts: string[]
+}
 
-type Deps = { db: Database; store: ImportStore; clock: Clock; ids: IdGenerator; logger: JiraiaLogger }
+type Deps = {
+  db: Database
+  store: ImportStore
+  files: AttachmentFiles
+  clock: Clock
+  ids: IdGenerator
+  logger: JiraiaLogger
+}
 type Input = { organizationId: string; actorId: string; rawRun: string; run: string; projects: string[] }
 type Loaded = { project: JiraProject; records: IssueRecord[]; workflow: JiraWorkflow }
-type Shared = { jiraFields: JiraField[]; mapping: Person[]; boards: JiraBoard[]; unmapped: Set<string> }
+type Shared = {
+  jiraFields: JiraField[]
+  mapping: Person[]
+  boards: JiraBoard[]
+  unmapped: Set<string>
+  /** Who each account is, across every project of the run: a link's author may be in another. */
+  people: People[]
+}
 type CardPlan = {
   inserts: CardInsert[]
   updates: CardInsert[]
@@ -56,6 +81,11 @@ type CardPlan = {
 
 const BATCH = 25
 const fieldListSchema = z.array(z.looseObject({ id: z.string(), name: z.string() }))
+
+const memberAcross =
+  (shared: Shared) =>
+  (accountId: string): string | undefined =>
+    shared.people.map((people) => people.memberOf(accountId)).find((member) => member !== undefined)
 
 const rankOf = (record: IssueRecord, field: string | undefined): string =>
   field ? String((record.issue.fields as Record<string, unknown>)[field] ?? '') : String(record.issue.key)
@@ -78,13 +108,27 @@ export class JiraImport {
       jiraFields: fieldListSchema.parse(await this.deps.store.getJson(`${prefix}/fields.json`)) as JiraField[],
       mapping: z.array(personSchema).parse((await this.deps.store.getJson(PEOPLE_MAPPING)) ?? []),
       boards: z.array(jiraBoardSchema).parse((await this.deps.store.getJson(`${prefix}/boards.json`)) ?? []),
-      unmapped: new Set()
+      unmapped: new Set(),
+      people: []
     }
     const spaces: SpaceImportReport[] = []
-    for (const loaded of await this.load(input)) {
-      spaces.push(await this.importProject(input, loaded, shared))
+    const loaded = await this.load(input)
+    for (const project of loaded) {
+      spaces.push(await this.importProject(input, project, shared))
     }
-    return { run: input.run, rawRun: input.rawRun, spaces, unmappedAccounts: [...shared.unmapped] }
+    const links = await new JiraLinks({
+      db: this.deps.db,
+      repository: this.repository,
+      clock: this.deps.clock,
+      ids: this.deps.ids
+    }).import({
+      organizationId: input.organizationId,
+      run: input.run,
+      actorId: input.actorId,
+      records: loaded.flatMap((project) => project.records),
+      memberOf: memberAcross(shared)
+    })
+    return { run: input.run, rawRun: input.rawRun, spaces, links, unmappedAccounts: [...shared.unmapped] }
   }
 
   private async load(input: Input): Promise<Loaded[]> {
@@ -137,7 +181,8 @@ export class JiraImport {
       workflow: context.catalogue.reconciliation,
       parentsOutside: await this.linkParents(ordered, plan.ids),
       aliases: await this.writeAliases(input, ordered, plan.ids),
-      comments: await comments.import({ run: input.run, records: ordered, cardIds: plan.ids, context })
+      comments: await comments.import({ run: input.run, records: ordered, cardIds: plan.ids, context }),
+      attachments: await this.attachments(input, ordered, plan.ids, context)
     }
     await this.settle(input, context.catalogue.spaceId, report)
     this.deps.logger.info('Jira project imported', {
@@ -146,6 +191,24 @@ export class JiraImport {
       updated: report.cards.updated
     })
     return report
+  }
+
+  private async attachments(input: Input, records: IssueRecord[], cardIds: Map<string, string>, context: CardContext) {
+    const deps = {
+      db: this.deps.db,
+      repository: this.repository,
+      files: this.deps.files,
+      clock: this.deps.clock,
+      ids: this.deps.ids
+    }
+    return await new JiraAttachments(deps).import({
+      organizationId: input.organizationId,
+      run: input.run,
+      actorId: input.actorId,
+      records,
+      cardIds,
+      memberOf: context.people.memberOf
+    })
   }
 
   /** The board shows the columns of the project's Jira board, or one per status it draws (ADR-0037). */
@@ -170,6 +233,7 @@ export class JiraImport {
       mapping: shared.mapping,
       seen
     })
+    shared.people.push(people)
     for (const accountId of people.unmapped) {
       shared.unmapped.add(accountId)
     }

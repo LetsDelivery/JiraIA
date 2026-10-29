@@ -47,7 +47,8 @@ per status.
 
 - TEC's board shows Jira's four columns, and its current sprint the 146 cards Jira shows — 35, 19, 62
   and 30 per column; the two in BACKLOG are in the sprint but off the board, as in Jira.
-- A business project's column order is LET'S's, not read from Jira: it is checked by the area.
+- A business project's column order is LET'S's, not read from Jira; PRD's was confirmed equal to
+  Jira's on 2026-10-29.
 - Editing columns on the screen ("Configurar fluxo") is not built yet: until then, columns come from
   the migration, and a new state gets its own.
 - A column's cards are ordered by state, then by rank within the state; Jira orders a column by one
