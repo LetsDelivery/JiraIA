@@ -5,6 +5,7 @@ import { testDatabase, truncateSchema } from '@jiraia/testing'
 import { and, eq, isNull } from 'drizzle-orm'
 
 import { fakeIssue } from '../import/atlassian-source.js'
+import { InMemoryAttachmentFiles } from '../import/attachment-files.js'
 import { InMemoryImportStore } from '../import/import-store.js'
 import { JiraImport } from '../import/jira-import.js'
 import type { Person } from '../import/people.js'
@@ -13,8 +14,10 @@ import { bootstrapOrganization } from '../members/bootstrap.js'
 import {
   auditEvents,
   boardColumns,
+  cardAttachments,
   cardComments,
   cardKeyAliases,
+  cardLinks,
   cards,
   cardTypes,
   members,
@@ -127,10 +130,12 @@ const fields = [
 ]
 
 let store: InMemoryImportStore
+let files: InMemoryAttachmentFiles
 let actorId: string
 let organizationId: string
 
-const importer = () => new JiraImport({ db, store, clock, ids: uuidGenerator, logger: createLogger('work', 'import') })
+const importer = () =>
+  new JiraImport({ db, store, files, clock, ids: uuidGenerator, logger: createLogger('work', 'import') })
 const run = (id: string) => importer().run({ organizationId, actorId, rawRun: 'raw1', run: id, projects: ['TEC'] })
 const card = async (number: number) => {
   const [row] = await db.select().from(cards).where(eq(cards.number, number))
@@ -146,6 +151,7 @@ beforeEach(async () => {
   actorId = admin.id
   organizationId = admin.organizationId
   store = new InMemoryImportStore()
+  files = new InMemoryAttachmentFiles()
   await store.putJson('import/raw1/jira/projects.json', [
     { id: '10132', key: 'TEC', name: 'Delivery Board', projectTypeKey: 'software' }
   ])
@@ -412,6 +418,99 @@ describe('Jira import', () => {
     expect(states.sort()).toEqual(['DOWNSTREAM', 'Em teste', 'IMERSÃO', 'IMPEDIMENTO'])
     expect(subtask?.isSubtask).toBe(true)
     expect(report.spaces[0]?.workflow).toEqual({ removed: ['state A fazer'], kept: ['state Em teste', 'type Tarefa'] })
+  })
+
+  it('copies each attachment into the card with Jira’s name, author and date, once', async () => {
+    const withFile = {
+      ...story,
+      issue: {
+        ...story.issue,
+        fields: {
+          ...(story.issue.fields as object),
+          attachment: [
+            {
+              id: '12503',
+              filename: 'tela.png',
+              size: 4,
+              mimeType: 'image/png',
+              created: '2026-10-27T19:10:00.000-0300',
+              author: user(ANA, 'Ana Souza')
+            }
+          ]
+        }
+      }
+    }
+    await store.putJson('import/raw1/jira/issues/101.json', withFile)
+    const report = await run('i1')
+    await run('i2')
+    const rows = await db.select().from(cardAttachments)
+    const ana = (await db.select().from(members).where(eq(members.email, 'ana@uselets.com')))[0]
+    const storyRow = await card(3538)
+
+    expect(report.spaces[0]?.attachments).toMatchObject({ inserted: 1, bytes: 4 })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      name: 'tela.png',
+      contentType: 'image/png',
+      size: 4,
+      status: 'ready',
+      uploadedBy: ana?.id
+    })
+    expect(rows[0]?.createdAt.toISOString()).toBe('2026-10-27T22:10:00.000Z')
+    expect(files.copies).toEqual([
+      { from: 'import/jira/attachments/12503', to: `${organizationId}/${storyRow?.id}/${rows[0]?.id}` }
+    ])
+  })
+
+  it('links two imported cards once, in JiraIA’s direction, with the date and author of the changelog', async () => {
+    const link = (
+      id: string,
+      name: string,
+      side: 'outwardIssue' | 'inwardIssue',
+      other: { id: string; key: string }
+    ) => ({ id, type: { name }, [side]: other })
+    const withLinks = (record: typeof story, links: object[], changelog: object[] = []) => ({
+      ...record,
+      changelog: [...record.changelog, ...changelog],
+      issue: { ...record.issue, fields: { ...(record.issue.fields as object), issuelinks: links } }
+    })
+    await store.putJson(
+      'import/raw1/jira/issues/101.json',
+      withLinks(
+        story,
+        [
+          link('9001', 'Blocks', 'outwardIssue', { id: '100', key: 'TEC-216' }),
+          link('9002', 'Polaris work item link', 'outwardIssue', { id: '100', key: 'TEC-216' }),
+          link('9003', 'Relates', 'outwardIssue', { id: '777', key: 'PRD-9' })
+        ],
+        [
+          {
+            id: '2',
+            created: '2026-10-27T19:30:00.000-0300',
+            author: user(ANA, 'Ana Souza'),
+            items: [{ field: 'Link', to: 'TEC-216', toString: 'This work item blocks TEC-216' }]
+          }
+        ]
+      )
+    )
+    await store.putJson(
+      'import/raw1/jira/issues/100.json',
+      withLinks(epic, [link('9001', 'Blocks', 'inwardIssue', { id: '101', key: 'TEC-3538' })])
+    )
+
+    const report = await run('i1')
+    const rows = await db.select().from(cardLinks)
+    const [storyRow, epicRow] = [await card(3538), await card(216)]
+    const blocks = rows.find((row) => row.type === 'blocks')
+
+    expect(report.links).toEqual({ inserted: 2, unchanged: 0, waiting: 1 })
+    expect(blocks).toMatchObject({ fromCardId: storyRow?.id, toCardId: epicRow?.id })
+    expect(blocks?.createdAt.toISOString()).toBe('2026-10-27T22:30:00.000Z')
+    expect(rows.find((row) => row.type === 'delivers')).toMatchObject({
+      fromCardId: epicRow?.id,
+      toCardId: storyRow?.id
+    })
+    expect((await run('i2')).links).toEqual({ inserted: 0, unchanged: 2, waiting: 1 })
   })
 
   it('changes only what Jira changed when run again, keeping what only JiraIA holds', async () => {

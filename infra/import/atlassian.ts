@@ -9,6 +9,11 @@ import { connectDatabase, type Database } from '@jiraia/db'
 import { createHttpClient } from '@jiraia/http'
 import { createLogger } from '@jiraia/logger'
 import { z } from 'zod'
+import {
+  type AttachmentFiles,
+  DiskAttachmentFiles,
+  S3AttachmentFiles
+} from '../../services/work/src/import/attachment-files.js'
 import { ConfluenceRawCopy, type ConfluenceReport } from '../../services/work/src/import/confluence-raw-copy.js'
 import { HttpAtlassianSource } from '../../services/work/src/import/http-atlassian-source.js'
 import { HttpConfluenceSource } from '../../services/work/src/import/http-confluence-source.js'
@@ -117,6 +122,7 @@ const printConfluence = (report: ConfluenceReport) => {
   console.error(
     row(['space', 'pages', 'folders', 'boards', 'dbs', 'embeds', 'versions', 'footer', 'inline', 'attach', 'MB'])
   )
+  console.error()
   for (const s of report.spaces) {
     console.error(
       row([
@@ -155,19 +161,34 @@ const byRule = (people: Person[]) =>
     .map(([rule, rows]) => `${rule} ${rows?.length ?? 0}`)
     .join(', ')
 
-/** The local database when `DATABASE_URL` is set; otherwise the Aurora the `jiraia` function uses. */
-const openDatabase = (): Database => {
+/**
+ * The local database and disk when `DATABASE_URL` is set; otherwise the Aurora and the attachments
+ * bucket the `jiraia` function uses, read from its settings.
+ */
+const openTarget = (importBucket: string): { db: Database; files: AttachmentFiles } => {
   if (process.env.DATABASE_URL) {
-    return connectDatabase({ DATABASE_URL: process.env.DATABASE_URL })
+    const root = process.env.LOCAL_FILES_DIR ?? '.local-files/8280'
+    return {
+      db: connectDatabase({ DATABASE_URL: process.env.DATABASE_URL }),
+      files: new DiskAttachmentFiles({ importBucket, root, region: 'us-east-1' })
+    }
   }
   const args = ['lambda', 'get-function-configuration', '--function-name', 'jiraia', '--region', 'us-east-1']
   const output = execFileSync('aws', [...args, '--query', 'Environment.Variables', '--output', 'json'], {
     env: { AWS_PROFILE: 'lets-dev', ...process.env }
   })
   const env = z
-    .object({ DB_CLUSTER_ARN: z.string(), DB_SECRET_ARN: z.string(), DB_NAME: z.string() })
+    .object({
+      DB_CLUSTER_ARN: z.string(),
+      DB_SECRET_ARN: z.string(),
+      DB_NAME: z.string(),
+      ATTACHMENTS_BUCKET: z.string()
+    })
     .parse(JSON.parse(output.toString()))
-  return connectDatabase(env, { waitMs: () => 60_000 })
+  return {
+    db: connectDatabase(env, { waitMs: () => 60_000 }),
+    files: new S3AttachmentFiles({ importBucket, attachmentsBucket: env.ATTACHMENTS_BUCKET, region: 'us-east-1' })
+  }
 }
 
 /** What one space's import found worth a look: collisions, reconciled workflow, parents elsewhere. */
@@ -186,11 +207,16 @@ const printNotes = (space: JiraImportReport['spaces'][number]) => {
 }
 
 const printImport = (report: JiraImportReport) => {
+  const { links } = report
   console.error(`run ${report.run} from ${report.rawRun}`)
+  console.error(
+    `links: +${links.inserted} =${links.unchanged}, waiting for a project not imported yet: ${links.waiting}`
+  )
   for (const s of report.spaces) {
-    console.error(
-      `${s.key}: cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}, comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}, aliases ${s.aliases}`
-    )
+    const cards = `cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}`
+    const comments = `comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}`
+    const files = `attachments +${s.attachments.inserted} (${mb(s.attachments.bytes)} MB)`
+    console.error(`${s.key}: ${cards}, ${comments}, ${files}, aliases ${s.aliases}`)
     printNotes(s)
   }
   if (report.unmappedAccounts.length > 0) {
@@ -199,7 +225,7 @@ const printImport = (report: JiraImportReport) => {
 }
 
 if (step === 'jira-import') {
-  const db = openDatabase()
+  const { db, files } = openTarget(values.bucket)
   const actor = await new ImportRepository(db).actor(values.as ?? '')
   if (!actor) {
     console.error(`No member "${values.as}" in that database`)
@@ -207,7 +233,7 @@ if (step === 'jira-import') {
   }
   const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
   const logger = createLogger('work', 'import')
-  const report = await new JiraImport({ db, store, clock: systemClock, ids: uuidGenerator, logger }).run({
+  const report = await new JiraImport({ db, store, files, clock: systemClock, ids: uuidGenerator, logger }).run({
     organizationId: actor.organizationId,
     actorId: actor.memberId,
     rawRun: values['raw-run'] ?? '',
