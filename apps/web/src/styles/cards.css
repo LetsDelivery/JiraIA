@@ -161,6 +161,69 @@
   font-size: var(--text-xs);
 }
 
+/* ---------- Development: branches and pull requests from GitHub (ADR-0038) ---------- */
+.dev-links {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dev-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  align-items: start;
+  font-size: var(--text-sm);
+}
+
+.dev-link > .icon {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.dev-open > .icon,
+.dev-active > .icon {
+  color: var(--state-done);
+}
+
+.dev-merged > .icon {
+  color: var(--state-progress);
+}
+
+.dev-link-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dev-badges {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  gap: var(--space-1);
+}
+
+.dev-deleted a,
+.dev-closed a {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.dev-review-approved,
+.dev-checks-success {
+  border-color: var(--state-done);
+  color: var(--state-done);
+}
+
+.dev-review-changes_requested,
+.dev-checks-failure {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---------- Attachments ---------- */
 .worklogs {
   display: grid;

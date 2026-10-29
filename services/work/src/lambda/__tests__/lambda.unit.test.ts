@@ -351,6 +351,27 @@ describe('invoke', () => {
     expect(work.wakes.held.map((wake) => wake.job)).toEqual(['dispatch'])
   })
 
+  it('hands Slack’s and GitHub’s signed deliveries their raw body, past the router (ADR-0018, ADR-0038)', async () => {
+    const work = new RecordingWork()
+    const heard: string[] = []
+    const signed = (who: string) => ({
+      handle: async (request: { body: string }) => {
+        heard.push(`${who}:${request.body}`)
+        return { statusCode: 200, body: '' }
+      }
+    })
+    const both = {
+      ...service(work, false),
+      slackEvents: signed('slack'),
+      githubEvents: signed('github')
+    } as unknown as Parameters<typeof invoke>[0]
+    const body = Buffer.from('{"zen":"x"}').toString('base64')
+    const at = (path: string) => ({ ...http, requestContext: { http: { method: 'POST', path } } })
+    await invoke(both, deployDeps, logger, { ...at('/github/events'), body, isBase64Encoded: true })
+    await invoke(both, deployDeps, logger, { ...at('/slack/events'), body: '{}' })
+    expect(heard).toEqual(['github:{"zen":"x"}', 'slack:{}'])
+  })
+
   it('answers even when the wake cannot be sent, and says so in the log', async () => {
     const work = new RecordingWork()
     work.wakes.now = async () => {

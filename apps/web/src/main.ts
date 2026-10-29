@@ -60,6 +60,7 @@ import { drawContentView, drawHomeView, drawSpaceView } from '@/views/draw'
 import { drawShell } from '@/views/draw-shell'
 import { forYouView } from '@/views/for-you'
 import { formPageView } from '@/views/form-page'
+import { githubConnectView, githubView } from '@/views/github'
 import { groupsView } from '@/views/groups'
 import { integrationsView } from '@/views/integrations'
 import { notificationsView, refreshBell } from '@/views/notifications'
@@ -107,6 +108,8 @@ const ROUTES: readonly View[] = [
   settingsView,
   slackConnectView,
   slackView,
+  githubConnectView,
+  githubView,
   profileView,
   formPageView,
   searchView,

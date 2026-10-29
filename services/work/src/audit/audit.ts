@@ -54,6 +54,8 @@ export type AuditInput = {
     | 'entitlement'
     | 'access_review'
     | 'sprint'
+    | 'github_installation'
+    | 'dev_link'
   entityId: string
   action: string
   changes: Changes

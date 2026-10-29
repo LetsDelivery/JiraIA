@@ -19,6 +19,7 @@ import {
   localClaims
 } from './config.js'
 import { LocalFileStore } from './files.js'
+import { LocalGitHubApi, localGitHubConfig } from './github.js'
 import { LocalBroadcaster, realtimeSockets, type SocketData, upgrade } from './realtime.js'
 import { LocalSlackApi, localSlackConfig } from './slack.js'
 
@@ -51,7 +52,8 @@ const config = {
   WEB_URL: process.env.LOCAL_WEB_URL ?? 'http://localhost:5280',
   // The OAuth issuer and the MCP resource (ADR-0021): here the service sits under `/work`.
   API_URL: `http://localhost:${LOCAL_PORT}/work`,
-  ...localSlackConfig(process.env)
+  ...localSlackConfig(process.env),
+  ...localGitHubConfig(process.env)
 }
 const files = new LocalFileStore(LOCAL_FILES_DIR)
 const broadcaster = new LocalBroadcaster()
@@ -74,7 +76,8 @@ const work = buildWork(anthropic ? { ...config, ANTHROPIC_API_KEY: anthropic } :
   ),
   ...(anthropic ? {} : { writer: new OfflineDraftWriter() }),
   // A real Slack app's settings in the environment talk to Slack; otherwise the stand-in prints.
-  ...(process.env.SLACK_CLIENT_ID ? {} : { slackApi: new LocalSlackApi() })
+  ...(process.env.SLACK_CLIENT_ID ? {} : { slackApi: new LocalSlackApi() }),
+  ...(process.env.GITHUB_APP_ID ? {} : { githubApi: new LocalGitHubApi() })
 })
 // The jobs run in this process, woken as in AWS: a commit wakes the dispatch, each pass plans the rest (ADR-0035).
 wakes.bind((asked) => runWakes(work, createLogger('local', 'jobs'), asked))
@@ -129,9 +132,10 @@ const _route = async (request: Request): Promise<Response> => {
   if (prefix === 'files') {
     return await files.serve(request, rest.join('/'))
   }
-  // Slack's events skip the router, as the function does in AWS (ADR-0018, ADR-0025).
-  if (prefix === 'work' && rest.join('/') === 'slack/events' && request.method === 'POST') {
-    const reply = await work.slackEvents.handle({
+  // Slack's and GitHub's events skip the router, as the function does in AWS (ADR-0018, ADR-0025, ADR-0038).
+  const signed = { 'slack/events': work.slackEvents, 'github/events': work.githubEvents }[rest.join('/')]
+  if (prefix === 'work' && signed && request.method === 'POST') {
+    const reply = await signed.handle({
       body: await request.text(),
       headers: Object.fromEntries(request.headers.entries())
     })

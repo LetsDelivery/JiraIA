@@ -156,6 +156,11 @@ export const write = {
     await unwrap(api.PATCH('/work/spaces/{spaceId}', { params: { path: { spaceId } }, body }))
     invalidate('spaces', 'my-spaces', `space:${spaceId}`)
   },
+  /** Where a card goes when a pull request naming it is merged (ADR-0038); null leaves it where it is. */
+  setMergedState: async (spaceId: string, mergedStateId: string | null) => {
+    await unwrap(api.PATCH('/work/spaces/{spaceId}', { params: { path: { spaceId } }, body: { mergedStateId } }))
+    invalidate('spaces', 'my-spaces', `space:${spaceId}`)
+  },
   archiveSpace: async (spaceId: string, archived: boolean) => {
     const path = { params: { path: { spaceId } } }
     await unwrap(

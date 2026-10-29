@@ -37,6 +37,8 @@ export const spaceViewSchema = z.object({
   lead: leadSchema.nullable(),
   usesSprints: z.boolean(),
   estimation: estimationSchema,
+  /** Where a card goes when a pull request naming it is merged (ADR-0038); null leaves it where it is. */
+  mergedStateId: z.uuid().nullable(),
   lastCardActivityAt: z.iso.datetime().nullable(),
   archivedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime()
@@ -63,7 +65,8 @@ export const updateSpaceSchema = z
     type: spaceTypeSchema.optional(),
     leadId: z.uuid().nullable().optional(),
     usesSprints: z.boolean().optional(),
-    estimation: estimationSchema.optional()
+    estimation: estimationSchema.optional(),
+    mergedStateId: z.uuid().nullable().optional()
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined), {
     message: 'Send at least one field to change'
@@ -101,6 +104,7 @@ export const toSpaceView = (row: SpaceWithLead): SpaceView => ({
   lead: row.leadId && row.leadName ? { id: row.leadId, name: row.leadName } : null,
   usesSprints: row.usesSprints,
   estimation: estimationSchema.catch('tshirt').parse(row.estimation),
+  mergedStateId: row.mergedStateId,
   lastCardActivityAt: row.lastCardActivityAt ? toIso(row.lastCardActivityAt) : null,
   archivedAt: row.archivedAt ? toIso(row.archivedAt) : null,
   createdAt: toIso(row.createdAt)

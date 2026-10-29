@@ -154,7 +154,8 @@ Os agentes iniciais reaproveitam as skills que já existem em `.claude/skills/`.
   sprint no Jira — item 3.11, ADR-0029.)
 - Time tracking e worklog, dashboards customizados, linguagem de consulta própria.
 - Boards públicos, acesso de clientes e OLs, apps móveis.
-- Integrações com GitHub, Zendesk e outras além do Slack.
+- Integrações com Zendesk e outras além do Slack. (GitHub entrou em 2026-10-29, Etapa 9: branches e
+  pull requests no card e o card indo para revisão no merge — ADR-0038.)
 
 > TODO: validar a matriz com as áreas usuárias. Cada área marca o que usa de fato hoje.
 > Proposta: uma rodada de 30 min por área na S1.

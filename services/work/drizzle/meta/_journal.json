@@ -211,6 +211,13 @@
       "when": 1793279068538,
       "tag": "0029_card-worklogs",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793299544839,
+      "tag": "0030_github-integration",
+      "breakpoints": true
     }
   ]
 }

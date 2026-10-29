@@ -21,6 +21,7 @@ import bolt from '@tabler/icons/outline/bolt.svg?raw'
 import bookmark from '@tabler/icons/outline/bookmark.svg?raw'
 import books from '@tabler/icons/outline/books.svg?raw'
 import boxMultiple from '@tabler/icons/outline/box-multiple.svg?raw'
+import github from '@tabler/icons/outline/brand-github.svg?raw'
 import slack from '@tabler/icons/outline/brand-slack.svg?raw'
 import bug from '@tabler/icons/outline/bug.svg?raw'
 import bulb from '@tabler/icons/outline/bulb.svg?raw'
@@ -66,7 +67,11 @@ import folder from '@tabler/icons/outline/folder.svg?raw'
 import folderOpen from '@tabler/icons/outline/folder-open.svg?raw'
 import forms from '@tabler/icons/outline/forms.svg?raw'
 import frame from '@tabler/icons/outline/frame.svg?raw'
+import gitBranch from '@tabler/icons/outline/git-branch.svg?raw'
+import gitMerge from '@tabler/icons/outline/git-merge.svg?raw'
 import gitPullRequest from '@tabler/icons/outline/git-pull-request.svg?raw'
+import gitPullRequestClosed from '@tabler/icons/outline/git-pull-request-closed.svg?raw'
+import gitPullRequestDraft from '@tabler/icons/outline/git-pull-request-draft.svg?raw'
 import grid4x4 from '@tabler/icons/outline/grid-4x4.svg?raw'
 import gridDots from '@tabler/icons/outline/grid-dots.svg?raw'
 import grip from '@tabler/icons/outline/grip-vertical.svg?raw'
@@ -164,6 +169,11 @@ const ICONS = {
   gitPullRequest,
   robot,
   slack,
+  github,
+  gitBranch,
+  gitMerge,
+  gitPullRequestClosed,
+  gitPullRequestDraft,
   arrowsExchange,
   deviceFloppy,
   download,
