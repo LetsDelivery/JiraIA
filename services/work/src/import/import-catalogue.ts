@@ -117,15 +117,17 @@ export class ImportCatalogue {
       .filter((entry): entry is { field: JiraField; kind: FieldKind } => entry.kind !== undefined)
       .filter((entry) => input.records.some((record) => fieldsOf(record)[entry.field.id] != null))
     const result: Catalogue['fields'] = []
+    const names = fieldNames(used.map((entry) => entry.field))
     for (const [position, { field, kind }] of used.entries()) {
       const options = optionsOf(input.records, field.id, kind)
-      const found = existing.find((row) => row.name === field.name.slice(0, 60))
+      const name = names.get(field.id) ?? field.name
+      const found = existing.find((row) => row.name === name)
       const id = found?.id ?? this.deps.ids.next()
       if (!found) {
         await this.deps.db.insert(customFields).values({
           id,
           spaceId,
-          name: field.name.slice(0, 60),
+          name,
           kind,
           options,
           typeIds: [],
@@ -136,7 +138,7 @@ export class ImportCatalogue {
       result.push({
         jiraId: field.id,
         id,
-        name: field.name,
+        name,
         kind: (found?.kind as FieldKind | undefined) ?? kind,
         options: found ? (found.options as string[]) : options
       })
@@ -225,6 +227,22 @@ const sprintDays = (sprint: JiraSprint, at: Date): { startsOn: string; endsOn: s
   const start = sprint.startDate ? dayOf(sprint.startDate) : null
   const end = sprint.endDate ? dayOf(sprint.endDate) : null
   return { startsOn: start ?? today, endsOn: end ?? start ?? today }
+}
+
+/**
+ * Each field's name in the space, unique as JiraIA requires: Jira allows two fields of one name ("Link"
+ * twice), so a repeated one is told apart by its Jira number, the same on every run.
+ */
+const fieldNames = (fields: JiraField[]): Map<string, string> => {
+  const taken = new Set<string>()
+  const names = new Map<string, string>()
+  for (const field of fields) {
+    const plain = field.name.slice(0, 60)
+    const name = taken.has(plain) ? `${field.name.slice(0, 45)} (${field.id.replace('customfield_', '')})` : plain
+    taken.add(name)
+    names.set(field.id, name)
+  }
+  return names
 }
 
 /** The distinct values a selection field takes across the cards, within JiraIA's limits. */

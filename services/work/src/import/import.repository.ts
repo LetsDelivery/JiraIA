@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, eq, getTableColumns, type SQL, type SQLWrapper, sql } from 'drizzle-orm'
+import { and, asc, eq, getTableColumns, gt, type SQL, type SQLWrapper, sql } from 'drizzle-orm'
 
 import { labelColorSql } from '../cards/card.repository.js'
 import {
@@ -24,6 +24,9 @@ export type CardInsert = typeof cards.$inferInsert
 export type CommentInsert = typeof cardComments.$inferInsert
 export type Ref = { targetId: string; contentHash: string }
 
+/** References a read; each is under 200 bytes, so a page stays far under the Data API's 1 MiB. */
+const REFS_PAGE = 4_000
+
 /** `set` for an upsert: every column the rows carry, but `kept`, from the row that was refused. */
 const fromExcluded = (table: typeof cards, row: object, kept: string[]): Record<string, SQL> => {
   const columns = getTableColumns(table) as Record<string, { name: string }>
@@ -39,14 +42,34 @@ const fromExcluded = (table: typeof cards, row: object, kept: string[]): Record<
 export class ImportRepository {
   constructor(private readonly db: Database) {}
 
+  /**
+   * What an entity kind's Atlassian ids became, read in pages by source id and with only the columns
+   * needed: the history alone holds tens of thousands of rows, past the Data API's 1 MiB answer.
+   */
   async refs(organizationId: string, source: string, entity: string): Promise<Map<string, Ref>> {
-    const rows = await this.db
-      .select()
-      .from(importRefs)
-      .where(
-        and(eq(importRefs.organizationId, organizationId), eq(importRefs.source, source), eq(importRefs.entity, entity))
-      )
-    return new Map(rows.map((row) => [row.sourceId, { targetId: row.targetId, contentHash: row.contentHash }]))
+    const found = new Map<string, Ref>()
+    for (let after = ''; ; ) {
+      const page = await this.db
+        .select({ sourceId: importRefs.sourceId, targetId: importRefs.targetId, contentHash: importRefs.contentHash })
+        .from(importRefs)
+        .where(
+          and(
+            eq(importRefs.organizationId, organizationId),
+            eq(importRefs.source, source),
+            eq(importRefs.entity, entity),
+            after ? gt(importRefs.sourceId, after) : undefined
+          )
+        )
+        .orderBy(asc(importRefs.sourceId))
+        .limit(REFS_PAGE)
+      for (const row of page) {
+        found.set(row.sourceId, { targetId: row.targetId, contentHash: row.contentHash })
+      }
+      if (page.length < REFS_PAGE) {
+        return found
+      }
+      after = (page.at(-1) as { sourceId: string }).sourceId
+    }
   }
 
   async putRefs(tx: Database, rows: RefRow[]): Promise<void> {

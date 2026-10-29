@@ -6,6 +6,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { buildService } from '../container.js'
 import { fakeIssue } from '../import/atlassian-source.js'
 import { InMemoryAttachmentFiles } from '../import/attachment-files.js'
+import { ImportRepository } from '../import/import.repository.js'
 import { InMemoryImportStore } from '../import/import-store.js'
 import { JiraImport } from '../import/jira-import.js'
 import type { Person } from '../import/people.js'
@@ -21,6 +22,7 @@ import {
   cards,
   cardTypes,
   cardWatchers,
+  customFields,
   members,
   spaces,
   sprints,
@@ -448,7 +450,7 @@ describe('Jira import', () => {
     const ana = (await db.select().from(members).where(eq(members.email, 'ana@uselets.com')))[0]
     const storyRow = await card(3538)
 
-    expect(report.spaces[0]?.attachments).toMatchObject({ inserted: 1, bytes: 4 })
+    expect(report.spaces[0]?.attachments).toMatchObject({ inserted: 1, bytes: 4, missing: [] })
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       name: 'tela.png',
@@ -461,6 +463,36 @@ describe('Jira import', () => {
     expect(files.copies).toEqual([
       { from: 'import/jira/attachments/12503', to: `${organizationId}/${storyRow?.id}/${rows[0]?.id}` }
     ])
+  })
+
+  it('lists an attachment the raw copy lacks instead of stopping, and brings it once it is there', async () => {
+    await store.putJson('import/raw1/jira/issues/101.json', {
+      ...story,
+      issue: {
+        ...story.issue,
+        fields: {
+          ...(story.issue.fields as object),
+          attachment: [
+            {
+              id: '22265',
+              filename: 'novo.pdf',
+              size: 9,
+              mimeType: 'application/pdf',
+              created: '2026-10-28T10:00:00.000-0300',
+              author: user(ANA, 'Ana Souza')
+            }
+          ]
+        }
+      }
+    })
+    files.absent.add('import/jira/attachments/22265')
+
+    const first = await run('i1')
+    files.absent.clear()
+    const second = await run('i2')
+
+    expect(first.spaces[0]?.attachments).toMatchObject({ inserted: 0, missing: ['22265'] })
+    expect(second.spaces[0]?.attachments).toMatchObject({ inserted: 1, missing: [] })
   })
 
   it('links two imported cards once, in JiraIA’s direction, with the date and author of the changelog', async () => {
@@ -612,6 +644,59 @@ describe('Jira import', () => {
     expect(report.spaces[0]?.history).toMatchObject({ entries: 5, events: 5 })
     expect(await pending()).toBe(before)
     expect(events).toHaveLength(4)
+  })
+
+  it('reads every reference of a kind in pages, past one page of them', async () => {
+    const repository = new ImportRepository(db)
+    const rows = Array.from({ length: 4_050 }, (_, index) => ({
+      organizationId,
+      source: 'jira',
+      entity: 'history',
+      sourceId: `e${String(index).padStart(5, '0')}`,
+      targetId: uuidGenerator.next(),
+      contentHash: '',
+      runId: 'r',
+      importedAt: clock.now()
+    }))
+    for (let start = 0; start < rows.length; start += 1_000) {
+      await repository.putRefs(db, rows.slice(start, start + 1_000))
+    }
+
+    expect((await repository.refs(organizationId, 'jira', 'history')).size).toBe(4_050)
+  })
+
+  it('tells apart two Jira fields of the same name by their Jira number', async () => {
+    await store.putJson('import/raw1/jira/fields.json', [
+      ...fields,
+      {
+        id: 'customfield_10100',
+        name: 'Link',
+        custom: true,
+        schema: { custom: 'com.atlassian.jira.plugin.system.customfieldtypes:url' }
+      },
+      {
+        id: 'customfield_10200',
+        name: 'Link',
+        custom: true,
+        schema: { custom: 'com.atlassian.jira.plugin.system.customfieldtypes:url' }
+      }
+    ])
+    await store.putJson('import/raw1/jira/issues/101.json', {
+      ...story,
+      issue: {
+        ...story.issue,
+        fields: {
+          ...(story.issue.fields as object),
+          customfield_10100: 'https://a.test',
+          customfield_10200: 'https://b.test'
+        }
+      }
+    })
+
+    await run('i1')
+    await run('i2')
+
+    expect((await db.select().from(customFields)).map((field) => field.name).sort()).toEqual(['Link', 'Link (10200)'])
   })
 
   it('changes only what Jira changed when run again, keeping what only JiraIA holds', async () => {

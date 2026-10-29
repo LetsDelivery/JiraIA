@@ -14,8 +14,13 @@ export type AttachmentFiles = {
 /** Copies kept in a list — the suite's stand-in. */
 export class InMemoryAttachmentFiles implements AttachmentFiles {
   readonly copies: { from: string; to: string }[] = []
+  /** Source keys to answer as S3 does for a key that is not there. */
+  readonly absent = new Set<string>()
 
   async copy(input: { from: string; to: string }): Promise<void> {
+    if (this.absent.has(input.from)) {
+      throw Object.assign(new Error(`No object at ${input.from}`), { name: 'NoSuchKey' })
+    }
     this.copies.push({ from: input.from, to: input.to })
   }
 }

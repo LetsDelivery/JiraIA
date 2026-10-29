@@ -9,7 +9,8 @@ import { attachmentKey } from './jira-attachment-copy.js'
 import { chunk, fieldsOf, userOf } from './jira-mapping.js'
 import { inPool } from './jira-raw-copy.js'
 
-export type AttachmentTally = { inserted: number; unchanged: number; bytes: number }
+/** `missing`: Jira attachments whose bytes the raw copy lacks — run `jira-attachments` on that run. */
+export type AttachmentTally = { inserted: number; unchanged: number; bytes: number; missing: string[] }
 type Deps = { db: Database; repository: ImportRepository; files: AttachmentFiles; clock: Clock; ids: IdGenerator }
 type Input = {
   organizationId: string
@@ -20,6 +21,10 @@ type Input = {
   memberOf: (accountId: string) => string | undefined
 }
 type Planned = { row: typeof cardAttachments.$inferInsert; ref: RefRow; from: string }
+
+/** S3's answer for a key that is not there, from a copy or a read. */
+const isMissing = (error: unknown): boolean =>
+  ['NoSuchKey', 'NotFound'].includes(String((error as { name?: string }).name))
 
 /** The content types an attachment may carry (attachment.schemas.ts); anything else is a plain file. */
 const CONTENT_TYPE = /^[\w.+-]+\/[\w.+-]+$/
@@ -44,13 +49,21 @@ export class JiraAttachments {
     const done = await this.deps.repository.refs(input.organizationId, 'jira', 'attachment')
     const planned = input.records.flatMap((record) => this.plan(record, input, done))
     const copied: Planned[] = []
+    const missing: string[] = []
     await inPool(planned, 8, async (entry) => {
-      await this.deps.files.copy({
-        from: entry.from,
-        to: String(entry.row.objectKey),
-        contentType: String(entry.row.contentType)
-      })
-      copied.push(entry)
+      try {
+        await this.deps.files.copy({
+          from: entry.from,
+          to: String(entry.row.objectKey),
+          contentType: String(entry.row.contentType)
+        })
+        copied.push(entry)
+      } catch (error) {
+        if (!isMissing(error)) {
+          throw error
+        }
+        missing.push(entry.ref.sourceId)
+      }
     })
     for (const batch of chunk(copied, 100)) {
       await this.deps.db.transaction(async (tx) => {
@@ -62,7 +75,7 @@ export class JiraAttachments {
       })
     }
     const bytes = copied.reduce((sum, entry) => sum + Number(entry.row.size), 0)
-    return { inserted: copied.length, unchanged: done.size, bytes }
+    return { inserted: copied.length, unchanged: done.size, bytes, missing }
   }
 
   private plan(record: IssueRecord, input: Input, done: Map<string, unknown>): Planned[] {
