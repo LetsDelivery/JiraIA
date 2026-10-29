@@ -1,7 +1,6 @@
 import type { Clock, IdGenerator } from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 
-import { cardComments } from '../schema.js'
 import type { IssueRecord, Raw } from './atlassian-source.js'
 import type { CommentInsert, ImportRepository, Ref, RefRow } from './import.repository.js'
 import { type CardContext, commentRowOf } from './jira-card-rows.js'
@@ -60,20 +59,18 @@ export class JiraComments {
     ;(ref ? plan.updates : plan.inserts).push(entry)
   }
 
+  /** New and edited comments together, a batch to a statement, each batch with its references. */
   private async write(plan: Plan): Promise<void> {
-    for (const batch of chunk(plan.inserts, BATCH)) {
+    for (const batch of chunk([...plan.inserts, ...plan.updates], BATCH)) {
       await this.deps.db.transaction(async (tx) => {
-        await tx.insert(cardComments).values(batch.map((entry) => entry.row))
+        await this.deps.repository.upsertComments(
+          tx,
+          batch.map((entry) => entry.row)
+        )
         await this.deps.repository.putRefs(
           tx,
           batch.map((entry) => entry.ref)
         )
-      })
-    }
-    for (const entry of plan.updates) {
-      await this.deps.db.transaction(async (tx) => {
-        await this.deps.repository.updateComment(tx, String(entry.row.id), entry.row)
-        await this.deps.repository.putRefs(tx, [entry.ref])
       })
     }
   }

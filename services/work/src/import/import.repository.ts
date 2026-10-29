@@ -1,5 +1,5 @@
 import type { Database } from '@jiraia/db'
-import { and, eq, type SQLWrapper, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, type SQL, type SQLWrapper, sql } from 'drizzle-orm'
 
 import { labelColorSql } from '../cards/card.repository.js'
 import {
@@ -23,6 +23,13 @@ export type RefRow = typeof importRefs.$inferSelect
 export type CardInsert = typeof cards.$inferInsert
 export type CommentInsert = typeof cardComments.$inferInsert
 export type Ref = { targetId: string; contentHash: string }
+
+/** `set` for an upsert: every column the rows carry, but `kept`, from the row that was refused. */
+const fromExcluded = (table: typeof cards, row: object, kept: string[]): Record<string, SQL> => {
+  const columns = getTableColumns(table) as Record<string, { name: string }>
+  const names = Object.keys(row).filter((key) => !kept.includes(key) && columns[key])
+  return Object.fromEntries(names.map((key) => [key, sql.raw(`excluded.${(columns[key] as { name: string }).name}`)]))
+}
 
 /**
  * The importer's writes (Etapa 8c, ADR-0036). Rows go in with Jira's own authors and dates, past the
@@ -109,12 +116,29 @@ export class ImportRepository {
     return new Map(rows.map((row) => [row.number, row.id]))
   }
 
-  async updateCard(tx: Database, id: string, row: Omit<CardInsert, 'id' | 'organizationId' | 'spaceId' | 'number'>) {
-    await tx.update(cards).set(row).where(eq(cards.id, id))
+  /**
+   * New and changed cards in one statement: a row already there takes what Jira says now, and keeps
+   * what only JiraIA holds (its group, its t-shirt estimate) — one call for a batch, not four a card.
+   */
+  async upsertCards(tx: Database, rows: CardInsert[]): Promise<void> {
+    await tx
+      .insert(cards)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: cards.id,
+        set: fromExcluded(cards, rows[0] ?? {}, ['id', 'organizationId', 'spaceId', 'number'])
+      })
   }
 
-  async updateComment(tx: Database, id: string, row: Pick<CommentInsert, 'body' | 'mentions' | 'editedAt'>) {
-    await tx.update(cardComments).set(row).where(eq(cardComments.id, id))
+  /** New and edited comments in one statement; an edit changes the body, its mentions and its edit date. */
+  async upsertComments(tx: Database, rows: CommentInsert[]): Promise<void> {
+    await tx
+      .insert(cardComments)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: cardComments.id,
+        set: { body: sql`excluded.body`, mentions: sql`excluded.mentions`, editedAt: sql`excluded.edited_at` }
+      })
   }
 
   /** Parents in one statement: a card's parent may come later in Jira's order than the card itself. */

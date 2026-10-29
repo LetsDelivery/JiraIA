@@ -3,7 +3,6 @@ import type { Database } from '@jiraia/db'
 import type { JiraiaLogger } from '@jiraia/logger'
 import { z } from 'zod'
 
-import { cards } from '../schema.js'
 import { type IssueRecord, type JiraProject, jiraProjectSchema } from './atlassian-source.js'
 import { type CardInsert, ImportRepository, type Ref, type RefRow } from './import.repository.js'
 import { ImportCatalogue } from './import-catalogue.js'
@@ -252,21 +251,16 @@ export class JiraImport {
     })
   }
 
+  /** New and changed cards together, 25 to a statement, each batch with its references. */
   private async writeCards(run: string, plan: CardPlan): Promise<void> {
     const refOf = new Map(plan.refs.map((ref) => [ref.targetId, { ...ref, runId: run }]))
-    for (const batch of chunk(plan.inserts, BATCH)) {
+    for (const batch of chunk([...plan.inserts, ...plan.updates], BATCH)) {
       await this.deps.db.transaction(async (tx) => {
-        await tx.insert(cards).values(batch)
+        await this.repository.upsertCards(tx, batch)
         await this.repository.putRefs(
           tx,
           batch.map((row) => refOf.get(String(row.id)) as RefRow)
         )
-      })
-    }
-    for (const { id, organizationId: _o, spaceId: _s, number: _n, ...fields } of plan.updates) {
-      await this.deps.db.transaction(async (tx) => {
-        await this.repository.updateCard(tx, String(id), fields)
-        await this.repository.putRefs(tx, [refOf.get(String(id)) as RefRow])
       })
     }
   }

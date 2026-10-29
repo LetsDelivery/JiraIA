@@ -170,18 +170,28 @@ const openDatabase = (): Database => {
   return connectDatabase(env, { waitMs: () => 60_000 })
 }
 
+/** What one space's import found worth a look: collisions, reconciled workflow, parents elsewhere. */
+const printNotes = (space: JiraImportReport['spaces'][number]) => {
+  const notes = [
+    space.cards.conflicts.length > 0
+      ? `number already used by a card not from Jira: ${space.cards.conflicts.join(', ')}`
+      : '',
+    space.workflow.removed.length > 0 ? `not in Jira, removed: ${space.workflow.removed.join(', ')}` : '',
+    space.workflow.kept.length > 0 ? `not in Jira, kept off the board: ${space.workflow.kept.join(', ')}` : '',
+    space.parentsOutside.length > 0 ? `parent in another project (not linked): ${space.parentsOutside.length}` : ''
+  ]
+  for (const note of notes.filter(Boolean)) {
+    console.error(`  ${note}`)
+  }
+}
+
 const printImport = (report: JiraImportReport) => {
   console.error(`run ${report.run} from ${report.rawRun}`)
   for (const s of report.spaces) {
     console.error(
       `${s.key}: cards +${s.cards.inserted} ~${s.cards.updated} =${s.cards.unchanged}, comments +${s.comments.inserted} ~${s.comments.updated} =${s.comments.unchanged}, aliases ${s.aliases}`
     )
-    if (s.cards.conflicts.length > 0) {
-      console.error(`  number already used by a card not from Jira: ${s.cards.conflicts.join(', ')}`)
-    }
-    if (s.parentsOutside.length > 0) {
-      console.error(`  parent in another project (not linked): ${s.parentsOutside.length}`)
-    }
+    printNotes(s)
   }
   if (report.unmappedAccounts.length > 0) {
     console.error(`accounts not in the reviewed mapping, imported as inactive: ${report.unmappedAccounts.length}`)

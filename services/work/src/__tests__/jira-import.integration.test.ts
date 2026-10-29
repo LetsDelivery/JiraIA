@@ -414,8 +414,9 @@ describe('Jira import', () => {
     expect(report.spaces[0]?.workflow).toEqual({ removed: ['state A fazer'], kept: ['state Em teste', 'type Tarefa'] })
   })
 
-  it('changes only what Jira changed when run again', async () => {
+  it('changes only what Jira changed when run again, keeping what only JiraIA holds', async () => {
     await run('i1')
+    await db.update(cards).set({ estimate: 'M' }).where(eq(cards.number, 3538))
     await store.putJson('import/raw1/jira/issues/101.json', {
       ...story,
       issue: { ...story.issue, fields: { ...(story.issue.fields as object), summary: 'Nova tela v2' } }
@@ -426,6 +427,7 @@ describe('Jira import', () => {
     expect(report.spaces[0]?.cards).toMatchObject({ inserted: 0, updated: 1, unchanged: 1 })
     expect(report.spaces[0]?.comments).toMatchObject({ inserted: 0, unchanged: 1 })
     expect((await card(3538))?.title).toBe('Nova tela v2')
+    expect((await card(3538))?.estimate).toBe('M')
     expect(await db.select().from(cards)).toHaveLength(2)
   })
 })
