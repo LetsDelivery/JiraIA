@@ -68,6 +68,7 @@ export class SpaceService {
       type: input.type,
       leadId: lead.id,
       nextCardNumber: 1,
+      mergedStateId: null,
       // A software team plans in sprints; any other space switches them on if it wants (ADR-0029).
       usesSprints: input.type === 'software',
       estimation: 'tshirt',
@@ -111,6 +112,9 @@ export class SpaceService {
     const fields = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined))
     if (input.leadId) {
       await this._activeMember(actor.organizationId, input.leadId)
+    }
+    if (input.mergedStateId) {
+      await this._stateOf(space.id, input.mergedStateId)
     }
 
     await this.deps.db.transaction(async (tx) => {
@@ -237,6 +241,13 @@ export class SpaceService {
       throw new NotFoundException('Active member', memberId)
     }
     return target
+  }
+
+  /** A state a merged card may be moved to: one of this space's own. */
+  private async _stateOf(spaceId: string, stateId: string): Promise<void> {
+    if (!(await this.deps.workflows.findState(spaceId, stateId))) {
+      throw new NotFoundException('State of this space', stateId)
+    }
   }
 
   private async _audit(

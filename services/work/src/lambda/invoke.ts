@@ -46,16 +46,38 @@ export const triggerOf = (event: unknown): Trigger => {
 
 /** Slack's events skip the router (ADR-0018): the service checks Slack's signature on the raw body. */
 export const SLACK_EVENTS_PATH = '/slack/events'
+/** GitHub's deliveries skip it too (ADR-0038), for the same reason. */
+export const GITHUB_EVENTS_PATH = '/github/events'
 
 type Service = ReturnType<typeof buildService>
+type Signed = {
+  handle(request: {
+    body: string
+    headers: Record<string, string | undefined>
+  }): Promise<{ statusCode: number; body: string }>
+}
+
+/** Who answers a path whose sender signs its raw body, if this path is one. */
+const signedBy = (service: Service, event: APIGatewayProxyEventV2): Signed | undefined => {
+  if (event.requestContext.http.method !== 'POST') {
+    return undefined
+  }
+  const path = requestPath(event)
+  return path === SLACK_EVENTS_PATH
+    ? service.slackEvents
+    : path === GITHUB_EVENTS_PATH
+      ? service.githubEvents
+      : undefined
+}
 
 const _http = async (service: Service, event: APIGatewayProxyEventV2): Promise<APIGatewayProxyStructuredResultV2> => {
-  if (event.requestContext.http.method !== 'POST' || requestPath(event) !== SLACK_EVENTS_PATH) {
+  const signed = signedBy(service, event)
+  if (!signed) {
     return await service.router(event)
   }
   const body =
     event.isBase64Encoded && event.body ? Buffer.from(event.body, 'base64').toString('utf8') : (event.body ?? '')
-  const reply = await service.slackEvents.handle({ body, headers: event.headers })
+  const reply = await signed.handle({ body, headers: event.headers })
   return { statusCode: reply.statusCode, headers: { 'content-type': 'application/json' }, body: reply.body }
 }
 

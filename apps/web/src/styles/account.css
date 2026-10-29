@@ -123,15 +123,17 @@
   border-top: 1px solid var(--border);
 }
 
-/* ---------- Slack ---------- */
-.slack-features {
+/* ---------- Slack and GitHub ---------- */
+.slack-features,
+.integration-features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-6);
   margin-bottom: var(--space-8);
 }
 
-.slack-feature h2 {
+.slack-feature h2,
+.integration-feature h2 {
   margin: var(--space-4) 0 var(--space-1);
   font-size: var(--text-md);
 }
@@ -190,7 +192,8 @@
   border-left: 4px solid #1264a3;
 }
 
-.slack-state {
+.slack-state,
+.integration-state {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -201,11 +204,13 @@
   background: var(--surface);
 }
 
-.slack-state p {
+.slack-state p,
+.integration-state p {
   margin: 0;
 }
 
-.slack-state.is-on {
+.slack-state.is-on,
+.integration-state.is-on {
   border-color: var(--state-done);
 }
 
@@ -213,4 +218,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.integration-feature {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.integration-feature h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 0;
+}
+
+.integration-feature code {
+  overflow-wrap: anywhere;
 }

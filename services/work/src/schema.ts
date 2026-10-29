@@ -89,6 +89,12 @@ export const spaces = work.table(
     usesSprints: boolean('uses_sprints').notNull().default(false),
     /** How its cards are estimated: `tshirt` (P/M/G, in `cards.estimate`) or `points` (`cards.points`). */
     estimation: text('estimation').notNull().default('tshirt'),
+    /**
+     * Where a card goes when a pull request that names it is merged into the repository's default
+     * branch (ADR-0038). Null leaves the card where it is. Not a foreign key: a state removed later
+     * just stops being a destination.
+     */
+    mergedStateId: uuid('merged_state_id'),
     lastCardActivityAt: timestamp('last_card_activity_at', { withTimezone: true, mode: 'date' }),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
     createdAt: createdAt()

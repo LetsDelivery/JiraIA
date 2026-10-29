@@ -40,10 +40,34 @@ const editor = (workflow: Workflow): Html => html`
  * delete states, each change saved at once; everyone else reads the columns and what each one means.
  */
 export const workflowPanel = async (spaceId: string, manages: boolean): Promise<Html> => {
-  const workflow = await read.workflow(spaceId)
+  const [workflow, space] = await Promise.all([read.workflow(spaceId), read.space(spaceId)])
   return html`
     <p class="muted">As colunas do board, na ordem. O grupo diz o que o estado significa nos relatórios. O nome aceita emoji.</p>
     ${manages ? editor(workflow) : html`<ol class="states">${workflow.states.map(readOnlyRow)}</ol>`}
+    ${mergedSection(workflow, space.mergedStateId, manages)}
+  `
+}
+
+/**
+ * Where a card goes when a pull request that names it is merged into the repository's main branch
+ * (ADR-0038). "Não mover" leaves it where it is; a card already done or cancelled never moves.
+ */
+const mergedSection = (workflow: Workflow, mergedStateId: string | null, manages: boolean): Html => {
+  const chosen = workflow.states.find((state) => state.id === mergedStateId)
+  const options = [
+    { value: '', label: 'Não mover' },
+    ...workflow.states.map((state) => ({ value: state.id, label: state.name }))
+  ]
+  return html`
+    <section class="merged-state" data-merged-state>
+      <h3>${icon('gitMerge', 16)}Quando um pull request é mergeado</h3>
+      <p class="muted">Pull request com a chave do card que entra na branch principal do repositório no GitHub move o card para este estado. Card concluído ou cancelado fica onde está.</p>
+      ${
+        manages
+          ? selectField({ name: 'mergedStateId', label: 'Mover o card para', options, value: chosen?.id ?? '' })
+          : html`<p>${chosen ? html`Move o card para <strong>${chosen.name}</strong>.` : 'Não move o card.'}</p>`
+      }
+    </section>
   `
 }
 
@@ -54,6 +78,15 @@ export const bindWorkflowPanel = async (root: HTMLElement, spaceId: string): Pro
   }
   const workflow = await read.workflow(spaceId)
   bindSelects(root)
+  root.querySelector('[data-merged-state]')?.addEventListener('select-change', (event) => {
+    const value = (event as CustomEvent<{ value: string }>).detail.value
+    void write
+      .setMergedState(spaceId, value || null)
+      .then(() =>
+        toast(value ? 'Pull request mergeado agora move o card.' : 'Pull request mergeado não move mais o card.')
+      )
+      .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
+  })
   const run = (change: Promise<unknown>) => change.catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
   const ids = workflow.states.map((state) => state.id)
   for (const row of root.querySelectorAll<HTMLElement>('[data-state]')) {

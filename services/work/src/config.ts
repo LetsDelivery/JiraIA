@@ -63,6 +63,16 @@ const configSchema = z.intersection(
     /** Slack's Web API; the suites point it at a mocked host. */
     SLACK_API_URL: z.url().optional(),
     /**
+     * The GitHub App (Etapa 9, ADR-0038): its id and public name, and from Secrets Manager its private
+     * key (PEM; `\n` for line breaks is accepted) and webhook secret. Without them, connecting answers 503.
+     */
+    GITHUB_APP_ID: z.string().regex(/^\d+$/).optional(),
+    GITHUB_APP_SLUG: z.string().min(1).optional(),
+    GITHUB_PRIVATE_KEY: z.string().min(100).optional(),
+    GITHUB_WEBHOOK_SECRET: z.string().min(16).optional(),
+    /** GitHub's REST API; the suites point it at a mocked host. */
+    GITHUB_API_URL: z.url().optional(),
+    /**
      * What wakes the jobs (ADR-0035): the FIFO jobs queue, and the role and group of the one-time
      * schedules for later. Without them, wakes are held and no job runs.
      */

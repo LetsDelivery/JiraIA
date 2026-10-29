@@ -9,7 +9,8 @@ export default defineConfig({
     './services/work/src/schema-agents.ts',
     './services/work/src/schema-governance.ts',
     './services/work/src/schema-wiki.ts',
-    './services/work/src/schema-import.ts'
+    './services/work/src/schema-import.ts',
+    './services/work/src/schema-github.ts'
   ],
   out: './services/work/drizzle',
   schemaFilter: ['work']

@@ -36,6 +36,7 @@
     "import:atlassian": "bun run infra/import/atlassian.ts",
     "local:digest": "bun run infra/local/digest.ts",
     "local:email-preview": "bun run infra/local/email-preview.ts",
+    "local:github": "bun run infra/local/github-send.ts",
     "local:down": "docker compose down",
     "local:reset": "docker compose down -v && docker compose up -d --wait && bun run infra/local/migrate.ts && bun run infra/local/seed.ts",
     "local:serve": "bun run infra/local/server.ts",

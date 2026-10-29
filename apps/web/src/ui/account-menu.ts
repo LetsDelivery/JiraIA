@@ -6,7 +6,8 @@ import { icon } from './icons'
 
 /**
  * The account menu (Etapa 5e): the person's avatar at the right end of the header opens who they are,
- * their profile and settings, the theme, Slack, and the way out — what the bottom of the side menu held.
+ * their profile and settings, the theme, Slack and GitHub, and the way out — what the bottom of the
+ * side menu held.
  */
 export type ThemeChoice = 'light' | 'dark' | 'system'
 
@@ -40,6 +41,7 @@ export const accountMenu = (me: Me, theme: ThemeChoice): Html => html`
     )}
   </div>
   <a role="menuitem" href="/slack">${icon('slack', 16)}Slack</a>
+  <a role="menuitem" href="/github">${icon('github', 16)}GitHub</a>
   <hr class="account-rule" />
   <button type="button" role="menuitem" data-switch-account>${icon('arrowsExchange', 16)}Trocar de conta</button>
   <button type="button" role="menuitem" data-sign-out>${icon('logout', 16)}Sair</button>

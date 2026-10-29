@@ -1,4 +1,5 @@
 import { accessRead, type Group } from '@/api/access'
+import { type DevLink, githubRead } from '@/api/github'
 import { type Proposal, proposalsRead } from '@/api/proposals'
 import {
   type Card,
@@ -10,6 +11,7 @@ import {
   read,
   write
 } from '@/api/requests'
+import { branchName } from '@/lib/github'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
@@ -20,6 +22,7 @@ import { type ActivityTab, activitySection, bindActivity } from './card-activity
 import { attachButton, attachmentsSection, bindAttachments, uploadFile } from './card-attachments'
 import { bindComments, commentsSection } from './card-comments'
 import { type DescriptionHandle, descriptionSection, mountDescription } from './card-description'
+import { bindDevelopment, developmentSection } from './card-development'
 import { pickLabels } from './card-pickers'
 import { bindRelations, type ComposeForm, type RelationsContext, relationsSection } from './card-relations'
 import { bindSide, type SideGroup, side } from './card-side'
@@ -49,6 +52,9 @@ type Loaded = {
   attachments: Awaited<ReturnType<typeof read.attachments>>['items']
   watchers: Awaited<ReturnType<typeof read.watchers>>['items']
   worklogs: Awaited<ReturnType<typeof read.worklogs>>['items']
+  /** Its branches and pull requests, and whether GitHub is connected at all (ADR-0038). */
+  development: readonly DevLink[]
+  github: boolean
   starred: boolean
   groups: readonly Group[]
   isOrgAdmin: boolean
@@ -145,7 +151,7 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
 }
 
 const load = async (cardId: string): Promise<Loaded> => {
-  const [card, proposals, comments, events, relations, attachments, watchers, worklogs, star, groups, me] =
+  const [card, proposals, comments, events, relations, attachments, watchers, worklogs, star, groups, me, dev, github] =
     await Promise.all([
       read.card(cardId),
       proposalsRead.forCard(cardId).catch(() => ({ items: [] })),
@@ -157,7 +163,9 @@ const load = async (cardId: string): Promise<Loaded> => {
       read.worklogs(cardId),
       read.cardStar(cardId),
       accessRead.groups(),
-      read.me()
+      read.me(),
+      githubRead.development(cardId).catch(() => ({ items: [] })),
+      githubRead.status().catch(() => undefined)
     ])
   return {
     card,
@@ -168,6 +176,8 @@ const load = async (cardId: string): Promise<Loaded> => {
     attachments: attachments.items,
     watchers: watchers.items,
     worklogs: worklogs.items,
+    development: dev.items,
+    github: Boolean(github?.installation),
     starred: star.starred,
     groups: groups.items,
     isOrgAdmin: me.isOrgAdmin
@@ -205,6 +215,7 @@ const render = async (
   const sections = html`
     ${relationsSection(loaded.relations, relationContext)}
     ${attachmentsSection(loaded.attachments, attachContext)}
+    ${developmentSection(loaded.development, branchOf(card, context), loaded.github)}
     ${worklogsSection(loaded.worklogs)}
     ${activitySection({ ...context, groups: loaded.groups }, loaded.history, comments, tab)}
   `
@@ -241,6 +252,7 @@ const render = async (
   bindRelations(dialog, loaded.relations, relationContext)
   bindSquadField(dialog.querySelector('[data-detail-root]') as HTMLElement, squadContext)
   bindAttachments(dialog, attachContext)
+  bindDevelopment(dialog)
   bindComments(dialog, loaded.comments, commentContext)
   bindWatch(dialog, card, () => again())
   bindStar(dialog, card, () => again())
@@ -254,6 +266,10 @@ const render = async (
   })
   applyArrival(dialog)
 }
+
+/** The branch the card's work should go on; a type that looks like a bug (ADR-0031) gets `fix/`. */
+const branchOf = (card: Card, context: BoardContext): string =>
+  branchName(card.key, card.title, context.workflow.types.find((type) => type.id === card.typeId)?.icon === 'bug')
 
 /** What the relations panels need; which composer is open lives on the dialog, across redraws. */
 const relationsOf = (

@@ -1472,6 +1472,28 @@ button.tile-prop[aria-expanded='true'] {
   padding: var(--space-4) 0;
 }
 
+/* Where a merged pull request moves the card (ADR-0038). */
+.merged-state {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 560px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.merged-state h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.merged-state p {
+  margin: 0;
+}
+
 @media (min-width: 1101px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);

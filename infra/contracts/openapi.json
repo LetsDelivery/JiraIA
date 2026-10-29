@@ -1350,6 +1350,18 @@
                               "points"
                             ]
                           },
+                          "mergedStateId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "lastCardActivityAt": {
                             "anyOf": [
                               {
@@ -1389,6 +1401,7 @@
                           "lead",
                           "usesSprints",
                           "estimation",
+                          "mergedStateId",
                           "lastCardActivityAt",
                           "archivedAt",
                           "createdAt"
@@ -1535,6 +1548,18 @@
                         "points"
                       ]
                     },
+                    "mergedStateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "lastCardActivityAt": {
                       "anyOf": [
                         {
@@ -1574,6 +1599,7 @@
                     "lead",
                     "usesSprints",
                     "estimation",
+                    "mergedStateId",
                     "lastCardActivityAt",
                     "archivedAt",
                     "createdAt"
@@ -1682,6 +1708,18 @@
                         "points"
                       ]
                     },
+                    "mergedStateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "lastCardActivityAt": {
                       "anyOf": [
                         {
@@ -1721,6 +1759,7 @@
                     "lead",
                     "usesSprints",
                     "estimation",
+                    "mergedStateId",
                     "lastCardActivityAt",
                     "archivedAt",
                     "createdAt"
@@ -1807,6 +1846,18 @@
                       "tshirt",
                       "points"
                     ]
+                  },
+                  "mergedStateId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 }
               }
@@ -1879,6 +1930,18 @@
                         "points"
                       ]
                     },
+                    "mergedStateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "lastCardActivityAt": {
                       "anyOf": [
                         {
@@ -1918,6 +1981,7 @@
                     "lead",
                     "usesSprints",
                     "estimation",
+                    "mergedStateId",
                     "lastCardActivityAt",
                     "archivedAt",
                     "createdAt"
@@ -2026,6 +2090,18 @@
                         "points"
                       ]
                     },
+                    "mergedStateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "lastCardActivityAt": {
                       "anyOf": [
                         {
@@ -2065,6 +2141,7 @@
                     "lead",
                     "usesSprints",
                     "estimation",
+                    "mergedStateId",
                     "lastCardActivityAt",
                     "archivedAt",
                     "createdAt"
@@ -2173,6 +2250,18 @@
                         "points"
                       ]
                     },
+                    "mergedStateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "lastCardActivityAt": {
                       "anyOf": [
                         {
@@ -2212,6 +2301,7 @@
                     "lead",
                     "usesSprints",
                     "estimation",
+                    "mergedStateId",
                     "lastCardActivityAt",
                     "archivedAt",
                     "createdAt"
@@ -2732,6 +2822,18 @@
                               "points"
                             ]
                           },
+                          "mergedStateId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "lastCardActivityAt": {
                             "anyOf": [
                               {
@@ -2786,6 +2888,7 @@
                           "lead",
                           "usesSprints",
                           "estimation",
+                          "mergedStateId",
                           "lastCardActivityAt",
                           "archivedAt",
                           "createdAt",
@@ -2858,6 +2961,18 @@
                               "points"
                             ]
                           },
+                          "mergedStateId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "lastCardActivityAt": {
                             "anyOf": [
                               {
@@ -2912,6 +3027,7 @@
                           "lead",
                           "usesSprints",
                           "estimation",
+                          "mergedStateId",
                           "lastCardActivityAt",
                           "archivedAt",
                           "createdAt",
@@ -2984,6 +3100,18 @@
                               "points"
                             ]
                           },
+                          "mergedStateId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "lastCardActivityAt": {
                             "anyOf": [
                               {
@@ -3038,6 +3166,7 @@
                           "lead",
                           "usesSprints",
                           "estimation",
+                          "mergedStateId",
                           "lastCardActivityAt",
                           "archivedAt",
                           "createdAt",
@@ -20461,6 +20590,457 @@
                     "canManage",
                     "workspace",
                     "me"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/integrations/github": {
+      "get": {
+        "operationId": "workGetIntegrationsGithub",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /integrations/github",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "canManage": {
+                      "type": "boolean"
+                    },
+                    "installation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "string"
+                            },
+                            "installedBy": {
+                              "type": "string"
+                            },
+                            "installedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            }
+                          },
+                          "required": [
+                            "account",
+                            "installedBy",
+                            "installedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "configured",
+                    "canManage",
+                    "installation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "workDeleteIntegrationsGithub",
+        "tags": [
+          "work"
+        ],
+        "summary": "DELETE /integrations/github",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "canManage": {
+                      "type": "boolean"
+                    },
+                    "installation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "string"
+                            },
+                            "installedBy": {
+                              "type": "string"
+                            },
+                            "installedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            }
+                          },
+                          "required": [
+                            "account",
+                            "installedBy",
+                            "installedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "configured",
+                    "canManage",
+                    "installation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/integrations/github/install": {
+      "post": {
+        "operationId": "workPostIntegrationsGithubInstall",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /integrations/github/install",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/integrations/github/complete": {
+      "post": {
+        "operationId": "workPostIntegrationsGithubComplete",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /integrations/github/complete",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installationId": {
+                    "type": "string",
+                    "pattern": "^\\d{1,20}$"
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "installationId",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "canManage": {
+                      "type": "boolean"
+                    },
+                    "installation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "string"
+                            },
+                            "installedBy": {
+                              "type": "string"
+                            },
+                            "installedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            }
+                          },
+                          "required": [
+                            "account",
+                            "installedBy",
+                            "installedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "configured",
+                    "canManage",
+                    "installation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/cards/{cardId}/development": {
+      "get": {
+        "operationId": "workGetCardsCardIdDevelopment",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /cards/{cardId}/development",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "cardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "repo": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "branch",
+                              "pull_request"
+                            ]
+                          },
+                          "ref": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "deleted",
+                              "open",
+                              "draft",
+                              "closed",
+                              "merged"
+                            ]
+                          },
+                          "review": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "approved",
+                                  "changes_requested"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "checks": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "success",
+                                  "failure"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "author": {
+                            "type": "string"
+                          },
+                          "mergedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "repo",
+                          "kind",
+                          "ref",
+                          "title",
+                          "url",
+                          "state",
+                          "review",
+                          "checks",
+                          "author",
+                          "mergedAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
                   ],
                   "additionalProperties": false
                 }

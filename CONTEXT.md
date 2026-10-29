@@ -109,6 +109,16 @@ An application acting as one person, from their consent until either ends it; ev
 belongs to one (ADR-0021, ADR-0022).
 _Avoid_: session, grant, link
 
+**Development**:
+A card's branches and pull requests, as GitHub last told them: linked by the card's key in a branch's
+name or a pull request's title (ADR-0038).
+_Avoid_: dev panel, commits, code (nothing of the code is kept)
+
+**Merged state**:
+The state a space sends a card to when a pull request naming it is merged into the repository's main
+branch; none leaves the card where it is (ADR-0038).
+_Avoid_: review column, auto-transition
+
 **Audit event**:
 One recorded write: actor, entity, action, and each changed field's before and after.
 _Avoid_: log, activity

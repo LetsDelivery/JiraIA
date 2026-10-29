@@ -27,6 +27,7 @@ import { WorkflowRepository } from './cards/workflow.repository.js'
 import { WorkflowService } from './cards/workflow.service.js'
 import type { Config } from './config.js'
 import { buildCardRecords } from './container-card-records.js'
+import { buildConnections } from './container-connections.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
 import { buildWake, connectSignalled } from './container-wake.js'
 import { buildWiki } from './container-wiki.js'
@@ -52,6 +53,7 @@ import type { EventPublisher } from './events/event.js'
 import type { FileStore } from './files/file-store.js'
 import { S3FileStore } from './files/s3-file-store.js'
 import { formRoutes } from './forms/routes.js'
+import type { GitHubApi } from './github/github-api.js'
 import { AccessClock } from './governance/access-clock.js'
 import { CatalogRepository } from './governance/catalog.repository.js'
 import { CatalogService } from './governance/catalog.service.js'
@@ -107,8 +109,6 @@ import { workRoutes } from './routes.js'
 import { searchRoutes } from './search/routes.js'
 import { SearchRepository } from './search/search.repository.js'
 import { SearchService } from './search/search.service.js'
-import { buildSlack } from './slack/build.js'
-import { slackRoutes } from './slack/routes.js'
 import type { SlackApi } from './slack/slack-api.js'
 import { SpaceRepository } from './spaces/space.repository.js'
 import { SpaceService } from './spaces/space.service.js'
@@ -155,6 +155,8 @@ export type Overrides = {
   slack?: SlackNotifier
   /** Slack's Web API for the workspace connection (Etapa 5e); the suites hand in their own. */
   slackApi?: SlackApi
+  /** GitHub's REST API (Etapa 9); the suites and the harness hand in their own. */
+  githubApi?: GitHubApi
 }
 
 export const buildService = (config: Config, overrides: Overrides = {}) => {
@@ -257,18 +259,13 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const webUrl = config.WEB_URL ?? 'http://localhost:5280'
   const mcp = buildMcp({ ...services, access, spaceRows: spaces, proposals, webUrl })
   const oauth = buildOAuth({ db, clock, ids, audit, access, members })
-  const slack = buildSlack({ db, clock, audit, access, members, cards, workflows, config, api: overrides.slackApi })
+  const connections = buildConnections({
+    ...{ db, clock, ids, audit, access, members, cards, cardGate, spaces, workflows, config, overrides },
+    moves: cardService
+  })
+  const { slack, github } = connections
   const notices = buildNotifications({
-    db,
-    clock,
-    ids,
-    access,
-    members,
-    cards,
-    workflows,
-    watchers,
-    config,
-    overrides,
+    ...{ db, clock, ids, access, members, cards, workflows, watchers, config, overrides },
     slackDirect: slack.slackDirect
   })
   const outward = buildOutward({ db, clock, ids, audit, access, gate, members, cards, overrides })
@@ -328,7 +325,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...notificationRoutes(notices.notifications),
     ...tokenRoutes(outward.tokens),
     ...webhookRoutes(outward.webhooks),
-    ...slackRoutes(slack.slackConnect),
+    ...connections.routes,
     ...proposalRoutes(proposals),
     ...mcpRoutes(mcp),
     ...oauthRoutes({ server: oauth.server, tokens: oauth.tokens, apiUrl: config.API_URL, webUrl })
@@ -349,6 +346,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     webhooks: outward.webhooks,
     webhookSender: outward.sender,
     ...slack,
+    ...github,
     proposals,
     oauth,
     router: createRouter({

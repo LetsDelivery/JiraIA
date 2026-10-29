@@ -57,6 +57,11 @@ Mappings:
       # The Slack app's client id (pendência #10). When set, the secret jiraia/slack must hold
       # client_secret, signing_secret and token_key.
       SlackClientId: '10340397365014.12393274177413'
+      # The GitHub App (ADR-0038): its id and its public name (github.com/apps/<slug>). When set, the
+      # secret jiraia/github must hold private_key (PEM, `\n` for line breaks) and webhook_secret.
+      # Empty: connecting GitHub answers 503 and every delivery is refused.
+      GitHubAppId: ''
+      GitHubAppSlug: ''
       # Aurora capacity units: zero lets the cluster pause when there is no work (ADR-0035).
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '4'
@@ -73,6 +78,8 @@ Mappings:
       AlarmEmail: ''
       MailFrom: 'jiraia@uselets.com'
       SlackClientId: '10340397365014.12393274177413'
+      GitHubAppId: ''
+      GitHubAppSlug: ''
       # Zero, as in dev: no work, no cost. The panel says the data is on its way while it resumes (ADR-0035).
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '8'
@@ -86,6 +93,7 @@ Conditions:
   HasAlarmEmail: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', AlarmEmail], '']]
   HasMailFrom: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', MailFrom], '']]
   HasSlack: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', SlackClientId], '']]
+  HasGitHub: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', GitHubAppId], '']]
   HasPanelDomain: !Not [!Equals [!FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain], '']]
 
 Resources:
@@ -762,6 +770,23 @@ Resources:
           SLACK_TOKEN_KEY: !If
             - HasSlack
             - '{{resolve:secretsmanager:jiraia/slack:SecretString:token_key}}'
+            - !Ref AWS::NoValue
+          # The GitHub App (ADR-0038): its id and name, and from Secrets Manager its key and webhook secret.
+          GITHUB_APP_ID: !If
+            - HasGitHub
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', GitHubAppId]
+            - !Ref AWS::NoValue
+          GITHUB_APP_SLUG: !If
+            - HasGitHub
+            - !FindInMap [EnvConfig, !Ref 'AWS::AccountId', GitHubAppSlug]
+            - !Ref AWS::NoValue
+          GITHUB_PRIVATE_KEY: !If
+            - HasGitHub
+            - '{{resolve:secretsmanager:jiraia/github:SecretString:private_key}}'
+            - !Ref AWS::NoValue
+          GITHUB_WEBHOOK_SECRET: !If
+            - HasGitHub
+            - '{{resolve:secretsmanager:jiraia/github:SecretString:webhook_secret}}'
             - !Ref AWS::NoValue
       Tags:
         - Key: project
