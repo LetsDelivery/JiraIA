@@ -45,7 +45,12 @@ const notConnected = (status: GitHubStatus): Html => {
     return html`<div class="integration-state"><p><strong>O app do GitHub ainda não foi criado.</strong></p><p class="muted">A Tecnologia cria o app na organização LetsDelivery do GitHub; depois disso um administrador conecta aqui.</p></div>`
   }
   return status.canManage
-    ? html`<div class="integration-state"><button type="button" class="button button-primary" data-github-connect>${icon('github', 16)}Instalar no GitHub</button><p class="muted">Você vai ao GitHub instalar o app em todos os repositórios e volta para cá. Instalar pede ser dono da organização no GitHub; se não for, o GitHub manda o pedido a um dono.</p></div>`
+    ? html`<div class="integration-state">
+        <button type="button" class="button button-primary" data-github-connect>${icon('github', 16)}Instalar no GitHub</button>
+        <p class="muted">Você vai ao GitHub instalar o app em todos os repositórios e volta para cá. Instalar pede ser dono da organização no GitHub; se não for, o GitHub manda o pedido a um dono.</p>
+        <p class="muted">Um dono da organização já instalou o app direto no GitHub?</p>
+        <button type="button" class="button button-secondary" data-github-installed>Conectar a instalação existente</button>
+      </div>`
     : html`<div class="integration-state"><p class="muted">O GitHub ainda não está conectado. Um administrador da organização conecta aqui.</p></div>`
 }
 
@@ -67,6 +72,15 @@ export const githubView: View = {
       void githubWrite
         .install()
         .then(({ url }) => window.location.assign(url))
+        .catch(refuse)
+    })
+    root.querySelector('[data-github-installed]')?.addEventListener('click', () => {
+      void githubWrite
+        .connectInstalled()
+        .then((status) => {
+          toast(`GitHub conectado à conta ${status.installation?.account ?? ''}.`)
+          navigate('/github', true)
+        })
         .catch(refuse)
     })
     root.querySelector('[data-github-disconnect]')?.addEventListener('click', () =>

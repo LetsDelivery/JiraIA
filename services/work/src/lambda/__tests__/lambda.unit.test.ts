@@ -13,7 +13,7 @@ import { CommitSignal } from '../../wake/commit-signal.js'
 import { HeldWakes, Waker } from '../../wake/waker.js'
 import type { DeployDeps } from '../deploy.js'
 import { cloudFormationResponder, type DeployRequest, deploy } from '../deploy.js'
-import { invoke, triggerOf } from '../invoke.js'
+import { invoke, isSignedDelivery, triggerOf } from '../invoke.js'
 import { consumeJobs, type JobDeps, type JobName } from '../jobs.js'
 import { InMemoryPanelBucket, publishPanel } from '../panel.js'
 import { consumeQueue, type QueueDeps, queueOf } from '../queues.js'
@@ -370,6 +370,15 @@ describe('invoke', () => {
     await invoke(both, deployDeps, logger, { ...at('/github/events'), body, isBase64Encoded: true })
     await invoke(both, deployDeps, logger, { ...at('/slack/events'), body: '{}' })
     expect(heard).toEqual(['github:{"zen":"x"}', 'slack:{}'])
+  })
+
+  it('tells Slack’s and GitHub’s deliveries apart, which wait for a paused database (ADR-0035)', () => {
+    const at = (method: string, path: string) => ({ ...http, requestContext: { http: { method, path } } })
+    expect(isSignedDelivery(at('POST', '/github/events'))).toBe(true)
+    expect(isSignedDelivery(at('POST', '/slack/events'))).toBe(true)
+    expect(isSignedDelivery(at('GET', '/github/events'))).toBe(false)
+    expect(isSignedDelivery(at('POST', '/cards'))).toBe(false)
+    expect(isSignedDelivery(_batch('jiraia-webhooks', '{}'))).toBe(false)
   })
 
   it('answers even when the wake cannot be sent, and says so in the log', async () => {

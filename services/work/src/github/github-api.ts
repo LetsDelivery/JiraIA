@@ -12,6 +12,8 @@ export type Installation = { id: string; account: string }
 export type GitHubApi = {
   /** An installation of the JiraIA App, read as the App; refused when it is not one of the App's. */
   installation(installationId: string): Promise<Installation>
+  /** Every installation of the App, read as the App: a private App has at most its owner's. */
+  installations(): Promise<Installation[]>
 }
 
 export type GitHubAppKeys = { appId: string; privateKey: string }
@@ -33,6 +35,13 @@ export const appJwt = (keys: GitHubAppKeys, now: Date): string => {
  * `\n`; PEM needs them real.
  */
 export const pemOf = (key: string): string => key.replace(/\\n/g, '\n')
+
+type Answer = { id: number; account?: { login?: string } }
+
+const toInstallation = (answer: Answer): Installation => ({
+  id: String(answer.id),
+  account: answer.account?.login ?? ''
+})
 
 export class HttpGitHubApi implements GitHubApi {
   constructor(
@@ -64,7 +73,18 @@ export class HttpGitHubApi implements GitHubApi {
     if (response.status !== 200) {
       throw new DependencyUnavailableException('GitHub', `GET /app/installations answered ${response.status}`)
     }
-    const answer = JSON.parse(response.body) as { id: number; account?: { login?: string } }
-    return { id: String(answer.id), account: answer.account?.login ?? '' }
+    return toInstallation(JSON.parse(response.body) as Answer)
+  }
+
+  async installations(): Promise<Installation[]> {
+    const response = await this.http.send({
+      method: 'GET',
+      url: `${this.options.apiUrl}/app/installations?per_page=100`,
+      headers: this.headers()
+    })
+    if (response.status !== 200) {
+      throw new DependencyUnavailableException('GitHub', `GET /app/installations answered ${response.status}`)
+    }
+    return (JSON.parse(response.body) as Answer[]).map(toInstallation)
   }
 }

@@ -31,6 +31,14 @@ export const githubRoutes = (github: GitHubConnectService): Route[] => [
     handler: async ({ caller, body }) => ({ statusCode: 200, body: await github.complete(caller, body) })
   }),
   defineRoute({
+    method: 'POST',
+    path: '/integrations/github/connect-installed',
+    requires: 'authenticated',
+    schemas: {},
+    responds: githubStatusSchema,
+    handler: async ({ caller }) => ({ statusCode: 200, body: await github.connectInstalled(caller) })
+  }),
+  defineRoute({
     method: 'DELETE',
     path: '/integrations/github',
     requires: 'authenticated',

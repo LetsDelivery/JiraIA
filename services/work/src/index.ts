@@ -4,7 +4,7 @@ import { createLogger } from '@jiraia/logger'
 import { readConfig } from './config.js'
 import { buildService } from './container.js'
 import { cloudFormationResponder } from './lambda/deploy.js'
-import { invoke, type Trigger, triggerOf } from './lambda/invoke.js'
+import { invoke, isSignedDelivery, type Trigger, triggerOf } from './lambda/invoke.js'
 import { applyMigrations } from './lambda/migrate.js'
 import { publishPanel, S3PanelBucket } from './lambda/panel.js'
 
@@ -19,8 +19,8 @@ import { publishPanel, S3PanelBucket } from './lambda/panel.js'
 const config = readConfig()
 /**
  * How long a statement waits for a paused database (ADR-0035): a person's request or a page's socket
- * not at all — the panel says the data is on its way and asks again; a queue or the deploy as long
- * as the function may run.
+ * not at all — the panel says the data is on its way and asks again; a queue, the deploy, and Slack's
+ * and GitHub's deliveries, which are not asked again, as long as the function may run.
  */
 const resume = { waitMs: 0 }
 const service = buildService(config, { resume: { waitMs: () => resume.waitMs } })
@@ -44,6 +44,6 @@ const deployDeps = {
 }
 
 export const handler = async (event: unknown) => {
-  resume.waitMs = WAITS_MS[triggerOf(event)]
+  resume.waitMs = isSignedDelivery(event) ? WAITS_MS.queue : WAITS_MS[triggerOf(event)]
   return await invoke(service, deployDeps, logger, event)
 }
