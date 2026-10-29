@@ -41,7 +41,7 @@ import { PEOPLE_MAPPING, PeopleScan } from '../../services/work/src/import/peopl
  *     bun run import:atlassian -- confluence-import --raw-run <id> --as <email> [--only BA,CS] [--run <id>]
  *
  * Reads the read-only tokens from the secret `jiraia/atlassian`, copies as it is to
- * `s3://<bucket>/import/<run>/`, prints the reconciliation and exits 1 when something is missing or a
+ * `s3://jiraia-import-<account>/import/<run>/` (the stack's `ImportBucket`; `--bucket` names another), prints the reconciliation and exits 1 when something is missing or a
  * count differs. `jira --previous` asks Jira only for what changed; `jira-attachments` stores the bytes
  * of every attachment of a run, each once, by its id; `jira-watchers` who watches each issue.
  * `people` proposes who each account becomes and
@@ -78,7 +78,7 @@ const { values, positionals } = parseArgs({
     only: { type: 'string' },
     previous: { type: 'string' },
     run: { type: 'string' },
-    bucket: { type: 'string', default: 'jiraia-import' },
+    bucket: { type: 'string' },
     secret: { type: 'string', default: 'jiraia/atlassian' },
     'jira-run': { type: 'string' },
     'confluence-run': { type: 'string' },
@@ -95,6 +95,16 @@ const readSecret = (id: string) => {
   })
   return secretSchema.parse(JSON.parse(output.toString()))
 }
+
+/** The stack's `ImportBucket` in the account the AWS profile reaches, unless `--bucket` names another. */
+const accountBucket = (): string => {
+  const output = execFileSync('aws', ['sts', 'get-caller-identity', '--query', 'Account', '--output', 'text'], {
+    env: { AWS_PROFILE: 'lets-dev', ...process.env }
+  })
+  return `jiraia-import-${output.toString().trim()}`
+}
+
+const bucket = values.bucket ?? accountBucket()
 
 const row = (cells: (string | number)[]) =>
   cells.map((cell, i) => (i === 0 ? String(cell).padEnd(12) : String(cell).padStart(9))).join('')
@@ -247,13 +257,13 @@ const printImport = (report: JiraImportReport) => {
 }
 
 if (step === 'jira-import') {
-  const { db, files } = openTarget(values.bucket)
+  const { db, files } = openTarget(bucket)
   const actor = await new ImportRepository(db).actor(values.as ?? '')
   if (!actor) {
     console.error(`No member "${values.as}" in that database`)
     process.exit(1)
   }
-  const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
+  const store = new S3ImportStore({ bucket: bucket, region: 'us-east-1' })
   const logger = createLogger('work', 'import')
   const report = await new JiraImport({ db, store, files, clock: systemClock, ids: uuidGenerator, logger }).run({
     organizationId: actor.organizationId,
@@ -291,13 +301,13 @@ const printConfluenceImport = (report: ConfluenceImportReport) => {
 }
 
 if (step === 'confluence-import') {
-  const { db, files } = openTarget(values.bucket)
+  const { db, files } = openTarget(bucket)
   const actor = await new ImportRepository(db).actor(values.as ?? '')
   if (!actor) {
     console.error(`No member "${values.as}" in that database`)
     process.exit(1)
   }
-  const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
+  const store = new S3ImportStore({ bucket: bucket, region: 'us-east-1' })
   const logger = createLogger('work', 'import')
   const report = await new ConfluenceImport({ db, store, files, clock: systemClock, ids: uuidGenerator, logger }).run({
     organizationId: actor.organizationId,
@@ -312,8 +322,8 @@ if (step === 'confluence-import') {
 
 if (step === 'people-accept') {
   const people = peopleFromCsv(readFileSync(positionals[1] ?? '', 'utf8'))
-  await new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' }).putJson(PEOPLE_MAPPING, people)
-  console.error(`${people.length} accounts stored in s3://${values.bucket}/${PEOPLE_MAPPING} (${byRule(people)})`)
+  await new S3ImportStore({ bucket: bucket, region: 'us-east-1' }).putJson(PEOPLE_MAPPING, people)
+  console.error(`${people.length} accounts stored in s3://${bucket}/${PEOPLE_MAPPING} (${byRule(people)})`)
   process.exit(0)
 }
 const secret = readSecret(values.secret)
@@ -332,7 +342,7 @@ const credentials = {
   jiraToken: secret.jira_token,
   confluenceToken: secret.confluence_token
 }
-const store = new S3ImportStore({ bucket: values.bucket, region: 'us-east-1' })
+const store = new S3ImportStore({ bucket: bucket, region: 'us-east-1' })
 const run = values.run ?? toIso(systemClock.now()).replace(/[:.]/g, '-')
 const only = values.only?.split(',')
 

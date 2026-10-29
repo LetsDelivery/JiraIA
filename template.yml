@@ -71,8 +71,8 @@ Mappings:
       AllowedEmailDomains: 'uselets.com,lets.delivery'
       GoogleClientId: '721914026671-170ki7n7n6b50i5nsserj255ftete0oi.apps.googleusercontent.com'
       AlarmEmail: ''
-      MailFrom: ''
-      SlackClientId: ''
+      MailFrom: 'jiraia@uselets.com'
+      SlackClientId: '10340397365014.12393274177413'
       # Zero, as in dev: no work, no cost. The panel says the data is on its way while it resumes (ADR-0035).
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '8'
@@ -224,6 +224,35 @@ Resources:
             Status: Enabled
             NoncurrentVersionExpiration:
               NoncurrentDays: 90
+      Tags:
+        - Key: project
+          Value: JiraIA
+
+  # The migration's vault (ADR-0036): the raw Jira and Confluence copies, the site backups and the
+  # people mapping, written and read only by `import:atlassian` from a terminal, never by a function.
+  # Versioned and retained: it is the proof of what Atlassian held, and the people mapping is
+  # personal data.
+  ImportBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub jiraia-import-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
       Tags:
         - Key: project
           Value: JiraIA
@@ -1283,6 +1312,9 @@ Resources:
       AlarmActions: [!Ref CriticalAlarmTopic]
 
 Outputs:
+  ImportBucket:
+    Description: The migration's vault, read and written by `bun run import:atlassian` (ADR-0036)
+    Value: !Ref ImportBucket
   PanelUrl:
     Description: The panel, and the API under /api/work
     Value: !If [HasPanelDomain, !Sub ['https://${Domain}', {Domain: !FindInMap [EnvConfig, !Ref 'AWS::AccountId', PanelDomain]}], !Sub 'https://${PanelDistribution.DomainName}']

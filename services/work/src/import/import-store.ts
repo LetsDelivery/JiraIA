@@ -45,7 +45,7 @@ export class InMemoryImportStore implements ImportStore {
   }
 }
 
-/** The migration bucket: private, encrypted, versioned (`jiraia-import`). */
+/** The migration bucket: private, encrypted, versioned (`jiraia-import-<account>`, the stack's `ImportBucket`). */
 export class S3ImportStore implements ImportStore {
   private readonly s3: S3Client
 
