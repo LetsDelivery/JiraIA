@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { fixedClock, uuidGenerator } from '@jiraia/core'
 import { createLogger } from '@jiraia/logger'
-import { testDatabase, truncateSchema } from '@jiraia/testing'
+import { answer, apiEvent, googleClaims, testDatabase, truncateSchema } from '@jiraia/testing'
 import { and, eq, isNull } from 'drizzle-orm'
-
+import { buildService } from '../container.js'
 import { fakeIssue } from '../import/atlassian-source.js'
 import { InMemoryAttachmentFiles } from '../import/attachment-files.js'
 import { InMemoryImportStore } from '../import/import-store.js'
@@ -20,6 +20,7 @@ import {
   cardLinks,
   cards,
   cardTypes,
+  cardWatchers,
   members,
   spaces,
   sprints,
@@ -511,6 +512,66 @@ describe('Jira import', () => {
       toCardId: storyRow?.id
     })
     expect((await run('i2')).links).toEqual({ inserted: 0, unchanged: 2, waiting: 1 })
+  })
+
+  it('makes Jira’s watchers watch the card, leaving apps out, and keeps logged time read-only', async () => {
+    const bot = {
+      accountId: '557058:00000000-0000-4000-8000-0000000000ff',
+      displayName: 'Automation for Jira',
+      accountType: 'app'
+    }
+    await store.putJson('import/raw1/jira/watchers/101.json', [user(ANA, 'Ana Souza'), bot])
+    await store.putJson('import/raw1/jira/issues/101.json', {
+      ...story,
+      worklogs: [
+        {
+          id: 'w1',
+          author: user(ANA, 'Ana Souza'),
+          started: '2026-10-27T09:00:00.000-0300',
+          timeSpentSeconds: 5400,
+          comment: doc('Pareamento'),
+          created: '2026-10-27T10:30:00.000-0300'
+        }
+      ]
+    })
+
+    const report = await run('i1')
+    await run('i2')
+    const storyRow = await card(3538)
+    const ana = (await db.select().from(members).where(eq(members.email, 'ana@uselets.com')))[0]
+    const watching = await db
+      .select()
+      .from(cardWatchers)
+      .where(eq(cardWatchers.cardId, String(storyRow?.id)))
+    const service = buildService(
+      {
+        DATABASE_URL: 'unused',
+        AWS_REGION: 'us-east-1',
+        ALLOWED_EMAIL_DOMAINS: ['uselets.com'],
+        ATTACHMENTS_BUCKET: 'unused',
+        REALTIME_URL: 'ws://localhost/realtime'
+      },
+      { db }
+    )
+    const listed = answer(
+      await service.router(
+        apiEvent({ method: 'GET', path: `/cards/${storyRow?.id}/worklogs`, claims: googleClaims('stenio@uselets.com') })
+      )
+    )
+
+    expect(report.spaces[0]?.watchers).toEqual({ watchers: 1, worklogs: 1 })
+    expect(watching.map((row) => row.memberId)).toEqual([String(ana?.id)])
+    expect(listed.body).toEqual({
+      items: [
+        {
+          id: expect.any(String),
+          author: { id: ana?.id, name: 'Ana Souza' },
+          startedAt: '2026-10-27T12:00:00.000Z',
+          seconds: 5400,
+          comment: 'Pareamento'
+        }
+      ]
+    })
   })
 
   it('changes only what Jira changed when run again, keeping what only JiraIA holds', async () => {

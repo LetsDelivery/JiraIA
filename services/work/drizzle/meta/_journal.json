@@ -204,6 +204,13 @@
       "when": 1793230796808,
       "tag": "0028_card-type-subtask",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793279068538,
+      "tag": "0029_card-worklogs",
+      "breakpoints": true
     }
   ]
 }

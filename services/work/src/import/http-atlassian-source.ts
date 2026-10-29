@@ -87,6 +87,11 @@ export class HttpAtlassianSource implements AtlassianSource {
     return await this.jira.bytes(`/attachment/content/${id}?redirect=false`)
   }
 
+  async watchers(issueId: string): Promise<Raw[]> {
+    const answer = await this.jira.object(`/issue/${issueId}/watchers`)
+    return z.array(rawSchema).parse(answer.watchers ?? [])
+  }
+
   async projectStatuses(projectKey: string): Promise<Raw[]> {
     return z.array(rawSchema).parse(await this.jira.json('GET', `/project/${projectKey}/statuses`))
   }

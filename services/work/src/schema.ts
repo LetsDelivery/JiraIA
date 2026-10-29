@@ -466,6 +466,29 @@ export const cardWatchers = work.table(
  * A file on a card (2.9). The bytes live in object storage under `objectKey`; the row is written when
  * the upload is asked for and becomes `ready` once the file is there.
  */
+/**
+ * Time logged on a card in Jira (ADR-0036): kept read-only so nothing is lost. JiraIA itself does not
+ * track time (escopo-mvp, fora do escopo); no screen writes here, only the migration.
+ */
+export const cardWorklogs = work.table(
+  'card_worklogs',
+  {
+    id: uuid('id').primaryKey(),
+    cardId: uuid('card_id')
+      .notNull()
+      .references(() => cards.id),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => members.id),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }).notNull(),
+    seconds: integer('seconds').notNull(),
+    /** What was done, in Markdown; empty when Jira had no comment. */
+    comment: text('comment').notNull().default(''),
+    createdAt: createdAt()
+  },
+  (table) => [index('card_worklogs_card').on(table.cardId, table.startedAt)]
+)
+
 export const cardAttachments = work.table(
   'card_attachments',
   {

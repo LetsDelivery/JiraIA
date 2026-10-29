@@ -3,7 +3,7 @@ import type { Database } from '@jiraia/db'
 import type { JiraiaLogger } from '@jiraia/logger'
 import { z } from 'zod'
 
-import { type IssueRecord, type JiraProject, jiraProjectSchema } from './atlassian-source.js'
+import { type IssueRecord, type JiraProject, jiraProjectSchema, type Raw } from './atlassian-source.js'
 import type { AttachmentFiles } from './attachment-files.js'
 import { type CardInsert, ImportRepository, type Ref, type RefRow } from './import.repository.js'
 import { ImportCatalogue } from './import-catalogue.js'
@@ -28,6 +28,8 @@ import {
   statusOf
 } from './jira-mapping.js'
 import { inPool, manifestSchema } from './jira-raw-copy.js'
+import { watchersKey } from './jira-watcher-copy.js'
+import { JiraWatchersWorklogs, type WatcherTally } from './jira-watchers-worklogs.js'
 import { type JiraWorkflow, jiraWorkflowOf } from './jira-workflow.js'
 import { collectAccounts, type Person, personSchema } from './people.js'
 import { PEOPLE_MAPPING } from './people-scan.js'
@@ -43,6 +45,7 @@ export type SpaceImportReport = {
   /** What the space had that Jira has not: removed, or kept off the board because something names it. */
   workflow: WorkflowReconciliation
   attachments: AttachmentTally
+  watchers: WatcherTally
 }
 export type JiraImportReport = {
   run: string
@@ -62,7 +65,13 @@ type Deps = {
   logger: JiraiaLogger
 }
 type Input = { organizationId: string; actorId: string; rawRun: string; run: string; projects: string[] }
-type Loaded = { project: JiraProject; records: IssueRecord[]; workflow: JiraWorkflow }
+type Loaded = {
+  project: JiraProject
+  records: IssueRecord[]
+  workflow: JiraWorkflow
+  /** Each issue's watchers, by Jira id, when the raw copy has them (`jira-watchers`). */
+  watchers: Map<string, Raw[]>
+}
 type Shared = {
   jiraFields: JiraField[]
   mapping: Person[]
@@ -142,16 +151,22 @@ export class JiraImport {
     const loaded: Loaded[] = []
     for (const project of projects.filter((row) => input.projects.includes(row.key))) {
       const records: IssueRecord[] = []
+      const watchers = new Map<string, Raw[]>()
       await inPool(
         entries.filter((entry) => entry.key.startsWith(`${project.key}-`)),
         16,
         async (entry) => {
-          records.push((await this.deps.store.getJson(entry.path)) as IssueRecord)
+          const record = (await this.deps.store.getJson(entry.path)) as IssueRecord
+          records.push(record)
+          const watching = await this.deps.store.getJson(watchersKey(input.rawRun, String(record.issue.id)))
+          if (Array.isArray(watching)) {
+            watchers.set(String(record.issue.id), watching as Raw[])
+          }
         }
       )
       const statuses = await this.deps.store.getJson(`${prefix}/statuses/${project.key}.json`)
       records.sort((a, b) => numberOf(String(a.issue.key)) - numberOf(String(b.issue.key)))
-      loaded.push({ project, records, workflow: jiraWorkflowOf(project, statuses, records) })
+      loaded.push({ project, records, watchers, workflow: jiraWorkflowOf(project, statuses, records) })
     }
     return loaded
   }
@@ -182,7 +197,21 @@ export class JiraImport {
       parentsOutside: await this.linkParents(ordered, plan.ids),
       aliases: await this.writeAliases(input, ordered, plan.ids),
       comments: await comments.import({ run: input.run, records: ordered, cardIds: plan.ids, context }),
-      attachments: await this.attachments(input, ordered, plan.ids, context)
+      attachments: await this.attachments(input, ordered, plan.ids, context),
+      watchers: await new JiraWatchersWorklogs({
+        db: this.deps.db,
+        repository: this.repository,
+        clock: this.deps.clock,
+        ids: this.deps.ids
+      }).import({
+        organizationId: input.organizationId,
+        run: input.run,
+        actorId: input.actorId,
+        records: ordered,
+        cardIds: plan.ids,
+        watchers: loaded.watchers,
+        people: context.people
+      })
     }
     await this.settle(input, context.catalogue.spaceId, report)
     this.deps.logger.info('Jira project imported', {
@@ -225,7 +254,7 @@ export class JiraImport {
   private async contextOf(input: Input, loaded: Loaded, shared: Shared): Promise<CardContext> {
     const at = this.deps.clock.now()
     const deps = { db: this.deps.db, repository: this.repository, ids: this.deps.ids }
-    const seen = [...collectAccounts(loaded.records).values()]
+    const seen = [...collectAccounts([loaded.records, [...loaded.watchers.values()]]).values()]
     const people = await new ImportMembers(deps).ensure({
       organizationId: input.organizationId,
       run: input.run,
