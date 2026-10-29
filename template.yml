@@ -60,8 +60,8 @@ Mappings:
       # The GitHub App (ADR-0038): its id and its public name (github.com/apps/<slug>). When set, the
       # secret jiraia/github must hold private_key (PEM, `\n` for line breaks) and webhook_secret.
       # Empty: connecting GitHub answers 503 and every delivery is refused.
-      GitHubAppId: ''
-      GitHubAppSlug: ''
+      GitHubAppId: '5532897'
+      GitHubAppSlug: 'jiraia-lets-dev'
       # Aurora capacity units: zero lets the cluster pause when there is no work (ADR-0035).
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '4'
@@ -78,8 +78,8 @@ Mappings:
       AlarmEmail: ''
       MailFrom: 'jiraia@uselets.com'
       SlackClientId: '10340397365014.12393274177413'
-      GitHubAppId: ''
-      GitHubAppSlug: ''
+      GitHubAppId: '5532923'
+      GitHubAppSlug: 'jiraia-lets-prd'
       # Zero, as in dev: no work, no cost. The panel says the data is on its way while it resumes (ADR-0035).
       DatabaseMinCapacity: '0'
       DatabaseMaxCapacity: '8'
