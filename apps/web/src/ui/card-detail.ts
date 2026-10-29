@@ -23,6 +23,7 @@ import { type DescriptionHandle, descriptionSection, mountDescription } from './
 import { pickLabels } from './card-pickers'
 import { bindRelations, type ComposeForm, type RelationsContext, relationsSection } from './card-relations'
 import { bindSide, type SideGroup, side } from './card-side'
+import { worklogsSection } from './card-worklogs'
 import { bindCustomFields } from './custom-fields'
 import { bindDatePickers } from './date-picker'
 import { openFormDialog } from './dialog'
@@ -47,6 +48,7 @@ type Loaded = {
   relations: Awaited<ReturnType<typeof read.relations>>
   attachments: Awaited<ReturnType<typeof read.attachments>>['items']
   watchers: Awaited<ReturnType<typeof read.watchers>>['items']
+  worklogs: Awaited<ReturnType<typeof read.worklogs>>['items']
   starred: boolean
   groups: readonly Group[]
   isOrgAdmin: boolean
@@ -143,18 +145,20 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
 }
 
 const load = async (cardId: string): Promise<Loaded> => {
-  const [card, proposals, comments, events, relations, attachments, watchers, star, groups, me] = await Promise.all([
-    read.card(cardId),
-    proposalsRead.forCard(cardId).catch(() => ({ items: [] })),
-    read.comments(cardId),
-    read.history(cardId),
-    read.relations(cardId),
-    read.attachments(cardId),
-    read.watchers(cardId),
-    read.cardStar(cardId),
-    accessRead.groups(),
-    read.me()
-  ])
+  const [card, proposals, comments, events, relations, attachments, watchers, worklogs, star, groups, me] =
+    await Promise.all([
+      read.card(cardId),
+      proposalsRead.forCard(cardId).catch(() => ({ items: [] })),
+      read.comments(cardId),
+      read.history(cardId),
+      read.relations(cardId),
+      read.attachments(cardId),
+      read.watchers(cardId),
+      read.worklogs(cardId),
+      read.cardStar(cardId),
+      accessRead.groups(),
+      read.me()
+    ])
   return {
     card,
     proposals: proposals.items,
@@ -163,6 +167,7 @@ const load = async (cardId: string): Promise<Loaded> => {
     relations,
     attachments: attachments.items,
     watchers: watchers.items,
+    worklogs: worklogs.items,
     starred: star.starred,
     groups: groups.items,
     isOrgAdmin: me.isOrgAdmin
@@ -200,6 +205,7 @@ const render = async (
   const sections = html`
     ${relationsSection(loaded.relations, relationContext)}
     ${attachmentsSection(loaded.attachments, attachContext)}
+    ${worklogsSection(loaded.worklogs)}
     ${activitySection({ ...context, groups: loaded.groups }, loaded.history, comments, tab)}
   `
 
