@@ -203,7 +203,10 @@ const printNotes = (space: JiraImportReport['spaces'][number]) => {
       : '',
     space.workflow.removed.length > 0 ? `not in Jira, removed: ${space.workflow.removed.join(', ')}` : '',
     space.workflow.kept.length > 0 ? `not in Jira, kept off the board: ${space.workflow.kept.join(', ')}` : '',
-    space.parentsOutside.length > 0 ? `parent in another project (not linked): ${space.parentsOutside.length}` : ''
+    space.parentsOutside.length > 0 ? `parent in another project (not linked): ${space.parentsOutside.length}` : '',
+    space.attachments.missing.length > 0
+      ? `attachments not in the raw copy (run jira-attachments): ${space.attachments.missing.join(', ')}`
+      : ''
   ]
   for (const note of notes.filter(Boolean)) {
     console.error(`  ${note}`)
