@@ -28,6 +28,12 @@ export const githubWrite = {
     invalidate('github')
     return status
   },
+  /** The App an owner already installed on GitHub, connected without going there (ADR-0038). */
+  connectInstalled: async () => {
+    const status = await unwrap(api.POST('/work/integrations/github/connect-installed'))
+    invalidate('github')
+    return status
+  },
   disconnect: async () => {
     const status = await unwrap(api.DELETE('/work/integrations/github'))
     invalidate('github')

@@ -1,4 +1,10 @@
-import { type Clock, DependencyUnavailableException, ForbiddenException, toIso } from '@jiraia/core'
+import {
+  type Clock,
+  DependencyUnavailableException,
+  ForbiddenException,
+  toIso,
+  ValidationException
+} from '@jiraia/core'
 import type { Database } from '@jiraia/db'
 import type { Caller } from '@jiraia/http'
 
@@ -8,7 +14,7 @@ import type { CardGate } from '../cards/card-gate.js'
 import type { MemberRepository } from '../members/member.repository.js'
 import type { MemberRow } from '../members/schemas.js'
 import type { GitHubRepository } from './github.repository.js'
-import type { GitHubApi } from './github-api.js'
+import type { GitHubApi, Installation } from './github-api.js'
 import { type CompleteGitHub, type DevLinkView, devLinkViewSchema, type GitHubStatus } from './schemas.js'
 import type { InstallState } from './signatures.js'
 
@@ -62,9 +68,33 @@ export class GitHubConnectService {
   /** GitHub sent the admin back: the installation, proved by asking GitHub as the App, becomes the organization's. */
   async complete(caller: Caller, input: CompleteGitHub): Promise<GitHubStatus> {
     const actor = await this.admin(caller)
+    this.configured().state.check(input.state, actor.id, this.deps.clock.now())
+    await this._connect(actor, await this.deps.api.installation(input.installationId))
+    return await this.status(caller)
+  }
+
+  /**
+   * The App already installed on GitHub — by an owner of the GitHub organization, when the admin is not
+   * one, so GitHub never sends them back here. The App is private: its one installation is the
+   * organization's, read from GitHub as the App.
+   */
+  async connectInstalled(caller: Caller): Promise<GitHubStatus> {
+    const actor = await this.admin(caller)
+    this.configured()
+    const installations = await this.deps.api.installations()
+    const [only] = installations
+    if (installations.length !== 1 || !only) {
+      const accounts = installations.map((each) => each.account).join(', ') || 'none'
+      throw new ValidationException(
+        `The JiraIA GitHub App needs exactly one installation to connect; it has: ${accounts}`
+      )
+    }
+    await this._connect(actor, only)
+    return await this.status(caller)
+  }
+
+  private async _connect(actor: MemberRow, installed: Installation): Promise<void> {
     const now = this.deps.clock.now()
-    this.configured().state.check(input.state, actor.id, now)
-    const installed = await this.deps.api.installation(input.installationId)
     await this.deps.db.transaction(async (tx) => {
       await this.deps.github.saveInstallation(tx, {
         organizationId: actor.organizationId,
@@ -75,7 +105,6 @@ export class GitHubConnectService {
       })
       await this._audit(tx, actor, 'connected', { account: { before: null, after: installed.account } })
     })
-    return await this.status(caller)
   }
 
   async disconnect(caller: Caller): Promise<GitHubStatus> {

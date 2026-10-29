@@ -42,7 +42,15 @@ const signedByApp = (authorization: string | null): boolean => {
   const [header = '', claims = '', signature = ''] = (authorization ?? '').replace('Bearer ', '').split('.')
   return createVerify('RSA-SHA256').update(`${header}.${claims}`).verify(publicKey, signature, 'base64url')
 }
+/** The accounts the App is installed on, as GitHub lists them. */
+let installedOn = ['LetsDelivery']
 const github = setupServer(
+  http.get(`${GITHUB}/app/installations`, ({ request }) => {
+    if (!signedByApp(request.headers.get('authorization'))) {
+      return HttpResponse.json({ message: 'Bad credentials' }, { status: 401 })
+    }
+    return HttpResponse.json(installedOn.map((login, index) => ({ id: 42 + index, account: { login } })))
+  }),
   http.get(`${GITHUB}/app/installations/:id`, ({ request, params }) => {
     if (!signedByApp(request.headers.get('authorization'))) {
       return HttpResponse.json({ message: 'Bad credentials' }, { status: 401 })
@@ -139,7 +147,10 @@ const development = async () =>
 beforeAll(() => github.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => github.resetHandlers())
 afterAll(() => github.close())
-beforeEach(async () => await truncateSchema(db, 'work'))
+beforeEach(async () => {
+  await truncateSchema(db, 'work')
+  installedOn = ['LetsDelivery']
+})
 
 describe('without the GitHub App', () => {
   it('says it is not configured, connecting answers 503, and every delivery is refused', async () => {
@@ -174,6 +185,24 @@ describe('installing the App', () => {
       status: 400
     })
     expect(await connect('9')).toMatchObject({ status: 400 })
+  })
+
+  it('an admin connects the installation an owner already made on GitHub, with no trip there', async () => {
+    const connect = { method: 'POST' as const, path: '/integrations/github/connect-installed' }
+    expect(await ana(connect)).toMatchObject({ status: 403 })
+    expect(await ok(admin(connect))).toMatchObject({ installation: { account: 'LetsDelivery', installedBy: 'Admin' } })
+    expect(await deliver('pull_request', pull('opened'))).toMatchObject({ statusCode: 200 })
+    expect(await development()).toMatchObject([{ kind: 'pull_request', ref: '7' }])
+  })
+
+  it('refuses to guess when the App is installed on no account, or on more than one', async () => {
+    const connect = { method: 'POST' as const, path: '/integrations/github/connect-installed' }
+    installedOn = []
+    expect(await admin(connect)).toMatchObject({ status: 400 })
+    installedOn = ['LetsDelivery', 'stenio-lima']
+    const refused = await admin(connect)
+    expect(refused).toMatchObject({ status: 400 })
+    expect(JSON.stringify(refused.body)).toContain('LetsDelivery, stenio-lima')
   })
 
   it('disconnecting forgets the installation, and its deliveries are then ignored', async () => {

@@ -9,6 +9,10 @@ export class LocalGitHubApi implements GitHubApi {
   async installation(installationId: string): Promise<Installation> {
     return { id: installationId, account: 'LetsDelivery (local)' }
   }
+
+  async installations(): Promise<Installation[]> {
+    return [{ id: '1', account: 'LetsDelivery (local)' }]
+  }
 }
 
 export const LOCAL_GITHUB_WEBHOOK_SECRET = 'local-github-webhook-secret'

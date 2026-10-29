@@ -57,18 +57,29 @@ type Signed = {
   }): Promise<{ statusCode: number; body: string }>
 }
 
+/** The path of a delivery whose sender signs its raw body, or nothing for any other request. */
+const signedPath = (event: APIGatewayProxyEventV2): string | undefined => {
+  const path = event.requestContext.http.method === 'POST' ? requestPath(event) : undefined
+  return path === SLACK_EVENTS_PATH || path === GITHUB_EVENTS_PATH ? path : undefined
+}
+
 /** Who answers a path whose sender signs its raw body, if this path is one. */
 const signedBy = (service: Service, event: APIGatewayProxyEventV2): Signed | undefined => {
-  if (event.requestContext.http.method !== 'POST') {
-    return undefined
-  }
-  const path = requestPath(event)
+  const path = signedPath(event)
   return path === SLACK_EVENTS_PATH
     ? service.slackEvents
     : path === GITHUB_EVENTS_PATH
       ? service.githubEvents
       : undefined
 }
+
+/**
+ * Whether a request is Slack's or GitHub's delivery. Their senders do not ask again the way the panel
+ * does — GitHub never redelivers on its own — so it waits for a paused database (ADR-0035) as a
+ * queue's message does, past their own timeouts if it must: the delivery is handled either way.
+ */
+export const isSignedDelivery = (event: unknown): boolean =>
+  triggerOf(event) === 'http' && signedPath(event as APIGatewayProxyEventV2) !== undefined
 
 const _http = async (service: Service, event: APIGatewayProxyEventV2): Promise<APIGatewayProxyStructuredResultV2> => {
   const signed = signedBy(service, event)

@@ -24,12 +24,22 @@ on the team's behalf: **when the pull request is merged, the card moves to revie
   `/github/conectar` with the installation's id, and the API asks GitHub, as the App (a JWT signed
   with its private key), whose installation that is before keeping it. Installing and disconnecting
   are audited; uninstalling on GitHub disconnects too.
+- **An installation an owner made on GitHub is connected from the page too** ("Conectar a instalação
+  existente", 2026-10-29). An admin who is not an owner of the GitHub organization cannot change the
+  installation, and GitHub then drops the `state` and never sends them back. The API lists the App's
+  installations as the App; the App is private, so its one installation is the organization's. None or
+  more than one is refused, naming the accounts.
 - **The App's id and name are in `Mappings`**; its private key and webhook secret in the secret
   `jiraia/github`. Without them everything is wired and inert: the page says the App does not exist
   yet, connecting answers 503, every delivery is refused.
 - **Deliveries reach `/github/events` on the general function**, past the router, like Slack's events:
   first the `X-Hub-Signature-256` over the raw body is checked; a delivery id already handled
   (`github_deliveries`, kept a month) is answered without acting twice.
+- **A delivery waits for a paused database** (ADR-0035), as a queue's message does, not failing at once
+  as a person's request does: GitHub never redelivers on its own, so a delivery refused while the
+  database resumes would be lost — the first merge of the morning would not move its card. GitHub stops
+  waiting after ten seconds and may mark it timed out; the function goes on and handles it. Slack's
+  events wait the same way. Found in dev on 2026-10-29: two check suites answered 500 while it resumed.
 - **A card's key in a branch's name or a pull request's title links them** (`card_dev_links`), at most
   five keys each. Read events: branch created and deleted, pull request opened, edited, drafted,
   synchronised, closed and merged, reviews (approved, changes requested, dismissed) and check suites. A
