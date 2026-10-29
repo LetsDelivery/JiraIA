@@ -28,6 +28,7 @@ export type CardContext = {
   actorId: string
   storyPointsField: string | undefined
   sprintField: string | undefined
+  rankField: string | undefined
 }
 
 export const mentionOf =

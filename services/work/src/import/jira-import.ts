@@ -14,6 +14,7 @@ import type { WorkflowReconciliation } from './import-workflow.js'
 import { type AttachmentTally, JiraAttachments } from './jira-attachments.js'
 import { type CardContext, cardRowOf } from './jira-card-rows.js'
 import { type CommentTally, JiraComments } from './jira-comments.js'
+import { type HistoryTally, JiraHistory } from './jira-history.js'
 import { JiraLinks, type LinkTally } from './jira-links.js'
 import {
   chunk,
@@ -46,6 +47,7 @@ export type SpaceImportReport = {
   workflow: WorkflowReconciliation
   attachments: AttachmentTally
   watchers: WatcherTally
+  history: HistoryTally
 }
 export type JiraImportReport = {
   run: string
@@ -211,7 +213,13 @@ export class JiraImport {
         cardIds: plan.ids,
         watchers: loaded.watchers,
         people: context.people
-      })
+      }),
+      history: await new JiraHistory({
+        db: this.deps.db,
+        repository: this.repository,
+        clock: this.deps.clock,
+        ids: this.deps.ids
+      }).import({ run: input.run, spaceId: context.catalogue.spaceId, records: ordered, cardIds: plan.ids, context })
     }
     await this.settle(input, context.catalogue.spaceId, report)
     this.deps.logger.info('Jira project imported', {
@@ -281,7 +289,8 @@ export class JiraImport {
       people,
       actorId: input.actorId,
       storyPointsField: shared.jiraFields.find(isStoryPoints)?.id,
-      sprintField: shared.jiraFields.find(isSprint)?.id
+      sprintField: shared.jiraFields.find(isSprint)?.id,
+      rankField: this.rankField(shared)
     }
   }
 

@@ -574,6 +574,46 @@ describe('Jira import', () => {
     })
   })
 
+  it('writes the card’s past with Jira’s dates and authors, dispatched, so reports see it and nobody hears of it', async () => {
+    await store.putJson('import/raw1/jira/issues/101.json', {
+      ...story,
+      changelog: [
+        ...story.changelog,
+        {
+          id: '7',
+          created: '2026-10-27T18:00:00.000-0300',
+          author: user(ANA, 'Ana Souza'),
+          items: [{ field: 'status', fromString: 'IMPEDIMENTO', toString: 'DOWNSTREAM' }, { field: 'Rank' }]
+        }
+      ]
+    })
+    const pending = async () => (await db.select().from(auditEvents).where(isNull(auditEvents.dispatchedAt))).length
+    const before = await pending()
+    const report = await run('i1')
+    await run('i2')
+    const storyRow = await card(3538)
+    const events = await db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.entityId, String(storyRow?.id)))
+    const moved = events.find((event) => event.action === 'moved')
+    const states = await db.select().from(workflowStates)
+    const ana = (await db.select().from(members).where(eq(members.email, 'ana@uselets.com')))[0]
+
+    expect(events.map((event) => event.action).sort()).toEqual(['commented', 'created', 'moved', 'transferred'])
+    expect(moved).toMatchObject({ actorId: ana?.id, via: 'Jira' })
+    expect(moved?.occurredAt.toISOString()).toBe('2026-10-27T21:00:00.000Z')
+    expect(moved?.changes).toEqual({
+      stateId: {
+        before: states.find((s) => s.name === 'IMPEDIMENTO')?.id,
+        after: states.find((s) => s.name === 'DOWNSTREAM')?.id
+      }
+    })
+    expect(report.spaces[0]?.history).toMatchObject({ entries: 5, events: 5 })
+    expect(await pending()).toBe(before)
+    expect(events).toHaveLength(4)
+  })
+
   it('changes only what Jira changed when run again, keeping what only JiraIA holds', async () => {
     await run('i1')
     await db.update(cards).set({ estimate: 'M' }).where(eq(cards.number, 3538))
