@@ -70,7 +70,7 @@ import { profileView } from '@/views/profile'
 import { proposalsView } from '@/views/proposals'
 import { searchView } from '@/views/search'
 import { settingsView } from '@/views/settings'
-import { applyTheme, appsMenu, collapsed, isDark, shell, spacesOpen, theme } from '@/views/shell'
+import { applyTheme, appsMenu, collapsed, isDark, shell, spacesOpen, theme, toggleSection } from '@/views/shell'
 import { bindSignIn, signInPage } from '@/views/sign-in'
 import { slackConnectView, slackView } from '@/views/slack'
 import { spaceView } from '@/views/space'
@@ -281,7 +281,7 @@ const openAccountMenu = async (): Promise<void> => {
 }
 
 /** Controls that belong to the frame, not to a screen: sign out, theme, collapse. */
-const FRAME_ACTIONS: Record<string, () => void> = {
+const FRAME_ACTIONS: Record<string, (control: HTMLElement) => void> = {
   '[data-sign-out]': () => signOutEverywhere(),
   '[data-theme-toggle]': () => {
     theme.set(isDark() ? 'light' : 'dark')
@@ -295,6 +295,10 @@ const FRAME_ACTIONS: Record<string, () => void> = {
     const opening = collapsed.get() || !spacesOpen.get()
     collapsed.set(false)
     spacesOpen.set(opening)
+    render()
+  },
+  '[data-toggle-section]': (control) => {
+    toggleSection(control.dataset.toggleSection ?? '')
     render()
   },
   '[data-account]': () => void openAccountMenu(),
@@ -370,7 +374,7 @@ const bindFrame = () => {
   app.addEventListener('click', (event) => {
     const target = event.target as HTMLElement
     const action = Object.entries(FRAME_ACTIONS).find(([selector]) => target.closest(selector))
-    action?.[1]()
+    action?.[1](target.closest(action[0]) as HTMLElement)
   })
   app.addEventListener('submit', (event) => {
     const form = (event.target as HTMLElement).closest<HTMLFormElement>('[data-global-search]')
