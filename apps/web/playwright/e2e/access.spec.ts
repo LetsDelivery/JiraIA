@@ -102,7 +102,8 @@ test('a person sets their own job title on Meu perfil, and Pessoas shows it in i
   await signIn(page, 'admin@uselets.com')
   await sidebar(page).getByRole('link', { name: 'Pessoas' }).click()
   const row = page.getByRole('row').filter({ hasText: 'rui@uselets.com' })
-  await expect(row.getByRole('cell').nth(0)).toHaveText('Rui')
+  // The first cell is the avatar's initials, then the name (ADR-0039).
+  await expect(row.getByRole('cell').nth(0)).toContainText('Rui')
   await expect(row.getByRole('cell').nth(1)).toHaveText('Coordenador de operações')
 })
 
