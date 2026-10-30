@@ -31,7 +31,7 @@ import { noticesRead } from '@/api/notifications'
 import { proposalsRead } from '@/api/proposals'
 import { read } from '@/api/requests'
 import { session, signOut, signOutEverywhere } from '@/auth/session'
-import { clearCache, onInvalidate } from '@/lib/cache'
+import { clearCache, invalidate, onInvalidate } from '@/lib/cache'
 import { html } from '@/lib/html'
 import { presence, watchPresence } from '@/lib/presence'
 import { refusalSentence } from '@/lib/refusal'
@@ -40,6 +40,7 @@ import { findRoute, interceptLinks, navigate, onNavigate } from '@/lib/router'
 import { cardKey, spaceKeyOf } from '@/lib/search'
 import { spacePath } from '@/lib/space-types'
 import { accountMenu, type ThemeChoice } from '@/ui/account-menu'
+import { bindAvatarFallback } from '@/ui/avatar'
 import { bindCardPicker } from '@/ui/card-picker'
 import { openCreateCard } from '@/ui/create-card'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
@@ -181,6 +182,8 @@ const renderApp = async (path: string, entering: boolean) => {
   }
 
   const refused = (refusal: unknown) => html`<p class="muted">${refusalSentence(refusal)}</p>`
+  // The photos are known before any screen draws a person (ADR-0039); read once, then cached.
+  await read.members().catch(() => undefined)
   const [me, spaces, all, content, sidebar, notices, proposals] = await Promise.all([
     read.me(),
     read.mySpaces(),
@@ -395,6 +398,7 @@ interceptLinks(document.body)
 closeSelectsOnOutsideClick()
 bindStars(app)
 bindFrame()
+bindAvatarFallback(document, () => invalidate('members', 'me'))
 onNavigate(() => {
   drawerOpen = false
   render(true)

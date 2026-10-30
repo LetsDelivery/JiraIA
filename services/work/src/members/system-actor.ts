@@ -63,6 +63,7 @@ export class SystemActors {
       email: null,
       name,
       jobTitle: null,
+      avatarKey: null,
       isOrgAdmin: true,
       isSpaceManager: false,
       isAccessAuditor: false,

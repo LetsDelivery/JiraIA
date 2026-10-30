@@ -12,6 +12,8 @@ import type { FileStore, UploadTarget } from './file-store.js'
 /** Long enough to upload a large file on a slow link; short enough that a leaked URL soon expires. */
 const UPLOAD_SECONDS = 15 * 60
 const DOWNLOAD_SECONDS = 5 * 60
+/** A photo stays on screen all day; past the Lambda's own credentials it fails and the panel asks again. */
+const VIEW_SECONDS = 12 * 60 * 60
 
 /**
  * Attachments in one private S3 bucket, reached only by pre-signed URLs.
@@ -45,6 +47,16 @@ export class S3FileStore implements FileStore {
       ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(input.name)}`
     })
     return await getSignedUrl(this.s3, command, { expiresIn: DOWNLOAD_SECONDS })
+  }
+
+  async viewUrl(input: { key: string; contentType: string }): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.config.bucket,
+      Key: input.key,
+      ResponseContentType: input.contentType,
+      ResponseCacheControl: 'private, max-age=43200, immutable'
+    })
+    return await getSignedUrl(this.s3, command, { expiresIn: VIEW_SECONDS })
   }
 
   async sizeOf(key: string): Promise<number | undefined> {

@@ -1,9 +1,10 @@
 import type { Card, CardChanges } from '@/api/requests'
-import { ESTIMATES, initials, labelColor, PRIORITIES, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
+import { ESTIMATES, labelColor, PRIORITIES, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
 import { html } from '@/lib/html'
 import { POINTS } from '@/lib/sprints'
 import type { BoardContext } from '@/views/board'
 
+import { avatar } from './avatar'
 import { openCalendar } from './date-picker'
 import { icon } from './icons'
 import { openPicker, type PickerItem } from './picker'
@@ -23,7 +24,7 @@ const assigneeItems = (context: BoardContext): PickerItem[] =>
   people(context).map((person) => ({
     ...person,
     lead: person.value
-      ? html`<span class="avatar">${initials(person.label)}</span>`
+      ? avatar({ id: person.value, name: person.label })
       : html`<span class="avatar avatar-empty">${icon('user', 12)}</span>`
   }))
 

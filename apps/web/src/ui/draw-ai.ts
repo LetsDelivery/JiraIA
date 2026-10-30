@@ -6,6 +6,7 @@ import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 
 import type { CreateTarget } from './create-menu'
+import { closeOnEscape } from './dialog'
 import { icon } from './icons'
 
 type Kind = 'auto' | 'page' | 'whiteboard'
@@ -119,7 +120,7 @@ export const openDrawAi = (target: CreateTarget): void => {
     dialog.remove()
   }
   const send = (text: string) => void ask(target, state, text, draw)
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   dialog.addEventListener('click', (event) => onClick(event, { target, state, draw, close, send }))
   dialog.addEventListener('submit', (event) => {
     event.preventDefault()

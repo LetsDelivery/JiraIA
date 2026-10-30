@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 
 /**
  * The rest of Etapa 2 on the Requisições space: custom fields, subtasks and typed links, comments with
@@ -186,6 +186,19 @@ test('attachments: a file goes up, opens by its link, and is removed', async ({ 
 
   await detail.getByRole('button', { name: 'Remover escopo.txt' }).click()
   await expect(detail.getByRole('link', { name: 'escopo.txt' })).toHaveCount(0)
+})
+
+/** What the browser does when the file picker is closed without a file: a `cancel` that bubbles. */
+const cancelPicker = async (input: Locator) =>
+  await input.evaluate((element) => element.dispatchEvent(new Event('cancel', { bubbles: true })))
+
+test('attachments: cancelling the file picker keeps the card open; Escape still closes it', async ({ page }) => {
+  await signIn(page, 'admin@uselets.com')
+  const detail = await openCard(page, 'REQ-2')
+  await cancelPicker(detail.locator('[data-file-input]'))
+  await expect(detail).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(detail).toHaveCount(0)
 })
 
 test('a card moves to another space; its old key still opens it', async ({ page }) => {

@@ -1,9 +1,10 @@
 import type { HistoryEvent } from '@/api/requests'
-import { initials, PRIORITY_LABEL } from '@/lib/cards'
+import { PRIORITY_LABEL } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { LINK_LABEL, type LinkType } from '@/lib/relations'
 import type { BoardContext } from '@/views/board'
 
+import { avatar } from './avatar'
 import { detailPanel } from './detail-panel'
 
 const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
@@ -95,7 +96,7 @@ const historyLine = (context: HistoryContext, event: HistoryEvent): Html => {
 
   return html`
     <li>
-      <span class="avatar">${initials(actor)}</span>
+      ${avatar({ id: event.actorId, name: actor })}
       <div class="history-text">
         <p><strong>${actor}</strong> ${ACTION_LABEL[event.action] ?? event.action}${event.via ? html` <span class="history-via">via ${event.via}</span>` : ''} <span class="muted">· ${WHEN.format(new Date(event.occurredAt))}</span></p>
         ${changes.map(

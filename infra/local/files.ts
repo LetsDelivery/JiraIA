@@ -20,6 +20,10 @@ export class LocalFileStore implements FileStore {
     return `/api/files/${input.key}?${query}`
   }
 
+  async viewUrl(input: { key: string; contentType: string }): Promise<string> {
+    return `/api/files/${input.key}?${new URLSearchParams({ type: input.contentType })}`
+  }
+
   async sizeOf(key: string): Promise<number | undefined> {
     return await stat(this.pathOf(key)).then(
       (found) => found.size,

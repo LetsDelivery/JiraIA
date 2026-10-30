@@ -1,0 +1,1 @@
+ALTER TABLE "work"."members" ADD COLUMN "avatar_key" text;

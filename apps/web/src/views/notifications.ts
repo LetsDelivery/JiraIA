@@ -1,10 +1,10 @@
 import { type Box, type Notice, noticesRead, noticesWrite } from '@/api/notifications'
 import { forget } from '@/lib/cache'
-import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { sentence, snoozeUntil, target } from '@/lib/notifications'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
+import { avatar } from '@/ui/avatar'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { icon } from '@/ui/icons'
 import { bindPreferences, preferencesPanel } from '@/ui/notification-preferences'
@@ -53,7 +53,7 @@ const actions = (notice: Notice, box: Box): Html => {
 const noticeItem = (notice: Notice, box: Box): Html => html`
   <li class="notice ${notice.readAt ? '' : 'is-unread'}" data-notice="${notice.id}">
     <span class="notice-dot" aria-hidden="true"></span>
-    <span class="avatar">${initials(notice.actor.name)}</span>
+    ${avatar(notice.actor)}
     <div class="notice-text">
       <a class="notice-link" href="${target(notice)}" data-notice-open>${sentence(notice)}</a>
       ${notice.data.cardTitle || notice.data.excerpt ? html`<p class="muted notice-detail">${notice.data.excerpt ? `“${notice.data.excerpt}”` : notice.data.cardTitle}</p>` : ''}

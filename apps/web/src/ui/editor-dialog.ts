@@ -2,6 +2,7 @@ import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { busy, submitButton } from '@/ui/busy'
 import { bindDatePickers } from './date-picker'
+import { closeOnEscape } from './dialog'
 import { icon } from './icons'
 import { bindSelects } from './select'
 import { toast } from './toast'
@@ -58,7 +59,7 @@ export const openEditorDialog = (options: EditorDialog): void => {
   for (const button of dialog.querySelectorAll('[data-close]')) {
     button.addEventListener('click', close)
   }
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   dialog.querySelector('form')?.addEventListener('submit', (event) => {
     event.preventDefault()
     void _save(dialog, options, close)

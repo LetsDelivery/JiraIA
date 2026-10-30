@@ -1,10 +1,11 @@
 import { type Card, type CardType, type Label, write } from '@/api/requests'
-import { initials, labelColor, PRIORITY_ICON, PRIORITY_LABEL, type StateGroup } from '@/lib/cards'
+import { labelColor, PRIORITY_ICON, PRIORITY_LABEL, type StateGroup } from '@/lib/cards'
 import { dayMonth, isPast, shortDate } from '@/lib/dates'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import type { BoardContext } from '@/views/board'
 
+import { avatar } from './avatar'
 import { pickAssignee, pickDue, pickEstimate, pickLabels, pickPriority, type Save } from './card-pickers'
 import { icon } from './icons'
 import { toast } from './toast'
@@ -57,7 +58,7 @@ const labelProp = (card: Card, canWrite: boolean, labels: readonly Label[]): Htm
 
 const assigneeProp = (card: Card, canWrite: boolean): Html => {
   const body = card.assignee
-    ? html`<span class="avatar">${initials(card.assignee.name)}</span>`
+    ? avatar(card.assignee)
     : html`<span class="avatar avatar-empty">${icon('user', 14)}</span>`
   const label = `Responsável: ${card.assignee?.name ?? 'ninguém'}`
   return card.assignee || canWrite ? prop(canWrite, 'assignee', label, body, 'tile-assignee') : html``

@@ -29,7 +29,7 @@ import { bindSide, type SideGroup, side } from './card-side'
 import { worklogsSection } from './card-worklogs'
 import { bindCustomFields } from './custom-fields'
 import { bindDatePickers } from './date-picker'
-import { openFormDialog } from './dialog'
+import { closeOnEscape, openFormDialog } from './dialog'
 import { applyArrival } from './email-arrival'
 import { icon } from './icons'
 import { proposalStrip } from './proposal-strip'
@@ -145,7 +145,7 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
     back.searchParams.delete('card')
     history.replaceState(null, '', back)
   }
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   dialog.showModal()
   void render(dialog, card, context, close)
 }

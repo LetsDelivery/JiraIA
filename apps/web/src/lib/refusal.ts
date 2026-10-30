@@ -35,7 +35,8 @@ const CONFLICTS: { field: string; sentence: (value: string) => string }[] = [
 /** Refusals of a field whose value the server names: what to change, in the words of the screen. */
 const VALIDATIONS: { field: string; sentence: string }[] = [
   { field: 'privilege', sentence: 'Perfil privilegiado precisa de data de validade.' },
-  { field: 'expiresAt', sentence: 'A validade precisa ser uma data futura, até 90 dias para perfil privilegiado.' }
+  { field: 'expiresAt', sentence: 'A validade precisa ser uma data futura, até 90 dias para perfil privilegiado.' },
+  { field: 'photo', sentence: 'Não foi possível ler essa imagem. Escolha um JPG, PNG ou WebP.' }
 ]
 
 export const refusalSentence = (refusal: unknown): string => {

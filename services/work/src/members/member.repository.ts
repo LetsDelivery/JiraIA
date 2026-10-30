@@ -61,6 +61,10 @@ export class MemberRepository {
     await tx.update(members).set(changes).where(eq(members.id, id))
   }
 
+  async setAvatar(tx: Database, id: string, avatarKey: string | null): Promise<void> {
+    await tx.update(members).set({ avatarKey }).where(eq(members.id, id))
+  }
+
   async setOrgAdmin(tx: Database, id: string, isOrgAdmin: boolean): Promise<void> {
     await tx.update(members).set({ isOrgAdmin }).where(eq(members.id, id))
   }

@@ -218,6 +218,13 @@
       "when": 1793299544839,
       "tag": "0030_github-integration",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793385534656,
+      "tag": "0031_member_avatar",
+      "breakpoints": true
     }
   ]
 }

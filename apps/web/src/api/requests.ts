@@ -1,7 +1,9 @@
 import { cached, forget, invalidate } from '@/lib/cache'
 import type { CardFilter } from '@/lib/filters'
+import { avatarType } from '@/lib/photo'
 import type { Role } from '@/lib/roles'
 import type { SpaceType } from '@/lib/space-types'
+import { learnFaces } from '@/ui/avatar'
 
 import { api } from './client'
 import type { paths } from './schema'
@@ -71,11 +73,27 @@ export const unwrap = async <T>(call: Promise<{ data?: T; error?: unknown }>): P
 }
 
 /** The bytes, straight to storage at the URL the API signed (2.9, 5.2). */
-export const sendFile = async (upload: { url: string; headers: Record<string, string> }, file: File): Promise<void> => {
+export const sendFile = async (upload: { url: string; headers: Record<string, string> }, file: Blob): Promise<void> => {
   const sent = await fetch(upload.url, { method: 'PUT', headers: upload.headers, body: file })
   if (!sent.ok) {
     throw { error: { code: 'DEPENDENCY_UNAVAILABLE', message: `Upload answered ${sent.status}` } }
   }
+}
+
+/** Every read of a person's own profile also tells the avatars their photo (ADR-0039). */
+const knownFace = (me: Me): Me => {
+  learnFaces([me])
+  return me
+}
+
+/** A cropped photo, announced, sent straight to storage, then confirmed (ADR-0039). */
+const sendAvatar = async (photo: Blob): Promise<Me> => {
+  const body = { contentType: avatarType(photo.type), size: photo.size }
+  const started = await unwrap(api.POST('/work/me/avatar', { body }))
+  await sendFile(started.upload, photo)
+  return await unwrap(
+    api.POST('/work/me/avatar/{avatarId}/complete', { params: { path: { avatarId: started.id } }, body })
+  )
 }
 
 const listSpaces = (archived: boolean) =>
@@ -83,9 +101,15 @@ const listSpaces = (archived: boolean) =>
 
 /** Reads, cached by key. Every key of a space starts with `space:<id>` so one write clears them all. */
 export const read = {
-  me: () => cached('me', () => unwrap(api.GET('/work/me'))),
+  me: () => cached('me', () => unwrap(api.GET('/work/me')).then(knownFace)),
   mySpaces: () => cached('my-spaces', () => unwrap(api.GET('/work/me/spaces'))),
-  members: () => cached('members', () => unwrap(api.GET('/work/members'))),
+  members: () =>
+    cached('members', () =>
+      unwrap(api.GET('/work/members')).then((list) => {
+        learnFaces(list.items)
+        return list
+      })
+    ),
   spaces: () => cached('spaces', () => listSpaces(false)),
   archivedSpaces: () => cached('spaces-archived', () => listSpaces(true)),
   space: (spaceId: string) =>
@@ -329,6 +353,16 @@ export const write = {
   /** A person's own name and job title (Meu perfil); the frame and every list show the new name. */
   updateProfile: async (body: { name: string; jobTitle: string | null }) => {
     const me = await unwrap(api.PATCH('/work/me', { body }))
+    invalidate('me', 'members')
+    return me
+  },
+  setAvatar: async (photo: Blob) => {
+    const me = knownFace(await sendAvatar(photo))
+    invalidate('me', 'members')
+    return me
+  },
+  removeAvatar: async () => {
+    const me = knownFace(await unwrap(api.DELETE('/work/me/avatar')))
     invalidate('me', 'members')
     return me
   },

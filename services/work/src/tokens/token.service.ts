@@ -107,6 +107,7 @@ export class TokenService implements TokenVerifier {
       email: null,
       name,
       jobTitle: null,
+      avatarKey: null,
       isOrgAdmin: false,
       isSpaceManager: false,
       isAccessAuditor: false,

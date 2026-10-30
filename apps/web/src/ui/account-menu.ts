@@ -1,7 +1,7 @@
 import type { Me } from '@/api/requests'
-import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 
+import { avatar } from './avatar'
 import { icon } from './icons'
 
 /**
@@ -17,18 +17,17 @@ const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'system', label: 'Seguir o sistema' }
 ]
 
-export const avatar = (name: string, size: 'small' | 'large' = 'small'): Html =>
-  html`<span class="account-avatar account-avatar-${size}" aria-hidden="true">${initials(name) || '?'}</span>`
+const accountAvatar = (me: Me, size: 'small' | 'large'): Html => avatar(me, `account-avatar account-avatar-${size}`)
 
 export const accountButton = (me: Me): Html => html`
   <button type="button" class="account-button" data-account aria-haspopup="menu" aria-expanded="false" aria-label="Sua conta: ${me.name}" title="${me.name}">
-    ${avatar(me.name)}
+    ${accountAvatar(me, 'small')}
   </button>
 `
 
 export const accountMenu = (me: Me, theme: ThemeChoice): Html => html`
   <div class="account-head">
-    ${avatar(me.name, 'large')}
+    ${accountAvatar(me, 'large')}
     <div><strong>${me.name}</strong><span class="muted">${me.email ?? ''}</span></div>
   </div>
   <a role="menuitem" href="/perfil">${icon('user', 16)}Perfil</a>

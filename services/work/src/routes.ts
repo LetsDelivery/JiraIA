@@ -2,8 +2,12 @@ import { defineRoute, healthSchema, type Route } from '@jiraia/http'
 import { z } from 'zod'
 
 import { auditEventViewSchema } from './audit/audit.js'
+import { uploadViewSchema } from './cards/attachment.schemas.js'
+import type { AvatarService } from './members/avatar.service.js'
 import type { MemberService } from './members/member.service.js'
 import {
+  avatarFileSchema,
+  avatarPathSchema,
   inviteMemberSchema,
   memberListSchema,
   memberPathSchema,
@@ -26,12 +30,43 @@ import {
 } from './spaces/schemas.js'
 import type { SpaceService } from './spaces/space.service.js'
 
-type Services = { members: MemberService; spaces: SpaceService; personal: PersonalService }
+type Services = { members: MemberService; avatars: AvatarService; spaces: SpaceService; personal: PersonalService }
 
 const historyQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   before: z.iso.datetime().optional()
 })
+
+/** A person's photo (ADR-0039): announced, sent straight to storage, then confirmed; or taken off. */
+const avatarRoutes = ({ avatars }: Services): Route[] => [
+  defineRoute({
+    method: 'POST',
+    path: '/me/avatar',
+    requires: 'authenticated',
+    schemas: { body: avatarFileSchema },
+    responds: uploadViewSchema,
+    handler: async ({ caller, body }) => ({ statusCode: 201, body: await avatars.start(caller, body) })
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/me/avatar/{avatarId}/complete',
+    requires: 'authenticated',
+    schemas: { path: avatarPathSchema, body: avatarFileSchema },
+    responds: memberViewSchema,
+    handler: async ({ caller, path, body }) => ({
+      statusCode: 200,
+      body: await avatars.complete(caller, path.avatarId, body)
+    })
+  }),
+  defineRoute({
+    method: 'DELETE',
+    path: '/me/avatar',
+    requires: 'authenticated',
+    schemas: {},
+    responds: memberViewSchema,
+    handler: async ({ caller }) => ({ statusCode: 200, body: await avatars.remove(caller) })
+  })
+]
 
 const memberRoutes = ({ members }: Services): Route[] => [
   defineRoute({
@@ -261,6 +296,7 @@ const healthRoute = defineRoute({
 export const workRoutes = (services: Services): Route[] => [
   healthRoute as Route,
   ...memberRoutes(services),
+  ...avatarRoutes(services),
   ...spaceRoutes(services),
   ...spaceRoleRoutes(services),
   ...personalRoutes(services)

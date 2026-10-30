@@ -1,8 +1,8 @@
 import type { WikiLine } from '@/api/wiki'
-import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { ACCESS_LABEL, type Access, type PageMark, pageMark, wikiPagePath } from '@/lib/wiki'
 
+import { avatar, type Person } from './avatar'
 import { type IconName, icon } from './icons'
 import { toast } from './toast'
 
@@ -36,9 +36,9 @@ export const glyph = (node: { icon?: string | null; kind?: string }, size = 16):
     ? html`<span class="wiki-emoji" aria-hidden="true">${node.icon}</span>`
     : html`<span class="wiki-glyph" aria-hidden="true">${icon(KIND_ICON[node.kind ?? 'page'] ?? 'fileText', size)}</span>`
 
-/** A person as the tables show one: initials in a circle, then the name. */
-export const person = (who: { name: string }): Html =>
-  html`<span class="wiki-person"><span class="avatar" aria-hidden="true">${initials(who.name)}</span><span class="wiki-person-name">${who.name}</span></span>`
+/** A person as the tables show one: their photo or initials in a circle, then the name. */
+export const person = (who: Person): Html =>
+  html`<span class="wiki-person">${avatar(who)}<span class="wiki-person-name">${who.name}</span></span>`
 
 /** A page in a list of pages from any collection: icon, title, its collection, its mark. */
 export const lineItem = (item: WikiLine): Html => html`
