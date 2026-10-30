@@ -16,6 +16,23 @@ type Deps = {
   workflows: WorkflowRepository
 }
 
+/**
+ * Board columns after the states are reordered: each column sits where its first state now is, so a
+ * column of one state moves with it; a column holding no state goes last (ADR-0037).
+ */
+export const columnOrder = (
+  columns: readonly { id: string }[],
+  states: readonly Pick<StateRow, 'id' | 'columnId'>[],
+  stateIds: readonly string[]
+): string[] => {
+  const columnOf = new Map(states.map((state) => [state.id, state.columnId]))
+  const first = (columnId: string) => {
+    const at = stateIds.findIndex((id) => columnOf.get(id) === columnId)
+    return at === -1 ? Number.MAX_SAFE_INTEGER : at
+  }
+  return [...columns].sort((a, b) => first(a.id) - first(b.id)).map((column) => column.id)
+}
+
 /** A space's workflow, configured by its admins without code (escopo-mvp 2.1, 2.2, 2.3). */
 export class WorkflowService {
   constructor(private readonly deps: Deps) {}
@@ -68,26 +85,42 @@ export class WorkflowService {
       this._assertNameFree(await this.deps.workflows.states(spaceId), input.name)
     }
     const fields = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined))
+    const column = input.name === undefined ? undefined : await this._ownColumn(spaceId, state)
 
     await this.deps.db.transaction(async (tx) => {
       await this.deps.workflows.updateState(tx, state.id, fields)
+      if (column && input.name !== undefined) {
+        await this.deps.workflows.renameColumn(tx, column, input.name)
+      }
       await this._audit(tx, gate, state.id, 'updated', diff(state, fields))
     })
     return await this._view(spaceId)
   }
 
-  /** The new board order must name every state of the space, once. */
+  /** The board column that is only this state, under its name: renaming the state renames it too. */
+  private async _ownColumn(spaceId: string, state: StateRow): Promise<string | undefined> {
+    const column = (await this.deps.workflows.columns(spaceId)).find(
+      (each) => each.id === state.columnId && each.name === state.name
+    )
+    const states = await this.deps.workflows.states(spaceId)
+    return column && states.filter((each) => each.columnId === column.id).length === 1 ? column.id : undefined
+  }
+
+  /** The new board order must name every state of the space, once; the board columns follow it. */
   async orderStates(caller: Caller, spaceId: string, stateIds: readonly string[]): Promise<WorkflowView> {
     const gate = await this.deps.gate.checkWritable(caller, spaceId, 'space:manage')
-    const current = (await this.deps.workflows.states(spaceId)).map((state) => state.id)
+    const states = await this.deps.workflows.states(spaceId)
+    const current = states.map((state) => state.id)
     if (current.length !== stateIds.length || !current.every((id) => stateIds.includes(id))) {
       throw new ValidationException('The order must list every state of the space exactly once', {
         expected: current.length
       })
     }
+    const columns = await this.deps.workflows.columns(spaceId)
 
     await this.deps.db.transaction(async (tx) => {
       await this.deps.workflows.setOrder(tx, stateIds)
+      await this.deps.workflows.setColumnOrder(tx, columnOrder(columns, states, stateIds))
       await this._audit(tx, gate, spaceId, 'reordered', { order: { before: current, after: stateIds } })
     })
     return await this._view(spaceId)

@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from 'bun:test'
 
 import { systemClock, uuidGenerator } from '@jiraia/core'
 import { answer, apiEvent, type Call, googleClaims, testDatabase, truncateSchema } from '@jiraia/testing'
+import { eq } from 'drizzle-orm'
 
 import { buildService } from '../container.js'
 import { bootstrapOrganization } from '../members/bootstrap.js'
+import { boardColumns, workflowStates } from '../schema.js'
 
 /** The board: a space's workflow, its cards, their order, their history (escopo-mvp 2.x, 3.1). */
 const db = await testDatabase('services/work/drizzle')
@@ -85,6 +87,30 @@ describe('workflow', () => {
       'Em andamento',
       'Concluído'
     ])
+  })
+
+  it('moves and renames a migrated board’s columns with the states they show', async () => {
+    const [todo, doing, done] = states as [State, State, State]
+    for (const [position, state] of [doing, todo, done].entries()) {
+      const id = uuidGenerator.next()
+      await db.insert(boardColumns).values({ id, spaceId, name: state.name, position, createdAt: systemClock.now() })
+      await db.update(workflowStates).set({ columnId: id }).where(eq(workflowStates.id, state.id))
+    }
+    const columnNames = (body: unknown) =>
+      (body as { columns: { name: string; position: number }[] }).columns
+        .sort((a, b) => a.position - b.position)
+        .map((column) => column.name)
+
+    const order = [done.id, todo.id, doing.id]
+    const reordered = await admin({ method: 'PUT', path: `/spaces/${spaceId}/states/order`, body: { stateIds: order } })
+    const renamed = await admin({
+      method: 'PATCH',
+      path: `/spaces/${spaceId}/states/${todo.id}`,
+      body: { name: 'Pendente' }
+    })
+
+    expect(columnNames(reordered.body)).toEqual(['Concluído', 'A fazer', 'Em andamento'])
+    expect(columnNames(renamed.body)).toEqual(['Concluído', 'Pendente', 'Em andamento'])
   })
 
   it('refuses deleting a state that holds cards unless told where they go, then moves them', async () => {

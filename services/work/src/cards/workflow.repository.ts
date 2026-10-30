@@ -100,6 +100,17 @@ export class WorkflowRepository {
     }
   }
 
+  /** Board columns left to right: the position of each column is its index in `columnIds`. */
+  async setColumnOrder(tx: Database, columnIds: readonly string[]): Promise<void> {
+    for (const [position, id] of columnIds.entries()) {
+      await tx.update(boardColumns).set({ position }).where(eq(boardColumns.id, id))
+    }
+  }
+
+  async renameColumn(tx: Database, id: string, name: string): Promise<void> {
+    await tx.update(boardColumns).set({ name }).where(eq(boardColumns.id, id))
+  }
+
   async deleteState(tx: Database, id: string): Promise<void> {
     await tx.delete(workflowStates).where(eq(workflowStates.id, id))
   }
