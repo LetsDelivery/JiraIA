@@ -83,6 +83,7 @@ export class Whiteboard implements Surface {
   readonly lifetime = new AbortController()
   private readonly listeners = new Set<() => void>()
   private pending = 0
+  private opened = false
 
   constructor(
     doc: Y.Doc,
@@ -137,6 +138,21 @@ export class Whiteboard implements Surface {
       this.scene.migrate()
     }
     this.changed()
+    this.fitOnOpen()
+  }
+
+  /** Once loaded, the drawing opens fitted on screen, wherever on the board it was drawn. */
+  private fitOnOpen() {
+    if (this.opened) {
+      return
+    }
+    this.opened = true
+    requestAnimationFrame(() => {
+      if (this.svg.getBoundingClientRect().width) {
+        // biome-ignore lint/suspicious/noFocusedTests: the board's fit, not a test's
+        this.fit()
+      }
+    })
   }
 
   destroy() {

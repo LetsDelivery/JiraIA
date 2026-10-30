@@ -397,6 +397,119 @@
   }
 }
 
+/* ---------- Side panel: an icon rail at the right edge, each icon opening its panel (Draw only) ---------- */
+@media (min-width: 1101px) {
+  .page-layout.has-rail {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  .page-layout.has-rail.is-panel-folded {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+}
+
+.page-layout.has-rail .page-panel {
+  display: flex;
+  padding-left: 0;
+  overflow: hidden;
+}
+
+.page-panel-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: inherit;
+  padding: 0 var(--space-4);
+  overflow-y: auto;
+}
+
+.page-layout.is-panel-folded .page-panel-body {
+  display: none;
+}
+
+.page-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.page-panel-heading h2 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.page-panel-rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 48px;
+  padding-top: var(--space-1);
+}
+
+.page-layout:not(.is-panel-folded) .page-panel-rail {
+  border-left: 1px solid var(--border);
+}
+
+.page-panel-rail-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+}
+
+.page-panel-rail-item:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.page-layout:not(.is-panel-folded) .page-panel-rail-item[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.page-panel-rail-count {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* Stacked under the content on a tablet or a phone: the rail lies across the panel's top. */
+@media (max-width: 1100px) {
+  .page-layout.has-rail .page-panel {
+    flex-direction: column-reverse;
+  }
+
+  .page-panel-rail {
+    flex-direction: row;
+    width: auto;
+    padding: 0 0 var(--space-3);
+  }
+
+  .page-layout:not(.is-panel-folded) .page-panel-rail {
+    border-left: 0;
+  }
+
+  .page-panel-body {
+    padding: 0;
+  }
+}
+
 /* The open space in the list, with its menu at the end of the row. */
 .draw-space-row {
   display: flex;
