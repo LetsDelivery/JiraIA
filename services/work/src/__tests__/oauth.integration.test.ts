@@ -221,6 +221,8 @@ describe('discovery', () => {
       resource: `${BASE}/v1/mcp`,
       authorization_servers: [BASE]
     })
+    // Regression: behind the panel's domain the resource is /api/work/v1/mcp, four segments deep.
+    expect((await send('/.well-known/oauth-protected-resource/api/work/v1/mcp')).status).toBe(200)
     expect((await send('/.well-known/oauth-authorization-server')).body).toMatchObject({
       issuer: BASE,
       authorization_endpoint: 'http://panel.local/oauth/autorizar',

@@ -7,9 +7,35 @@ import { avatar } from '@/ui/avatar'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { icon } from '@/ui/icons'
+import { selectField } from '@/ui/select'
 import { toast } from '@/ui/toast'
 
 import type { View } from './view'
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Ativos' },
+  { value: 'inactive', label: 'Desativados' },
+  { value: 'all', label: 'Todos' }
+]
+
+const ROLE_OPTIONS = [
+  { value: '', label: 'Todos os papéis' },
+  { value: 'admin', label: 'Admins' },
+  { value: 'manager', label: 'Gestores de espaços' },
+  { value: 'auditor', label: 'Auditores de acessos' },
+  { value: 'none', label: 'Sem papel' }
+]
+
+/** The roles a row matches in the Papel filter, as the badges show them. */
+const rolesOf = (member: Member): string => {
+  const roles = [
+    member.isOrgAdmin && 'admin',
+    member.isSpaceManager && !member.isOrgAdmin && 'manager',
+    member.isAccessAuditor && 'auditor'
+  ].filter(Boolean)
+
+  return roles.length > 0 ? roles.join(' ') : 'none'
+}
 
 /** Whether an organization admin can act on this person: someone else, still active. */
 const actsOn = (me: Me, member: Member): boolean => me.isOrgAdmin && member.status === 'active' && member.id !== me.id
@@ -37,8 +63,13 @@ const badges = (member: Member): Html => html`
   ${member.isAccessAuditor ? html`<span class="badge" title="Lê e exporta tudo em Acessos">auditor</span>` : ''}
 `
 
+/** One row, carrying what the search and the filters match on, so filtering never re-renders. */
 const memberRow = (me: Me, member: Member): Html => html`
-  <tr>
+  <tr
+    data-search="${`${member.name} ${member.email ?? ''} ${member.jobTitle ?? ''}`.toLowerCase()}"
+    data-roles="${rolesOf(member)}"
+    data-status="${member.status}"
+  >
     <td><span class="person-name">${avatar(member)}${member.name}${badges(member)}</span></td>
     <td>${member.jobTitle ?? html`<span class="muted">—</span>`}</td>
     <td class="muted">${member.email}</td>
@@ -75,6 +106,42 @@ const openMenu = (anchor: HTMLElement, member: Member) =>
     }
   })
 
+const toolbar = (): Html => html`
+  <div class="toolbar">
+    <label class="search">
+      <span class="sr-only">Pesquisar pessoas</span>
+      <input type="search" class="input" data-search-input placeholder="Pesquisar por nome, e-mail ou cargo" />
+    </label>
+    ${selectField({ name: 'filter-role', label: 'Papel', visibleLabel: false, options: ROLE_OPTIONS, value: '', attributes: html`data-filter="role"` })}
+    ${selectField({ name: 'filter-status', label: 'Situação', visibleLabel: false, options: STATUS_OPTIONS, value: 'active', attributes: html`data-filter="status"` })}
+  </div>
+`
+
+/** Shows the rows that match the search and every filter; counts them. Active people by default. */
+const bindFilters = (root: HTMLElement): void => {
+  const search = root.querySelector<HTMLInputElement>('[data-search-input]')
+  const filterValue = (name: string) =>
+    root.querySelector<HTMLInputElement>(`[data-filter="${name}"] input[type="hidden"]`)?.value ?? ''
+  const rows = [...root.querySelectorAll<HTMLTableRowElement>('tbody tr')]
+
+  const apply = () => {
+    const query = (search?.value ?? '').trim().toLowerCase()
+    const [role, status] = [filterValue('role'), filterValue('status')]
+    const matches = (row: HTMLTableRowElement) =>
+      (row.dataset.search ?? '').includes(query) &&
+      (!role || (row.dataset.roles ?? '').split(' ').includes(role)) &&
+      (status === 'all' || row.dataset.status === status)
+    const shown = rows.filter((row) => !row.toggleAttribute('hidden', !matches(row)))
+
+    root.querySelector('[data-no-match]')?.toggleAttribute('hidden', shown.length > 0)
+    root.querySelector('[data-count]')?.replaceChildren(`${shown.length} ${shown.length === 1 ? 'pessoa' : 'pessoas'}`)
+  }
+
+  search?.addEventListener('input', apply)
+  root.addEventListener('select-change', apply)
+  apply()
+}
+
 const invite = () =>
   openFormDialog({
     title: 'Convidar pessoa',
@@ -102,18 +169,24 @@ export const peopleView: View = {
 
     return html`
       <header class="page-header row">
-        <h1>Pessoas</h1>
+        <div class="stack-tight">
+          <h1>Pessoas</h1>
+          <p class="muted" data-count></p>
+        </div>
         ${me.isOrgAdmin ? html`<button type="button" class="button button-primary" data-invite>${icon('plus')}Convidar pessoa</button>` : ''}
       </header>
+      ${toolbar()}
       <table class="table people-table">
         <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Status</th><th><span class="sr-only">Ações</span></th></tr></thead>
         <tbody>
           ${members.items.filter((member) => member.kind === 'person').map((member) => memberRow(me, member))}
         </tbody>
       </table>
+      <p class="empty muted" data-no-match hidden>Nenhuma pessoa corresponde à pesquisa e aos filtros.</p>
     `
   },
   bind: (root) => {
+    bindFilters(root)
     root.querySelector('[data-invite]')?.addEventListener('click', invite)
     for (const button of root.querySelectorAll<HTMLElement>('[data-member-menu]')) {
       button.addEventListener('click', () => {

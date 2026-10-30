@@ -101,8 +101,8 @@ export const profileView: View = {
       <section class="section">
         <div class="section-head">
           <div>
-            <h2>Tokens de API</h2>
-            <p class="muted">Para scripts e integrações agirem como você na API — com o mesmo acesso que você tem, nada além.</p>
+            <h2>Tokens para scripts</h2>
+            <p class="muted">Para scripts agirem como você na API, com o mesmo acesso que você tem. Para um assistente como o Claude, não precisa de token: veja <a class="link" href="/integracoes">Integrações</a>.</p>
           </div>
           <button type="button" class="button button-primary" data-new-token>${icon('plus', 16)}Novo token</button>
         </div>
@@ -115,7 +115,7 @@ export const profileView: View = {
     root.querySelector('[data-edit-profile]')?.addEventListener('click', () => void read.me().then(editProfile))
     root
       .querySelector('[data-new-token]')
-      ?.addEventListener('click', () => openNewToken('Novo token de API', outwardWrite.createToken))
+      ?.addEventListener('click', () => openNewToken('Novo token para scripts', outwardWrite.createToken))
     bindTokenTable(root)
     bindConnections(root)
   }
