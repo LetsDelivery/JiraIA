@@ -8,6 +8,14 @@ import { type IconName, icon } from '@/ui/icons'
 export const collapsed = persistedStore('jiraia.sidebar.collapsed', false)
 export const theme = persistedStore<'light' | 'dark' | null>('jiraia.theme', null)
 export const spacesOpen = persistedStore('jiraia.sidebar.spaces-open', true)
+/** The lists under Espaços the person folded, by key; every list starts open. */
+export const foldedSections = persistedStore<readonly string[]>('jiraia.sidebar.folded-sections', [])
+
+/** Opens a folded list under Espaços, or folds an open one. */
+export const toggleSection = (key: string): void => {
+  const folded = foldedSections.get()
+  foldedSections.set(folded.includes(key) ? folded.filter((each) => each !== key) : [...folded, key])
+}
 
 /** Applies the stored theme, or follows the system's when nothing was chosen. */
 export const applyTheme = (): void => {
@@ -31,25 +39,41 @@ export const navItem = (href: string, label: string, name: IconName, path: strin
 
 type SpaceLink = { key: string; name: string }
 
-/** One of the three lists under Espaços. A list with nothing in it says so, in one quiet line. */
-const spaceSection = (title: string, name: IconName, spaces: readonly SpaceLink[], empty: string, path: string) => html`
-  <div class="nav-sub" role="group" aria-label="${title}">
-    <p class="nav-sub-title">${icon(name, 14)}<span>${title}</span></p>
-    ${
-      spaces.length === 0
-        ? html`<p class="nav-sub-empty">${empty}</p>`
-        : spaces.map(
-            (space) => html`
-              <a
-                class="nav-sub-item ${path === spacePath(space.key) ? 'is-active' : ''}"
-                href="${spacePath(space.key)}"
-                ${path === spacePath(space.key) ? html`aria-current="page"` : ''}
-              >${space.name}</a>
-            `
-          )
-    }
-  </div>
-`
+const spaceLinks = (spaces: readonly SpaceLink[], empty: string, path: string) =>
+  spaces.length === 0
+    ? html`<p class="nav-sub-empty">${empty}</p>`
+    : spaces.map(
+        (space) => html`
+          <a
+            class="nav-sub-item ${path === spacePath(space.key) ? 'is-active' : ''}"
+            href="${spacePath(space.key)}"
+            ${path === spacePath(space.key) ? html`aria-current="page"` : ''}
+          >${space.name}</a>
+        `
+      )
+
+/**
+ * One of the three lists under Espaços. Its title folds it, and the fold is remembered. A list with
+ * nothing in it says so, in one quiet line.
+ */
+const spaceSection = (
+  key: string,
+  title: string,
+  name: IconName,
+  spaces: readonly SpaceLink[],
+  empty: string,
+  path: string
+) => {
+  const open = !foldedSections.get().includes(key)
+  return html`
+    <div class="nav-sub" role="group" aria-label="${title}">
+      <button type="button" class="nav-sub-title nav-sub-fold" data-toggle-section="${key}" aria-expanded="${String(open)}" aria-controls="nav-sub-${key}" title="${open ? 'Recolher' : 'Expandir'} ${title}">
+        ${icon(name, 14)}<span>${title}</span><span class="nav-sub-count">${spaces.length}</span>${icon('chevronRight', 12)}
+      </button>
+      <div id="nav-sub-${key}" class="nav-sub-list" ${open ? '' : html`hidden`}>${spaceLinks(spaces, empty, path)}</div>
+    </div>
+  `
+}
 
 /**
  * Espaços, as a group: the arrow opens it, `+` creates a space, the gear manages them. Inside, the
@@ -67,15 +91,15 @@ const spacesGroup = (me: Me, mine: MySpaces, all: readonly Space[], path: string
         <span class="nav-group-actions">
           ${canCreateSpaces(me) ? html`<button type="button" class="nav-action" data-new-space aria-label="Criar espaço" title="Criar espaço">${icon('plus', 16)}</button>` : ''}
           <a class="nav-action" href="/espacos" aria-label="Gerenciar espaços" title="Gerenciar espaços">${icon('settings', 16)}</a>
-          <button type="button" class="nav-toggle" data-toggle-spaces aria-expanded="${open}" aria-controls="spaces-tree" aria-label="${open ? 'Recolher' : 'Expandir'} Espaços">
+          <button type="button" class="nav-toggle" data-toggle-spaces aria-expanded="${String(open)}" aria-controls="spaces-tree" aria-label="${open ? 'Recolher' : 'Expandir'} Espaços">
             ${icon('chevronRight', 14)}
           </button>
         </span>
       </div>
       <div id="spaces-tree" class="nav-tree" ${open ? '' : html`hidden`}>
-        ${spaceSection('Marcados com estrela', 'starFilled', mine.starred, 'Nenhum espaço com estrela.', path)}
-        ${spaceSection('Recentes', 'clock', mine.recent, 'Nenhum espaço aberto ainda.', path)}
-        ${spaceSection('Todos os espaços', 'layoutGrid', all, 'Nenhum espaço criado ainda.', path)}
+        ${spaceSection('starred', 'Marcados com estrela', 'starFilled', mine.starred, 'Nenhum espaço com estrela.', path)}
+        ${spaceSection('recent', 'Recentes', 'clock', mine.recent, 'Nenhum espaço aberto ainda.', path)}
+        ${spaceSection('all', 'Todos os espaços', 'layoutGrid', all, 'Nenhum espaço criado ainda.', path)}
       </div>
     </div>
   `
@@ -171,6 +195,13 @@ export const appsMenu = (product: string) => html`
   <a role="menuitem" href="/wiki" ${product === 'wiki' ? html`aria-current="page"` : ''}>${icon('books', 16)}LET’S Wiki</a>
 `
 
+/** Grupos, Acessos and Pessoas: the sidebar shows them to organization admins only. */
+const adminItems = (path: string) => html`
+  ${navItem('/grupos', 'Grupos', 'usersGroup', path)}
+  ${navItem('/acessos', 'Acessos', 'lock', path.startsWith('/acessos') ? '/acessos' : path)}
+  ${navItem('/pessoas', 'Pessoas', 'users', path)}
+`
+
 /**
  * JiraIA's frame. Spaces live in the sidebar — starred, recent and all of them, under "Espaços" — and
  * the pages are another product, LET’S Draw AI, one click away (ADR-0010).
@@ -197,9 +228,7 @@ export const shell = (
       ${navItem('/', 'Para você', 'home', path)}
       ${spacesGroup(me, mine, all, path)}
       ${navItem('/propostas', 'Propostas', 'gitPullRequest', path, proposals)}
-      ${navItem('/grupos', 'Grupos', 'usersGroup', path)}
-      ${navItem('/acessos', 'Acessos', 'lock', path.startsWith('/acessos') ? '/acessos' : path)}
-      ${me.isOrgAdmin ? navItem('/pessoas', 'Pessoas', 'users', path) : ''}
+      ${me.isOrgAdmin ? adminItems(path) : ''}
       ${navItem('/integracoes', 'Integrações', 'bolt', path)}
       <hr class="nav-divider" />
       ${productLink('/draw', 'LET’S Draw AI', 'notebook')}

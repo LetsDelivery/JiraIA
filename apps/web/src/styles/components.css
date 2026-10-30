@@ -395,6 +395,49 @@
   color: var(--accent);
 }
 
+/* The title of a list under Espaços folds it: the whole row is the button, the arrow at its end. */
+.nav-sub-fold {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.nav-sub-fold:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.nav-sub-fold > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-sub-count {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-sub-fold .icon:last-child {
+  color: var(--faint);
+  transition: transform var(--fast) var(--ease);
+}
+
+.nav-sub-fold[aria-expanded='true'] .icon:last-child {
+  transform: rotate(90deg);
+}
+
+.nav-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .nav-sub-item {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-control);

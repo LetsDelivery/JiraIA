@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
  * Espaços in the sidebar: `+` and the gear appear only on hover; the gear opens the management page,
  * where spaces are searched, filtered, archived and restored.
  */
-test('Espaços: hover actions, folding, and managing spaces with search and filters', async ({ page }) => {
+test('Espaços: hover actions, folding each list, and managing spaces with search and filters', async ({ page }) => {
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('admin@uselets.com')
   await page.getByRole('button', { name: 'Entrar' }).click()
@@ -27,6 +27,16 @@ test('Espaços: hover actions, folding, and managing spaces with search and filt
   await expect(all).toBeHidden()
   await page.getByRole('button', { name: 'Expandir Espaços' }).click()
   await expect(all).toBeVisible()
+
+  // Each list under Espaços folds on its own title, and stays folded across a reload.
+  const fold = all.getByRole('button', { name: /Todos os espaços/ })
+  await expect(fold).toHaveAttribute('aria-expanded', 'true')
+  await fold.click()
+  await expect(all.getByRole('link', { name: 'Requisições' })).toBeHidden()
+  await page.reload()
+  await expect(all.getByRole('button', { name: /Todos os espaços/ })).toHaveAttribute('aria-expanded', 'false')
+  await all.getByRole('button', { name: /Todos os espaços/ }).click()
+  await expect(all.getByRole('link', { name: 'Requisições' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Espaços', exact: true }).hover()
   await gear.click()

@@ -15,7 +15,10 @@ const sidebar = (page: Page) => page.getByRole('complementary', { name: 'Menu pr
 
 test('everyone sees the groups and who is in them; only an admin creates one', async ({ page }) => {
   await signIn(page, 'rui@uselets.com')
-  await sidebar(page).getByRole('link', { name: 'Grupos' }).click()
+  for (const name of ['Grupos', 'Acessos', 'Pessoas']) {
+    await expect(sidebar(page).getByRole('link', { name, exact: true })).toHaveCount(0)
+  }
+  await page.goto('/grupos')
 
   const produto = page.locator('.group-card').filter({ hasText: 'Produto' })
   await expect(produto.locator('.person-name', { hasText: /^Ana/ })).toBeVisible()
