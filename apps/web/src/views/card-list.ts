@@ -11,6 +11,7 @@ import {
 } from '@/lib/columns'
 import { shortDate } from '@/lib/dates'
 import { type Html, html } from '@/lib/html'
+import { OLD_DONE_DAYS, oldDoneHref, showsAllDone } from '@/lib/old-done'
 import { planning } from '@/lib/sprints'
 import { persistedStore } from '@/lib/store'
 import { bindBulkBar, bulkBar, selectionOf } from '@/ui/bulk-bar'
@@ -130,6 +131,20 @@ const tick = (card: Card | undefined, selected: ReadonlySet<string>, total: numb
     ? html`<td class="tick"><input type="checkbox" data-tick="${card.id}" aria-label="Selecionar ${card.key}" ${selected.has(card.id) ? html`checked` : ''} /></td>`
     : html`<th class="tick"><input type="checkbox" data-tick-all aria-label="Selecionar todos" ${total > 0 && selected.size === total ? html`checked` : ''} /></th>`
 
+/** Says the old done cards are left out, and how to see them; or, once shown, how to leave them out. */
+const oldDoneNote = (context: BoardContext): Html => {
+  const here = `${location.pathname}${location.search}`
+  if (context.oldDone) {
+    const { hidden } = context.oldDone
+    return hidden === 0
+      ? html``
+      : html` · ${hidden === null ? '' : `${hidden} `}concluídos há mais de ${OLD_DONE_DAYS} dias ocultos · <a class="link" href="${oldDoneHref(here, true)}">Mostrar todos</a>`
+  }
+  return showsAllDone(location.search)
+    ? html` · <a class="link" href="${oldDoneHref(here, false)}">Ocultar concluídos há mais de ${OLD_DONE_DAYS} dias</a>`
+    : html``
+}
+
 /** The cards as a table with the columns the viewer picks, sortable by any of them (escopo-mvp 3.2). */
 export const cardList = (context: BoardContext): Html => {
   const shown = columnsOf(context.spaceId).filter((column) => offered(context.fields).includes(column))
@@ -138,7 +153,7 @@ export const cardList = (context: BoardContext): Html => {
   const ticks = (card?: Card) => (context.canWrite ? tick(card, bulk.selected, rows.length) : '')
   return html`
     <div class="toolbar">
-      <span class="muted">${context.cards.length} cards</span>
+      <span class="muted">${context.cards.length} cards${oldDoneNote(context)}</span>
       ${picker(context, shown)}
     </div>
     ${context.canWrite ? bulkBar(bulk) : ''}

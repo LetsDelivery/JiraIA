@@ -100,6 +100,18 @@ const field = (fieldId: string, anyOf: readonly (string | number)[]): SQL => {
 const inGroups = (groups: readonly string[]): SQL =>
   sql`${cards.stateId} in (select ${workflowStates.id} from ${workflowStates} where ${workflowStates.group} in (${list(groups)}))`
 
+const DONE_STATES = sql`select ${workflowStates.id}::text from ${workflowStates} where ${workflowStates.group} = 'done'`
+
+/** Not done, or entered a done state since `since` — or created since then, maybe done already. */
+export const doneSinceCondition = (since: DayBound, now: Date): SQL => {
+  const at = sql`${instantOf(since, now).toISOString()}::timestamptz`
+  return sql`(not ${inGroups(['done'])} or ${cards.createdAt} >= ${at} or exists (
+    select 1 from ${auditEvents}
+    where ${auditEvents.entityType} = 'card' and ${auditEvents.entityId} = ${cards.id}
+      and ${auditEvents.changes} -> 'stateId' ->> 'after' in (${DONE_STATES})
+      and ${auditEvents.occurredAt} >= ${at}))`
+}
+
 /** In any of the sprints named: an id, the card's space's active sprint, or none at all. */
 const inSprints = (values: readonly string[]): SQL | undefined => {
   const ids = values.filter((value) => value !== 'active' && value !== 'none')
@@ -131,7 +143,8 @@ const PARTS: readonly Part[] = [
   ({ created }, { now }) => created && instants(cards.createdAt, created, now),
   ({ updated }, { now }) => updated && instants(cards.updatedAt, updated, now),
   ({ due }, { now }) => due && days(cards.dueDate, due, now),
-  ({ movedTo: moved }, { now }) => moved && movedTo(moved, now)
+  ({ movedTo: moved }, { now }) => moved && movedTo(moved, now),
+  ({ doneSince: since }, { now }) => (since ? doneSinceCondition(since, now) : undefined)
 ]
 
 export const filterCondition = (filter: CardFilter, context: QueryContext): SQL | undefined =>

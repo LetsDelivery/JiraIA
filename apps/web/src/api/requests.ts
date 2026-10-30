@@ -122,6 +122,11 @@ export const read = {
     cached(`space:${spaceId}:cards`, () =>
       unwrap(api.GET('/work/spaces/{spaceId}/cards', { params: { path: { spaceId } } }))
     ),
+  /** The cards a Lista shows: those done before `doneSince` left out (ADR-0040). */
+  recentCards: (spaceId: string, doneSince: string) =>
+    cached(`space:${spaceId}:cards:done${doneSince}`, () =>
+      unwrap(api.GET('/work/spaces/{spaceId}/cards', { params: { path: { spaceId }, query: { doneSince } } }))
+    ),
   /** Under the space's cards: every card write can teach the catalogue a label (ADR-0032). */
   labels: (spaceId: string) =>
     cached(`space:${spaceId}:cards:labels`, () =>

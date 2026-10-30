@@ -88,7 +88,7 @@ export const cardRoutes = (cards: CardService): Route[] => [
     responds: cardListSchema,
     handler: async ({ caller, path, query }) => ({
       statusCode: 200,
-      body: await cards.list(caller, path.spaceId, query.sprint)
+      body: await cards.list(caller, path.spaceId, query)
     })
   }),
   defineRoute({

@@ -262,3 +262,43 @@ describe('who sees and changes a view', () => {
     expect((await admin({ method: 'POST', path: '/views', body: bad })).status).toBe(400)
   })
 })
+
+describe('the Lista leaves out what was done long ago (ADR-0040)', () => {
+  /** TEC: one card done 90 days ago, one done 10 days ago, one reopened, one never done, one created done. */
+  const seed = async () => {
+    const old = await card(tec, 'Concluído há muito', 'EM PROGRESSO')
+    const reopened = await card(tec, 'Reaberto', 'EM PROGRESSO')
+    const recent = await card(tec, 'Concluído há pouco', 'EM PROGRESSO')
+    await card(tec, 'Em andamento', 'EM PROGRESSO')
+    await move(tec, old, 'CONCLUÍDO')
+    await move(tec, reopened, 'CONCLUÍDO')
+    clock.advance(80 * DAY)
+    await move(tec, reopened, 'EM PROGRESSO')
+    await move(tec, recent, 'CONCLUÍDO')
+    await card(tec, 'Criado já concluído', 'CONCLUÍDO')
+    clock.advance(10 * DAY)
+  }
+
+  const listed = async (query: Record<string, string>) =>
+    ((await ok(admin({ method: 'GET', path: `/spaces/${tec.id}/cards`, query }))) as { items: Card[] }).items
+      .map((each) => each.key)
+      .sort()
+
+  it('lists every card but those that entered a done state before -60d', async () => {
+    await seed()
+    expect(await listed({})).toEqual(['TEC-1', 'TEC-2', 'TEC-3', 'TEC-4', 'TEC-5'])
+    expect(await listed({ doneSince: '-60d' })).toEqual(['TEC-2', 'TEC-3', 'TEC-4', 'TEC-5'])
+  })
+
+  it('is a condition of the structured filter too', async () => {
+    await seed()
+    const view = await saveView('Sem concluídos antigos', tec, { spaceIds: [tec.id], doneSince: '-60d' })
+    expect((await keysOf(view)).sort()).toEqual(['TEC-2', 'TEC-3', 'TEC-4', 'TEC-5'])
+  })
+
+  it('refuses a bound that is not days in the past', async () => {
+    expect((await admin({ method: 'GET', path: `/spaces/${tec.id}/cards`, query: { doneSince: '60' } })).status).toBe(
+      400
+    )
+  })
+})

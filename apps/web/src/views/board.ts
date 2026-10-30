@@ -51,6 +51,8 @@ export type BoardContext = {
   manages: boolean
   /** A filter narrows `cards` (3.4); orders that need every card, as the backlog's, wait until it is cleared. */
   filtered: boolean
+  /** The Lista without its old done cards (ADR-0040): how many it left out, `null` when uncounted. */
+  oldDone?: { hidden: number | null } | undefined
 }
 
 /** Swimlanes are a viewer's preference, per space, on this browser. */
@@ -406,10 +408,18 @@ const createCard = (context: BoardContext): void =>
  * fields, and its cards — those the filter lets through, when there is one. Every card is read too, so
  * the people a filter hides stay offered in it.
  */
-export const loadBoard = async (spaceId: string, filter: CardFilter = {}) => {
+/** The cards a filter lets through; with `doneSince`, without those done before it (ADR-0040). */
+const cardsOf = (spaceId: string, filter: CardFilter, doneSince: string | undefined) => {
+  if (!isEmpty(filter)) {
+    return read.filteredCards(spaceId, doneSince ? { ...filter, doneSince } : filter)
+  }
+  return doneSince ? read.recentCards(spaceId, doneSince) : read.cards(spaceId)
+}
+
+export const loadBoard = async (spaceId: string, filter: CardFilter = {}, doneSince?: string) => {
   const [workflow, cards, every, members, roles, fields, space, catalogue] = await Promise.all([
     read.workflow(spaceId),
-    isEmpty(filter) ? read.cards(spaceId) : read.filteredCards(spaceId, filter),
+    cardsOf(spaceId, filter, doneSince),
     read.cards(spaceId),
     read.members(),
     read.spaceRoles(spaceId),
@@ -427,6 +437,7 @@ export const loadBoard = async (spaceId: string, filter: CardFilter = {}) => {
     labels: catalogue.items,
     fields: fields.items,
     space,
-    sprints
+    sprints,
+    oldDone: doneSince ? { hidden: isEmpty(filter) ? every.items.length - cards.items.length : null } : undefined
   }
 }
