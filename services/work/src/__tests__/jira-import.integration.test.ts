@@ -351,6 +351,21 @@ describe('Jira import', () => {
     expect((await db.select().from(boardColumns)).map((column) => column.name)).toEqual(['BLOQUEIO'])
   })
 
+  it('leaves a board already drawn alone when a later raw copy lacks the boards’ columns', async () => {
+    await store.putJson('import/raw1/jira/boards.json', [
+      {
+        project: 'TEC',
+        board: { id: 31, name: 'quadro TDV3' },
+        columns: [{ name: 'BLOQUEIO', statuses: ['IMPEDIMENTO'] }]
+      }
+    ])
+    await run('i1')
+    store.documents.delete('import/raw1/jira/boards.json')
+    await run('i2')
+
+    expect((await db.select().from(boardColumns)).map((column) => column.name)).toEqual(['BLOQUEIO'])
+  })
+
   it('gives a project without a Jira board one column per status, from not started to done', async () => {
     await run('i1')
     const columns = await db.select().from(boardColumns)

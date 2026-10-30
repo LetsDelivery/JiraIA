@@ -34,6 +34,16 @@ type Deps = { db: Database; ids: IdGenerator }
 export class ImportColumns {
   constructor(private readonly deps: Deps) {}
 
+  /** Whether the space's board already has columns. */
+  async drawn(spaceId: string): Promise<boolean> {
+    const found = await this.deps.db
+      .select({ id: boardColumns.id })
+      .from(boardColumns)
+      .where(eq(boardColumns.spaceId, spaceId))
+      .limit(1)
+    return found.length > 0
+  }
+
   async apply(spaceId: string, wanted: WantedColumn[], at: Date): Promise<void> {
     const existing = await this.deps.db.select().from(boardColumns).where(eq(boardColumns.spaceId, spaceId))
     const byName = new Map(existing.map((column) => [column.name, column.id]))

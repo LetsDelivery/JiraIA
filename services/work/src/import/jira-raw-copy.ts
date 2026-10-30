@@ -95,6 +95,7 @@ export class JiraRawCopy {
   async run(input: { run: string; projects: string[]; previousRun?: string }): Promise<JiraReport> {
     const startedAt = toIso(this.deps.clock.now())
     const visible = await this.copyCatalogue(input.run, input.projects)
+    await this.carryBoards(input.run, input.previousRun)
     const previous = await this.manifestOf(input.previousRun)
     const manifest: Manifest = { run: input.run, issues: {} }
     const projects: ProjectReport[] = []
@@ -121,6 +122,17 @@ export class JiraRawCopy {
       )
     }
     return visible
+  }
+
+  /**
+   * The boards' columns, captured by hand into a run (the token cannot read the agile API), carried into
+   * the next one: without them the import would draw one column per status (ADR-0037).
+   */
+  private async carryBoards(run: string, previousRun: string | undefined): Promise<void> {
+    const boards = previousRun ? await this.deps.store.getJson(`import/${previousRun}/jira/boards.json`) : undefined
+    if (boards !== undefined) {
+      await this.deps.store.putJson(`import/${run}/jira/boards.json`, boards)
+    }
   }
 
   private async manifestOf(run: string | undefined): Promise<Manifest | undefined> {
