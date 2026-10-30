@@ -33,7 +33,7 @@ export const connectionsSection = (items: readonly Connection[]): Html => html`
               </tr>`
             )}</tbody>
           </table>`
-        : html`<div class="empty"><p class="empty-title">Nenhum aplicativo conectado</p><p class="muted">Quando você conectar o JiraIA a um assistente pelo MCP, ele aparece aqui.</p></div>`
+        : html`<div class="empty"><p class="empty-title">Nenhum aplicativo conectado</p><p class="muted">Quando você conectar o JiraIA a um assistente pelo MCP (veja <a class="link" href="/integracoes">Integrações</a>), ele aparece aqui.</p></div>`
     }
   </section>
 `
