@@ -6,6 +6,7 @@ import { invalidate } from '@/lib/cache'
 import { ancestorsOf } from '@/lib/content-tree'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { persistedStore } from '@/lib/store'
 import { type Area, pathsIn } from '@/lib/wiki'
 import { bindCommentsPanel, commentsPanel, focusThread, startInlineComment } from '@/ui/content-comments'
 import { bindVersionsPanel, versionsPanel } from '@/ui/content-versions'
@@ -100,14 +101,69 @@ const titleRow = (data: Loaded, parts: ScreenParts): Html => html`
   </header>
 `
 
-const panelTabs = (data: Loaded, current: string, comments: number): Html => {
+/** Whether Draw's side panel is open: each person's choice, kept in the browser. */
+const panelOpen = persistedStore('jiraia.draw.panel-open', true)
+
+const PANELS = { comentarios: 'Comentários', versoes: 'Versões' } as const
+
+const panelPath = (data: Loaded, name: keyof typeof PANELS): string => {
   const path = pathsIn(data.area).content(data.content.spaceId, data.content.id)
-  return html`
-    <nav class="tabs page-panel-tabs" aria-label="Painel">
-      <a class="tab" href="${path}" ${current === 'comentarios' ? html`aria-current="page"` : ''}>${icon('message', 16)}Comentários <span class="count">${comments}</span></a>
-      <a class="tab" href="${path}?painel=versoes" ${current === 'versoes' ? html`aria-current="page"` : ''}>${icon('history', 16)}Versões</a>
-    </nav>
-  `
+  return name === 'versoes' ? `${path}?painel=versoes` : path
+}
+
+/** The wiki's two tabs over its panel. */
+const panelTabs = (data: Loaded, current: string, comments: number): Html => html`
+  <nav class="tabs page-panel-tabs" aria-label="Painel">
+    <a class="tab" href="${panelPath(data, 'comentarios')}" ${current === 'comentarios' ? html`aria-current="page"` : ''}>${icon('message', 16)}Comentários <span class="count">${comments}</span></a>
+    <a class="tab" href="${panelPath(data, 'versoes')}" ${current === 'versoes' ? html`aria-current="page"` : ''}>${icon('history', 16)}Versões</a>
+  </nav>
+`
+
+/** Draw's icons down the right edge: each opens its own panel, and closes it when it is the one open. */
+const panelRail = (data: Loaded, current: string, comments: number): Html => html`
+  <nav class="page-panel-rail" aria-label="Painel">
+    <a class="page-panel-rail-item" href="${panelPath(data, 'comentarios')}" data-rail="comentarios" title="Comentários" aria-label="Comentários" ${current === 'comentarios' ? html`aria-current="page"` : ''}>
+      ${icon('message', 18)}${comments ? html`<span class="page-panel-rail-count">${comments}</span>` : ''}</a>
+    <a class="page-panel-rail-item" href="${panelPath(data, 'versoes')}" data-rail="versoes" title="Versões" aria-label="Versões" ${current === 'versoes' ? html`aria-current="page"` : ''}>${icon('history', 18)}</a>
+  </nav>
+`
+
+const panelHeading = (current: keyof typeof PANELS): Html => html`
+  <header class="page-panel-heading">
+    <h2>${PANELS[current]}</h2>
+    <button type="button" class="button button-ghost button-icon" data-close-panel aria-label="Fechar painel" title="Fechar">${icon('x', 16)}</button>
+  </header>
+`
+
+const layoutClass = (data: Loaded, parts: ScreenParts): string => {
+  if (parts.panelOpen === false) {
+    return 'is-panel-closed'
+  }
+  return data.area === 'draw' ? `has-rail ${panelOpen.get() ? '' : 'is-panel-folded'}` : ''
+}
+
+const setPanelOpen = (root: HTMLElement, open: boolean): void => {
+  panelOpen.set(open)
+  root.querySelector('.page-layout')?.classList.toggle('is-panel-folded', !open)
+}
+
+/**
+ * The rail: the open panel's icon closes it, a closed panel's icon opens it again — both in place, the
+ * board beside keeps its state. The other icon leads to its panel, open.
+ */
+const bindRail = (root: HTMLElement): void => {
+  root.querySelector('[data-close-panel]')?.addEventListener('click', () => setPanelOpen(root, false))
+  for (const item of root.querySelectorAll<HTMLElement>('[data-rail]')) {
+    item.addEventListener('click', (event) => {
+      if (item.dataset.rail === panelOf()) {
+        event.preventDefault()
+        event.stopPropagation()
+        setPanelOpen(root, !panelOpen.get())
+      } else {
+        panelOpen.set(true)
+      }
+    })
+  }
 }
 
 const currentSurface = () => editors?.sessions.currentSession()?.surface
@@ -148,13 +204,19 @@ export const documentScreen = async (data: Loaded, parts: ScreenParts = {}): Pro
   const open = (await drawRead.comments(data.content.id)).items.filter((each) => !each.parentId && !each.resolvedAt)
   const board = data.content.kind === 'whiteboard'
   return html`
-    <div class="page-layout ${board ? 'is-board' : ''} ${parts.panelOpen === false ? 'is-panel-closed' : ''}">
+    <div class="page-layout ${board ? 'is-board' : ''} ${layoutClass(data, parts)}">
       <article class="page-main">
         ${pageHead(data, parts, board)}
         ${surface(board)}
         ${parts.after ?? ''}
       </article>
-      <aside class="page-panel" data-page-panel>${panelTabs(data, panelOf(), open.length)}${await panel(data, Boolean(parts.tabbedComments))}</aside>
+      ${
+        data.area === 'draw'
+          ? html`<aside class="page-panel" data-page-panel>
+          <div class="page-panel-body">${panelHeading(panelOf())}${await panel(data, Boolean(parts.tabbedComments))}</div>
+          ${panelRail(data, panelOf(), open.length)}</aside>`
+          : html`<aside class="page-panel" data-page-panel>${panelTabs(data, panelOf(), open.length)}${await panel(data, Boolean(parts.tabbedComments))}</aside>`
+      }
     </div>
   `
 }
@@ -215,6 +277,7 @@ export const bindDocument = (root: HTMLElement, data: Loaded): void => {
   bindPublish(root, data, session)
   bindPresence(root, session.provider.awareness)
   bindPanels(root, data, session, redraw)
+  bindRail(root)
 }
 
 const openPage = (loaded: Editors, data: Loaded, redraw: () => void) => {
