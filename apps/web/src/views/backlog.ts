@@ -1,8 +1,9 @@
 import { type Card, write } from '@/api/requests'
 import { invalidate } from '@/lib/cache'
-import { dropIndex, initials, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
+import { dropIndex, PRIORITY_ICON, PRIORITY_LABEL } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { avatar } from '@/ui/avatar'
 import { icon } from '@/ui/icons'
 import { toast } from '@/ui/toast'
 
@@ -44,7 +45,7 @@ export const backlogRow = (card: Card, position: number, context: BoardContext):
       <span class="state-chip"><span class="group-dot group-${state?.group ?? 'not_started'}" aria-hidden="true"></span>${state?.name ?? ''}</span>
       <span class="priority priority-${card.priority}" title="Prioridade ${PRIORITY_LABEL[card.priority]}">${icon(PRIORITY_ICON[card.priority], 16)}</span>
       ${pointsChip(card, context)}
-      ${card.assignee ? html`<span class="avatar" title="${card.assignee.name}">${initials(card.assignee.name)}</span>` : html`<span class="avatar avatar-empty" aria-hidden="true"></span>`}
+      ${card.assignee ? avatar(card.assignee) : html`<span class="avatar avatar-empty" aria-hidden="true"></span>`}
     </li>
   `
 }

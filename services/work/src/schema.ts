@@ -52,6 +52,8 @@ export const members = work.table(
     name: text('name').notNull(),
     /** What the person does at LET'S ("Engenheira de software"), set by them on their profile. */
     jobTitle: text('job_title'),
+    /** Where the person's photo is stored (ADR-0039); without one, the panel draws their initials. */
+    avatarKey: text('avatar_key'),
     isOrgAdmin: boolean('is_org_admin').notNull().default(false),
     /** Creates JiraIA spaces without being an organization admin (ADR-0012). */
     isSpaceManager: boolean('is_space_manager').notNull().default(false),

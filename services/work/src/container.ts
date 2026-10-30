@@ -29,6 +29,7 @@ import type { Config } from './config.js'
 import { buildCardRecords } from './container-card-records.js'
 import { buildConnections } from './container-connections.js'
 import { buildIntake, buildNotifications, buildOutward } from './container-intake.js'
+import { buildMembers } from './container-members.js'
 import { buildWake, connectSignalled } from './container-wake.js'
 import { buildWiki } from './container-wiki.js'
 import { AnthropicDraftWriter } from './draw/anthropic-writer.js'
@@ -81,7 +82,6 @@ import { buildMcp } from './mcp/build.js'
 import { mcpRoutes } from './mcp/routes.js'
 import { MemberAdmission } from './members/admission.js'
 import { MemberRepository } from './members/member.repository.js'
-import { MemberService } from './members/member.service.js'
 import { SystemActors } from './members/system-actor.js'
 import type { Mailer } from './notifications/mailer.js'
 import { notificationRoutes } from './notifications/routes.js'
@@ -204,7 +204,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
   const comments = new CommentService({ ...onCards, comments: new CommentRepository(db), watchers, members })
 
   const services = {
-    members: new MemberService({ ...shared, members, allowedDomains, departures: accessParts.accessClock }),
+    ...buildMembers({ ...shared, members, files, allowedDomains, departures: accessParts.accessClock }),
     spaces: new SpaceService({ ...shared, spaces, members, personal, workflows }),
     workflows: new WorkflowService({ db, clock, ids, audit, gate, workflows }),
     cardTypes: new CardTypeService({ db, clock, ids, audit, gate, workflows }),

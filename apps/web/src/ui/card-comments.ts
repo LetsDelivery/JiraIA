@@ -1,9 +1,10 @@
 import { type Comment, type Member, write } from '@/api/requests'
-import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { fromTokens, mentionParts, mentionQuery, toTokens } from '@/lib/relations'
 import { busy, submitButton } from '@/ui/busy'
+
+import { avatar } from './avatar'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -48,7 +49,7 @@ const reactions = (comment: Comment, meId: string): Html => html`
 
 const item = (comment: Comment, context: CommentsContext, names: ReadonlyMap<string, string>): Html => html`
   <li data-comment-id="${comment.id}">
-    <span class="avatar">${initials(comment.author.name)}</span>
+    ${avatar(comment.author)}
     <div class="comment-content">
       <p><strong>${comment.author.name}</strong> <span class="muted">· ${WHEN.format(new Date(comment.createdAt))}${comment.editedAt ? ' · editado' : ''}</span>
         ${comment.author.id === context.meId ? html`<button type="button" class="button button-ghost button-small" data-edit-comment="${comment.id}">Editar</button>` : ''}</p>
@@ -68,7 +69,7 @@ export const commentsSection = (comments: readonly Comment[], context: CommentsC
   return html`
     <section class="comments-block" data-comments>
       <form class="composer" data-comment>
-        <span class="avatar">${initials(context.members.find((member) => member.id === context.meId)?.name ?? '')}</span>
+        ${avatar({ id: context.meId, name: context.members.find((member) => member.id === context.meId)?.name ?? '' })}
         <div class="composer-box">
           <label class="sr-only" for="card-comment">Novo comentário</label>
           <textarea id="card-comment" class="input textarea" name="body" rows="2" required

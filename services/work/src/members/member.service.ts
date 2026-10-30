@@ -13,7 +13,8 @@ import { type AccessResolver, assertOrgAdmin } from '../access.js'
 import type { AuditTrail } from '../audit/audit.js'
 import { domainList, isAllowedAddress } from './domains.js'
 import type { MemberRepository } from './member.repository.js'
-import { type InviteMember, type MemberRow, type MemberView, toMemberView, type UpdateProfile } from './schemas.js'
+import type { MemberViews } from './member-views.js'
+import type { InviteMember, MemberRow, MemberView, UpdateProfile } from './schemas.js'
 
 type Deps = {
   db: Database
@@ -22,6 +23,7 @@ type Deps = {
   access: AccessResolver
   audit: AuditTrail
   members: MemberRepository
+  views: MemberViews
   /** Only addresses of these Google Workspace domains can ever sign in (ADR-0005, ADR-0026). */
   allowedDomains: readonly string[]
   /** What a departure takes away in the same transaction: the person's access to LET’S systems (ADR-0024). */
@@ -35,7 +37,7 @@ export class MemberService {
   constructor(private readonly deps: Deps) {}
 
   async me(caller: Caller): Promise<MemberView> {
-    return toMemberView(await this.deps.access.actor(caller))
+    return await this.deps.views.one(await this.deps.access.actor(caller))
   }
 
   /**
@@ -58,14 +60,14 @@ export class MemberService {
         await this._record(tx, actor, 'profile_updated', changes)
       })
     }
-    return toMemberView({ ...actor, ...after })
+    return await this.deps.views.one({ ...actor, ...after })
   }
 
   async list(caller: Caller): Promise<{ items: MemberView[] }> {
     const actor = await this.deps.access.actor(caller)
     const rows = await this.deps.members.list(actor.organizationId)
 
-    return { items: rows.map(toMemberView) }
+    return { items: await this.deps.views.many(rows) }
   }
 
   /**
@@ -85,7 +87,7 @@ export class MemberService {
       await this._audit(tx, actor, row.id, 'invited', { email: input.email, isOrgAdmin: input.isOrgAdmin })
     })
 
-    return toMemberView(row)
+    return await this.deps.views.one(row)
   }
 
   /**
@@ -112,7 +114,7 @@ export class MemberService {
         changes: { isOrgAdmin: { before: target.isOrgAdmin, after: isOrgAdmin } }
       })
     })
-    return toMemberView({ ...target, isOrgAdmin })
+    return await this.deps.views.one({ ...target, isOrgAdmin })
   }
 
   /** A space manager creates JiraIA spaces without being an organization admin (ADR-0012). */
@@ -132,7 +134,7 @@ export class MemberService {
         changes: { isSpaceManager: { before: target.isSpaceManager, after: isSpaceManager } }
       })
     })
-    return toMemberView({ ...target, isSpaceManager })
+    return await this.deps.views.one({ ...target, isSpaceManager })
   }
 
   /** An access auditor reads and exports everything in access governance (ADR-0024). */
@@ -152,7 +154,7 @@ export class MemberService {
         changes: { isAccessAuditor: { before: target.isAccessAuditor, after: isAccessAuditor } }
       })
     })
-    return toMemberView({ ...target, isAccessAuditor })
+    return await this.deps.views.one({ ...target, isAccessAuditor })
   }
 
   /** The row stays: every card, comment and audit event that names this member keeps its author (1.4). */
@@ -174,7 +176,7 @@ export class MemberService {
       })
     })
 
-    return toMemberView({ ...target, status: 'inactive', deactivatedAt: at })
+    return await this.deps.views.one({ ...target, status: 'inactive', deactivatedAt: at })
   }
 
   /** An address of another domain could be invited and never sign in; refuse it at the door. */
@@ -196,6 +198,7 @@ export class MemberService {
       email: input.email,
       name: input.name,
       jobTitle: input.jobTitle,
+      avatarKey: null,
       isOrgAdmin: input.isOrgAdmin,
       isSpaceManager: false,
       isAccessAuditor: false,

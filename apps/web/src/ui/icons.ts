@@ -27,6 +27,7 @@ import bug from '@tabler/icons/outline/bug.svg?raw'
 import bulb from '@tabler/icons/outline/bulb.svg?raw'
 import calendar from '@tabler/icons/outline/calendar.svg?raw'
 import calendarCheck from '@tabler/icons/outline/calendar-check.svg?raw'
+import camera from '@tabler/icons/outline/camera.svg?raw'
 import chalkboard from '@tabler/icons/outline/chalkboard.svg?raw'
 import chartBar from '@tabler/icons/outline/chart-bar.svg?raw'
 import chartDonut from '@tabler/icons/outline/chart-donut.svg?raw'
@@ -153,6 +154,7 @@ import { type Html, raw } from '@/lib/html'
  * Outline for interface, filled for state (the original identity guidance).
  */
 const ICONS = {
+  camera,
   bold,
   italic,
   underline,

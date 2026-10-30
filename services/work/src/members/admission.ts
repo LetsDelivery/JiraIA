@@ -135,6 +135,7 @@ export class MemberAdmission {
       email,
       name: caller.name ?? email.split('@')[0] ?? email,
       jobTitle: null,
+      avatarKey: null,
       isOrgAdmin: false,
       isSpaceManager: false,
       isAccessAuditor: false,

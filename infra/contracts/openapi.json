@@ -157,6 +157,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -200,6 +206,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -296,6 +303,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -339,6 +352,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -414,6 +428,12 @@
                               "null"
                             ]
                           },
+                          "avatarUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "isOrgAdmin": {
                             "type": "boolean"
                           },
@@ -457,6 +477,7 @@
                           "email",
                           "name",
                           "jobTitle",
+                          "avatarUrl",
                           "isOrgAdmin",
                           "isSpaceManager",
                           "isAccessAuditor",
@@ -573,6 +594,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -616,6 +643,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -715,6 +743,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -758,6 +792,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -857,6 +892,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -900,6 +941,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -999,6 +1041,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -1042,6 +1090,7 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",
@@ -1123,6 +1172,12 @@
                         "null"
                       ]
                     },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isOrgAdmin": {
                       "type": "boolean"
                     },
@@ -1166,6 +1221,381 @@
                     "email",
                     "name",
                     "jobTitle",
+                    "avatarUrl",
+                    "isOrgAdmin",
+                    "isSpaceManager",
+                    "isAccessAuditor",
+                    "status",
+                    "isSystem",
+                    "createdAt",
+                    "deactivatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/me/avatar": {
+      "post": {
+        "operationId": "workPostMeAvatar",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /me/avatar",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/webp",
+                      "image/jpeg",
+                      "image/png"
+                    ]
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2097152
+                  }
+                },
+                "required": [
+                  "contentType",
+                  "size"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "upload": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "url",
+                        "headers"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "upload"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "workDeleteMeAvatar",
+        "tags": [
+          "work"
+        ],
+        "summary": "DELETE /me/avatar",
+        "description": "Requires `authenticated`.",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "person",
+                        "agent"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "jobTitle": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isOrgAdmin": {
+                      "type": "boolean"
+                    },
+                    "isSpaceManager": {
+                      "type": "boolean"
+                    },
+                    "isAccessAuditor": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive"
+                      ]
+                    },
+                    "isSystem": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "email",
+                    "name",
+                    "jobTitle",
+                    "avatarUrl",
+                    "isOrgAdmin",
+                    "isSpaceManager",
+                    "isAccessAuditor",
+                    "status",
+                    "isSystem",
+                    "createdAt",
+                    "deactivatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/me/avatar/{avatarId}/complete": {
+      "post": {
+        "operationId": "workPostMeAvatarAvatarIdComplete",
+        "tags": [
+          "work"
+        ],
+        "summary": "POST /me/avatar/{avatarId}/complete",
+        "description": "Requires `authenticated`.",
+        "parameters": [
+          {
+            "name": "avatarId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/webp",
+                      "image/jpeg",
+                      "image/png"
+                    ]
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2097152
+                  }
+                },
+                "required": [
+                  "contentType",
+                  "size"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "person",
+                        "agent"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "jobTitle": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isOrgAdmin": {
+                      "type": "boolean"
+                    },
+                    "isSpaceManager": {
+                      "type": "boolean"
+                    },
+                    "isAccessAuditor": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive"
+                      ]
+                    },
+                    "isSystem": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "deactivatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "email",
+                    "name",
+                    "jobTitle",
+                    "avatarUrl",
                     "isOrgAdmin",
                     "isSpaceManager",
                     "isAccessAuditor",

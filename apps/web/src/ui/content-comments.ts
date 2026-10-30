@@ -3,12 +3,13 @@ import type { Editor } from '@tiptap/core'
 import { type ContentComment, drawWrite } from '@/api/draw'
 import type { Member } from '@/api/requests'
 import { markSelection, revealComment, unmarkComment } from '@/editor/marks'
-import { initials } from '@/lib/cards'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { mentionParts, toTokens } from '@/lib/relations'
 import { fold, threadKind } from '@/lib/wiki-nav'
 import { busy, submitButton } from '@/ui/busy'
+
+import { avatar } from './avatar'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -44,7 +45,7 @@ const body = (comment: ContentComment, names: ReadonlyMap<string, string>): Html
 
 const line = (comment: ContentComment, names: ReadonlyMap<string, string>): Html => html`
   <li>
-    <span class="avatar">${initials(comment.author.name)}</span>
+    ${avatar(comment.author)}
     <div class="comment-content">
       <p><strong>${comment.author.name}</strong> <span class="muted">· ${WHEN.format(new Date(comment.createdAt))}${comment.editedAt ? ' · editado' : ''}</span></p>
       ${body(comment, names)}

@@ -3,6 +3,7 @@ import { governanceWrite } from '@/api/governance'
 import { type Me, type Member, read, write } from '@/api/requests'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
+import { avatar } from '@/ui/avatar'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { icon } from '@/ui/icons'
@@ -38,7 +39,7 @@ const badges = (member: Member): Html => html`
 
 const memberRow = (me: Me, member: Member): Html => html`
   <tr>
-    <td><span class="person-name">${member.name}${badges(member)}</span></td>
+    <td><span class="person-name">${avatar(member)}${member.name}${badges(member)}</span></td>
     <td>${member.jobTitle ?? html`<span class="muted">—</span>`}</td>
     <td class="muted">${member.email}</td>
     <td>${member.status === 'active' ? 'Ativo' : 'Desativado'}</td>

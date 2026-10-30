@@ -37,6 +37,7 @@ export const bootstrapOrganization = async (
     email,
     name: input.admin.name,
     jobTitle: null,
+    avatarKey: null,
     isOrgAdmin: true,
     isSpaceManager: false,
     isAccessAuditor: false,

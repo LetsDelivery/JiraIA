@@ -12,6 +12,8 @@ export type FileStore = {
   uploadUrl: (input: { key: string; contentType: string; size: number }) => Promise<UploadTarget>
   /** A URL that downloads the file under its original name, for the next few minutes. */
   downloadUrl: (input: { key: string; name: string; contentType: string }) => Promise<string>
+  /** A URL an `<img>` shows the file from, valid for hours: a person's photo outlives a screen. */
+  viewUrl: (input: { key: string; contentType: string }) => Promise<string>
   /** The size of the stored file, or `undefined` when nothing was uploaded under the key. */
   sizeOf: (key: string) => Promise<number | undefined>
   remove: (key: string) => Promise<void>
@@ -31,6 +33,10 @@ export class InMemoryFileStore implements FileStore {
 
   async downloadUrl(input: { key: string }): Promise<string> {
     return `https://files.counterparty.test/${input.key}?download`
+  }
+
+  async viewUrl(input: { key: string }): Promise<string> {
+    return `https://files.counterparty.test/${input.key}?view`
   }
 
   async sizeOf(key: string): Promise<number | undefined> {

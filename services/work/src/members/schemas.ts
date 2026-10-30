@@ -15,6 +15,8 @@ export const memberViewSchema = z.object({
   name: z.string(),
   /** What the person does at LET'S, beside their name — never inside it. */
   jobTitle: z.string().nullable(),
+  /** Shows the person's photo for the next hours (ADR-0039); `null` draws their initials instead. */
+  avatarUrl: z.string().nullable(),
   isOrgAdmin: z.boolean(),
   /** Creates JiraIA spaces without being an organization admin (ADR-0012). */
   isSpaceManager: z.boolean(),
@@ -57,12 +59,26 @@ export type UpdateProfile = z.infer<typeof updateProfileSchema>
 
 export const memberPathSchema = z.object({ memberId: z.uuid() })
 
-export const toMemberView = (row: MemberRow): MemberView => ({
+/** What a photo may be: the panel sends a small square it cropped itself, so this is generous. */
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+export const AVATAR_EXTENSIONS = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' } as const
+
+/** The photo announced before its bytes go to storage, and announced again once they arrived. */
+export const avatarFileSchema = z.object({
+  contentType: z.enum(['image/webp', 'image/jpeg', 'image/png']),
+  size: z.number().int().min(1).max(MAX_AVATAR_BYTES)
+})
+export type AvatarFile = z.infer<typeof avatarFileSchema>
+
+export const avatarPathSchema = z.object({ avatarId: z.uuid() })
+
+export const toMemberView = (row: MemberRow, avatarUrl: string | null): MemberView => ({
   id: row.id,
   kind: memberKindSchema.parse(row.kind),
   email: row.email,
   name: row.name,
   jobTitle: row.jobTitle,
+  avatarUrl,
   isOrgAdmin: row.isOrgAdmin,
   isSpaceManager: row.isSpaceManager,
   isAccessAuditor: row.isAccessAuditor,
