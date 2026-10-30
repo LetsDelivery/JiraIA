@@ -4,7 +4,7 @@ import { copyPng, download, type ExportOptions, exportPng, exportSvg, fileName }
 import { importScene, sceneJson } from '@/whiteboard/scene-file'
 import type { Whiteboard } from '@/whiteboard/whiteboard'
 
-import { openFormDialog, textField } from './dialog'
+import { closeOnEscape, openFormDialog, textField } from './dialog'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -66,7 +66,7 @@ export const openExport = (board: Whiteboard, title: string): void => {
       void ACTIONS[action]?.(board, title).catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
     }
   })
-  dialog.addEventListener('cancel', () => dialog.remove())
+  closeOnEscape(dialog, () => dialog.remove())
   draw()
   document.body.append(dialog)
   dialog.showModal()

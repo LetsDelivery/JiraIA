@@ -3,6 +3,7 @@ import type { SavedView } from '@/api/requests'
 import { type Html, html } from '@/lib/html'
 import { GROUPING_LABEL, INTERVAL_LABEL, suggestedTitle, titleOf, WIDTH_LABEL, WIDTHS } from '@/lib/reports'
 
+import { closeOnEscape } from './dialog'
 import { openEditorDialog } from './editor-dialog'
 import { type IconName, icon } from './icons'
 import { type SelectOption, selectField } from './select'
@@ -120,7 +121,7 @@ export const openCatalog = (onPick: (widget: Widget) => void): void => {
   `.value
   const close = () => dialog.remove()
   dialog.querySelector('[data-close]')?.addEventListener('click', close)
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   _bindCatalog(dialog, (entry) => {
     close()
     onPick(entry.make())

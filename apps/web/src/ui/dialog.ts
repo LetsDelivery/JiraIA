@@ -17,6 +17,17 @@ type FormDialog = {
 }
 
 /**
+ * Escape closes a dialog — its `cancel`. A file picker closed without a file fires a `cancel` of its
+ * own on the input, which bubbles up here too; that one must leave the dialog open.
+ */
+export const closeOnEscape = (dialog: HTMLDialogElement, close: () => void): void =>
+  dialog.addEventListener('cancel', (event) => {
+    if (event.target === dialog) {
+      close()
+    }
+  })
+
+/**
  * A form in a native `<dialog>`: focus trapping, Escape and the backdrop come from the browser.
  * The surface is glass (ADR-0006): it floats over the page it belongs to.
  */
@@ -44,7 +55,7 @@ export const openFormDialog = (options: FormDialog): void => {
   }
 
   dialog.querySelector('[data-close]')?.addEventListener('click', close)
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   form.addEventListener('submit', (event) => {
     event.preventDefault()
     void _save(form, options, close)
@@ -73,7 +84,7 @@ export const openNotice = (title: string, body: Html): void => {
     dialog.remove()
   }
   dialog.querySelector('[data-close]')?.addEventListener('click', close)
-  dialog.addEventListener('cancel', close)
+  closeOnEscape(dialog, close)
   document.body.append(dialog)
   dialog.showModal()
 }
