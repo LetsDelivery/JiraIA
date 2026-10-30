@@ -24,9 +24,10 @@ const NO_STORE = { 'cache-control': 'no-store' }
 
 /**
  * Where clients look for the documents (RFC 8414, RFC 9728): at the root, and with the path of the
- * issuer or the resource after it — `/work` and `/work/v1/mcp` locally, `/v1/mcp` in AWS.
+ * issuer or the resource after it — `/work` and `/work/v1/mcp` locally, `/api/work/v1/mcp` behind
+ * the panel's domain in AWS.
  */
-const WELL_KNOWN_SUFFIXES = ['', '/{a}', '/{a}/{b}', '/{a}/{b}/{c}']
+const WELL_KNOWN_SUFFIXES = ['', '/{a}', '/{a}/{b}', '/{a}/{b}/{c}', '/{a}/{b}/{c}/{d}']
 
 const wellKnown = (name: string, document: (base: string) => Record<string, unknown>, apiUrl?: string): Route[] =>
   WELL_KNOWN_SUFFIXES.map((suffix) =>

@@ -54084,6 +54084,77 @@
         }
       }
     },
+    "/work/.well-known/oauth-protected-resource/{a}/{b}/{c}/{d}": {
+      "get": {
+        "operationId": "workGet/.wellKnownOauthProtectedResourceABCD",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /.well-known/oauth-protected-resource/{a}/{b}/{c}/{d}",
+        "description": "Requires `public`.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "a",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "b",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "c",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "d",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/work/.well-known/oauth-authorization-server": {
       "get": {
         "operationId": "workGet/.wellKnownOauthAuthorizationServer",
@@ -54252,6 +54323,77 @@
           },
           {
             "name": "c",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work/.well-known/oauth-authorization-server/{a}/{b}/{c}/{d}": {
+      "get": {
+        "operationId": "workGet/.wellKnownOauthAuthorizationServerABCD",
+        "tags": [
+          "work"
+        ],
+        "summary": "GET /.well-known/oauth-authorization-server/{a}/{b}/{c}/{d}",
+        "description": "Requires `public`.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "a",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "b",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "c",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "d",
             "in": "path",
             "required": true,
             "schema": {

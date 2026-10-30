@@ -19,7 +19,7 @@ test('a personal token is shown once, works on /v1 and stops when revoked', asyn
   await page.getByRole('button', { name: /^Sua conta/ }).click()
   await page.getByRole('menuitem', { name: 'Perfil' }).click()
   await page.getByRole('button', { name: 'Novo token' }).click()
-  const form = page.getByRole('dialog', { name: 'Novo token de API' })
+  const form = page.getByRole('dialog', { name: 'Novo token para scripts' })
   await form.getByLabel('Para que serve').fill('Planilha de roadmap')
   await form.getByRole('button', { name: 'Criar token' }).click()
 

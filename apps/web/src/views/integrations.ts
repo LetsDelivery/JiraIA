@@ -1,9 +1,11 @@
 import { intakeRead, intakeWrite, type SlackChannel } from '@/api/intake'
+import { oauthRead } from '@/api/oauth'
 import { read } from '@/api/requests'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { openFormDialog, textField } from '@/ui/dialog'
 import { icon } from '@/ui/icons'
+import { bindMcpConnect, mcpConnectSection } from '@/ui/mcp-connect'
 import { bindServiceAccounts, serviceAccountsSection } from '@/ui/service-accounts'
 import { toast } from '@/ui/toast'
 
@@ -35,20 +37,26 @@ const _connect = () =>
   })
 
 /**
- * Where the organization's integrations live (escopo-mvp 4.5): today the Slack channels automations
- * post to. Everyone sees which exist; organization admins connect and disconnect them.
+ * Where the organization's integrations live (escopo-mvp 4.5): connecting an assistant by MCP, and the
+ * Slack channels automations post to. Everyone sees which exist; organization admins connect and
+ * disconnect the channels.
  */
 export const integrationsView: View = {
   path: '/integracoes',
   skeleton: 'table',
   title: 'Integrações',
   render: async () => {
-    const [me, channels] = await Promise.all([read.me(), intakeRead.slackChannels()])
+    const [me, channels, connections] = await Promise.all([
+      read.me(),
+      intakeRead.slackChannels(),
+      oauthRead.connections()
+    ])
     const accounts = me.isOrgAdmin ? await serviceAccountsSection() : html``
     return html`
       <header class="page-header">
-        <h1>Integrações</h1><p class="muted">Canais do Slack onde as automações publicam e contas de serviço da API.</p>
+        <h1>Integrações</h1><p class="muted">Assistentes conectados pelo MCP, canais do Slack onde as automações publicam e contas de serviço da API.</p>
       </header>
+      ${mcpConnectSection(connections.items)}
       <section class="section">
         <div class="section-head">
           <div><h2>Canais do Slack</h2><p class="muted">Onde as automações publicam os avisos.</p></div>
@@ -69,6 +77,7 @@ export const integrationsView: View = {
   bind: (root) => {
     root.querySelector('[data-connect-slack]')?.addEventListener('click', _connect)
     bindServiceAccounts(root)
+    bindMcpConnect(root)
     root.querySelector('table:not(.token-table) tbody')?.addEventListener('click', (event) => {
       const id = (event.target as HTMLElement).closest<HTMLElement>('[data-remove-channel]')?.dataset.removeChannel
       if (id) {
