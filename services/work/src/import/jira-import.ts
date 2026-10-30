@@ -77,7 +77,8 @@ type Loaded = {
 type Shared = {
   jiraFields: JiraField[]
   mapping: Person[]
-  boards: JiraBoard[]
+  /** The boards' columns the raw copy captured; undefined when it has no `boards.json`. */
+  boards: JiraBoard[] | undefined
   unmapped: Set<string>
   /** Who each account is, across every project of the run: a link's author may be in another. */
   people: People[]
@@ -118,7 +119,10 @@ export class JiraImport {
     const shared: Shared = {
       jiraFields: fieldListSchema.parse(await this.deps.store.getJson(`${prefix}/fields.json`)) as JiraField[],
       mapping: z.array(personSchema).parse((await this.deps.store.getJson(PEOPLE_MAPPING)) ?? []),
-      boards: z.array(jiraBoardSchema).parse((await this.deps.store.getJson(`${prefix}/boards.json`)) ?? []),
+      boards: z
+        .array(jiraBoardSchema)
+        .optional()
+        .parse(await this.deps.store.getJson(`${prefix}/boards.json`)),
       unmapped: new Set(),
       people: []
     }
@@ -248,10 +252,16 @@ export class JiraImport {
     })
   }
 
-  /** The board shows the columns of the project's Jira board, or one per status it draws (ADR-0037). */
+  /**
+   * The board shows the columns of the project's Jira board, or one per status it draws (ADR-0037). A raw
+   * copy without the boards' columns cannot tell the two apart, so it leaves a board already drawn alone.
+   */
   private async applyColumns(loaded: Loaded, shared: Shared, spaceId: string): Promise<void> {
-    const board = shared.boards.find((entry) => entry.project === loaded.project.key)
     const columns = new ImportColumns({ db: this.deps.db, ids: this.deps.ids })
+    if (shared.boards === undefined && (await columns.drawn(spaceId))) {
+      return
+    }
+    const board = shared.boards?.find((entry) => entry.project === loaded.project.key)
     await columns.apply(spaceId, wantedColumns(board, loaded.workflow.boardStates), this.deps.clock.now())
   }
 

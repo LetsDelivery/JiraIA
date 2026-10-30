@@ -82,6 +82,17 @@ describe('Jira raw copy', () => {
     expect(store.documents.get('import/r1/jira/report.json')).toEqual(report)
   })
 
+  it('carries the boards’ columns captured by hand into the next run', async () => {
+    const { store, copy } = setup()
+    const boards = [{ project: 'TEC', board: { id: 31, name: 'quadro TDV3' }, columns: [] }]
+    await copy.run({ run: 'r1', projects: ['TEC'] })
+    await store.putJson('import/r1/jira/boards.json', boards)
+
+    await copy.run({ run: 'r2', projects: ['TEC'], previousRun: 'r1' })
+
+    expect(store.documents.get('import/r2/jira/boards.json')).toEqual(boards)
+  })
+
   it('names a project the account cannot see instead of skipping it quietly', async () => {
     const { copy } = setup()
     const report = await copy.run({ run: 'r1', projects: ['TEC', 'JUR'] })
