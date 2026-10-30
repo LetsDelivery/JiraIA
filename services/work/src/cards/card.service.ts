@@ -4,12 +4,14 @@ import type { Caller } from '@jiraia/http'
 
 import { type AuditEventView, type AuditTrail, type Changes, diff } from '../audit/audit.js'
 import type { MemberRow } from '../members/schemas.js'
+import { doneSinceCondition } from '../search/card-query.js'
 import type { Gate, SpaceGate } from '../spaces/space-gate.js'
 import type { CardFields, CardRepository } from './card.repository.js'
 import type { CardAccess, CardGate } from './card-gate.js'
 import { type CardRules, fieldChanges } from './card-rules.js'
 import { rankAt } from './ranking.js'
 import {
+  type CardListQuery,
   type CardRow,
   type CardView,
   type CreateCard,
@@ -38,13 +40,15 @@ type Deps = {
 export class CardService {
   constructor(private readonly deps: Deps) {}
 
-  async list(caller: Caller, spaceId: string, sprint?: string): Promise<{ items: CardView[] }> {
+  async list(caller: Caller, spaceId: string, query: CardListQuery = {}): Promise<{ items: CardView[] }> {
     await this.deps.gate.check(caller, spaceId, 'space:read')
+    const { sprint, doneSince } = query
     const sprintId = sprint === 'active' ? ((await this.deps.rules.activeSprint(spaceId)) ?? null) : sprint
     if (sprint === 'active' && sprintId === null) {
       return { items: [] }
     }
-    const rows = await this.deps.cards.list(spaceId, sprintId === 'none' ? null : sprintId)
+    const recent = doneSince ? doneSinceCondition(doneSince, this.deps.clock.now()) : undefined
+    const rows = await this.deps.cards.list(spaceId, sprintId === 'none' ? null : sprintId, recent)
     return { items: rows.map(toCardView) }
   }
 

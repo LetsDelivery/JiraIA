@@ -2,6 +2,7 @@ import { accessRead } from '@/api/access'
 import { read, spaceIdByKey, visitSpace } from '@/api/requests'
 import { withParams } from '@/lib/filters'
 import { type Html, html } from '@/lib/html'
+import { DONE_SINCE, hidesOldDone } from '@/lib/old-done'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
 import { movedTab, settingsPath } from '@/lib/space-settings'
@@ -85,9 +86,11 @@ let context: BoardContext | undefined
 let filters: FilterState | undefined
 
 /** The work tab's context: the cards a filter or a saved view lets through (3.4, 3.5). */
-const loadWork = async (spaceId: string) => {
+const loadWork = async (spaceId: string, tab: WorkTab) => {
   filters = await loadFilterState(spaceId)
-  const loaded = await loadBoard(spaceId, filters.filter)
+  // Only the Lista leaves out the cards done long ago (ADR-0040).
+  const hides = tab === 'lista' && hidesOldDone(filters.filter, location.search)
+  const loaded = await loadBoard(spaceId, filters.filter, hides ? DONE_SINCE : undefined)
   return { ...loaded, filtered: Object.keys(filters.filter).length > 0 }
 }
 
@@ -116,7 +119,7 @@ export const spaceView: View = {
     const { canManage: manages, canWrite } = access
     const starred = mine.starred.some((each) => each.id === space.id)
     const tab = currentTab()
-    const loaded = isWork(tab) ? await loadWork(spaceId) : undefined
+    const loaded = isWork(tab) ? await loadWork(spaceId, tab) : undefined
     context = loaded ? { spaceId, spaceKey: space.key, meId: me.id, canWrite, manages, ...loaded } : undefined
 
     return html`

@@ -205,7 +205,7 @@ const sprintTools = (deps: ReadDeps): Tool[] => [
       if (!sprint) {
         throw new NotFoundException('Sprint', sprintId ?? `active in ${found.key}`)
       }
-      const cards = await deps.cards.list(context.caller, found.id, sprint.id)
+      const cards = await deps.cards.list(context.caller, found.id, { sprint: sprint.id })
       return { sprint, cards: cards.items.map(cardLine) }
     }
   })

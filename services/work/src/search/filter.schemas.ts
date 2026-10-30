@@ -51,6 +51,11 @@ export const cardFilterSchema = z.object({
   due: rangeSchema.optional(),
   /** Jira's `status CHANGED TO X AFTER D`: moved into one of these states since then. */
   movedTo: z.object({ stateIds: idsSchema, after: dayBoundSchema }).optional(),
+  /**
+   * A done card only if it entered a done state since then; every other card regardless. The Lista
+   * leaves out what was finished long ago this way, `-60d` (ADR-0040).
+   */
+  doneSince: dayBoundSchema.optional(),
   /** A custom field holding any of these values; for a multiple selection, any of its values (2.5). */
   fields: z
     .array(

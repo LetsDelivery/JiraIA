@@ -74,13 +74,13 @@ export class CardRepository {
    * none, when `sprintId` says so. Read in pages and without the description, which only a card's own
    * read carries: a space of thousands of cards would pass the Data API's 1 MiB answer (ADR-0027).
    */
-  async list(spaceId: string, sprintId?: string | null): Promise<CardWithPeople[]> {
+  async list(spaceId: string, sprintId?: string | null, also?: SQL): Promise<CardWithPeople[]> {
     const inSprint =
       sprintId === undefined ? undefined : sprintId === null ? isNull(cards.sprintId) : eq(cards.sprintId, sprintId)
     const rows: CardWithPeople[] = []
     for (let after = ''; ; ) {
       const page = await this._listPage(
-        and(eq(cards.spaceId, spaceId), inSprint, after ? gt(cards.id, after) : undefined)
+        and(eq(cards.spaceId, spaceId), inSprint, also, after ? gt(cards.id, after) : undefined)
       )
       rows.push(...page)
       if (page.length < LIST_PAGE) {

@@ -75,8 +75,19 @@ export const cardViewSchema = z.object({
   updatedAt: z.iso.datetime()
 })
 export type CardView = z.infer<typeof cardViewSchema>
-/** A space's cards, or only those of a sprint: the active one, one by id, or none — the backlog (ADR-0029). */
-export const cardListQuerySchema = z.object({ sprint: z.union([z.enum(['active', 'none']), z.uuid()]).optional() })
+/**
+ * A space's cards, or only those of a sprint: the active one, one by id, or none — the backlog (ADR-0029).
+ * `doneSince` (`-60d`) leaves out the cards that entered a done state before then, as the Lista does
+ * (ADR-0040).
+ */
+export const cardListQuerySchema = z.object({
+  sprint: z.union([z.enum(['active', 'none']), z.uuid()]).optional(),
+  doneSince: z
+    .string()
+    .regex(/^-\d{1,4}d$/)
+    .optional()
+})
+export type CardListQuery = z.infer<typeof cardListQuerySchema>
 /** A space's cards, each without its description (empty): only reading the card itself carries it. */
 export const cardListSchema = z.object({ items: z.array(cardViewSchema) })
 
