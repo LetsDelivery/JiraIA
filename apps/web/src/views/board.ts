@@ -1,3 +1,4 @@
+import { cardDetailRead } from '@/api/card-detail'
 import {
   type Card,
   type CardRef,
@@ -202,6 +203,7 @@ export const bindBoard = (root: HTMLElement, context: BoardContext): void => {
 /** Every `[data-open-card]` under `root` opens that card; `?card=KEY-n` in the address opens it too. */
 export const bindOpenCards = (root: HTMLElement, context: BoardContext): void => {
   root.querySelectorAll<HTMLElement>('[data-open-card]').forEach((button) => {
+    warmOnRest(button, button.dataset.openCard ?? '')
     button.addEventListener('click', () => {
       const card = context.cards.find((each) => each.id === button.dataset.openCard)
       if (card) {
@@ -210,6 +212,16 @@ export const bindOpenCards = (root: HTMLElement, context: BoardContext): void =>
     })
   })
   void openLinkedCard(context)
+}
+
+/** Resting on a card a moment starts loading its page, so the click finds it on its way (ADR-0041). */
+const warmOnRest = (button: HTMLElement, cardId: string): void => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  button.addEventListener('pointerenter', () => {
+    timer = setTimeout(() => cardDetailRead.warm(cardId), 120)
+  })
+  button.addEventListener('pointerleave', () => clearTimeout(timer))
+  button.addEventListener('focus', () => cardDetailRead.warm(cardId))
 }
 
 /**

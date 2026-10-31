@@ -715,6 +715,11 @@ button.labels-tags:hover > .icon {
   gap: var(--space-3);
 }
 
+/* A comment on its way: in place at once, faint until the API keeps it. */
+.card-detail .comments .comment-pending {
+  opacity: 0.6;
+}
+
 .card-detail .history li {
   display: flex;
   padding-left: 0;

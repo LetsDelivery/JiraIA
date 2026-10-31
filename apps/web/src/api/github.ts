@@ -15,9 +15,7 @@ export type GitHubStatus = Json<'/work/integrations/github', 'get'>
 export type DevLink = Json<'/work/cards/{cardId}/development', 'get'>['items'][number]
 
 export const githubRead = {
-  status: () => cached('github', () => unwrap(api.GET('/work/integrations/github'))),
-  /** A card's branches and pull requests: never cached, GitHub changes them at any time. */
-  development: (cardId: string) => unwrap(api.GET('/work/cards/{cardId}/development', { params: { path: { cardId } } }))
+  status: () => cached('github', () => unwrap(api.GET('/work/integrations/github')))
 }
 
 export const githubWrite = {
