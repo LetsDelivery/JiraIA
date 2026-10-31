@@ -2,7 +2,6 @@ import { accessRead, type Group } from '@/api/access'
 import { type CardDetail, cardDetailRead } from '@/api/card-detail'
 import { githubRead } from '@/api/github'
 import { type Card, type CardChanges, type CardRef, type CardType, read, write } from '@/api/requests'
-import { branchName } from '@/lib/github'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
 import { navigate } from '@/lib/router'
@@ -13,10 +12,10 @@ import { type ActivityTab, activitySection, bindActivity } from './card-activity
 import { attachButton, attachmentsSection, bindAttachments, uploadFile } from './card-attachments'
 import { bindComments, commentsSection } from './card-comments'
 import { type DescriptionHandle, descriptionSection, mountDescription } from './card-description'
-import { bindDevelopment, developmentSection } from './card-development'
+import { bindDevelopment, developmentGroup } from './card-development'
 import { pickLabels } from './card-pickers'
 import { bindRelations, type ComposeForm, type RelationsContext, relationsSection } from './card-relations'
-import { bindSide, type SideGroup, side } from './card-side'
+import { bindSide, type SideGroup, type SideParts, side } from './card-side'
 import { worklogsSection } from './card-worklogs'
 import { bindCustomFields } from './custom-fields'
 import { bindDatePickers } from './date-picker'
@@ -92,7 +91,7 @@ const actionBar = (canWrite: boolean): Html =>
       </div>`
     : html``
 
-type Parts = { sections: Html; squad: Html; folded: ReadonlySet<SideGroup> }
+type Parts = SideParts & { sections: Html }
 
 const content = (card: Card, context: BoardContext, loaded: Loaded, parts: Parts): Html => html`
   <div class="detail-root" data-detail-root>
@@ -106,7 +105,7 @@ const content = (card: Card, context: BoardContext, loaded: Loaded, parts: Parts
       ${actionBar(context.canWrite)}
       ${parts.sections}
     </div>
-    ${side(card, context, parts.squad, parts.folded)}
+    ${side(card, context, parts)}
   </div>
   </div>
 `
@@ -243,11 +242,15 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
   const squadContext = squadOf(card, context, loaded, changes)
   const tab = (dialog.dataset.activity ?? 'comments') as ActivityTab
   const folded = new Set((dialog.dataset.folded ?? '').split(',').filter(Boolean) as SideGroup[])
+  const development = developmentGroup(
+    loaded.development,
+    { key: card.key, title: card.title, bug: bugOf(card, context) },
+    loaded.github
+  )
   const comments = { html: commentsSection(loaded.comments, commentContext), count: loaded.comments.length }
   const sections = html`
     ${relationsSection(loaded.relations, relationContext)}
     ${attachmentsSection(loaded.attachments, attachContext)}
-    ${developmentSection(loaded.development, branchOf(card, context), loaded.github)}
     ${worklogsSection(loaded.worklogs)}
     ${activitySection({ ...context, groups: loaded.groups }, loaded.history, comments, tab)}
   `
@@ -256,7 +259,12 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
   const draft = previous?.draft()
   previous?.destroy()
   keepPlace(dialog, () => {
-    dialog.innerHTML = content(card, context, loaded, { sections, squad: squadField(squadContext), folded }).value
+    dialog.innerHTML = content(card, context, loaded, {
+      sections,
+      squad: squadField(squadContext),
+      development,
+      folded
+    }).value
   })
   bindSelects(dialog)
   bindDatePickers(dialog)
@@ -299,9 +307,9 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
   applyArrival(dialog)
 }
 
-/** The branch the card's work should go on; a type that looks like a bug (ADR-0031) gets `fix/`. */
-const branchOf = (card: Card, context: BoardContext): string =>
-  branchName(card.key, card.title, context.workflow.types.find((type) => type.id === card.typeId)?.icon === 'bug')
+/** Whether the card's type looks like a bug (ADR-0031): its branch and commits are then a `fix`. */
+const bugOf = (card: Card, context: BoardContext): boolean =>
+  context.workflow.types.find((type) => type.id === card.typeId)?.icon === 'bug'
 
 /** What the relations panels need; which composer is open lives on the dialog, across redraws. */
 const relationsOf = (

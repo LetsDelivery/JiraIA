@@ -13,7 +13,7 @@ import { selectField } from './select'
 const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
 
 /** The groups of the side column a person can fold; which are folded lives on the dialog, across redraws. */
-export type SideGroup = 'details' | 'structure' | 'integrations'
+export type SideGroup = 'details' | 'structure' | 'development'
 
 type Select = (
   name: string,
@@ -111,14 +111,6 @@ const structure = (card: Card, context: BoardContext, squad: Html): Html => html
   ${context.space.usesSprints ? selectOf(context.canWrite)('sprintId', 'Sprint', 'bolt', sprintOptions(card, context), card.sprintId ?? '') : ''}
 `
 
-/**
- * Room for what other tools know about the card. GitHub is out of the MVP (escopo-mvp, "Fora do
- * MVP"), so its row only says so; a connected tool will list its pull requests and commits here.
- */
-const integrations = (): Html => html`
-  ${readField('GitHub', 'gitPullRequest', html`<span class="muted">Em breve</span>`)}
-`
-
 const group = (id: SideGroup, title: string, folded: ReadonlySet<SideGroup>, body: Html): Html => html`
   <details class="side-group" data-side-group="${id}" ${folded.has(id) ? '' : html`open`}>
     <summary class="side-group-title">${title}${icon('chevronDown', 14)}</summary>
@@ -155,17 +147,20 @@ const meta = (card: Card): Html => html`
 
 /**
  * The side column: the state, then the fields in groups a person can fold — the card's details, where
- * it sits, what other tools know — and when the card was born.
+ * it sits, its development on GitHub — and when the card was born.
  */
-export const side = (card: Card, context: BoardContext, squad: Html, folded: ReadonlySet<SideGroup>): Html => html`
+export const side = (card: Card, context: BoardContext, parts: SideParts): Html => html`
   <aside class="detail-side">
     ${toolbar(card, context)}
-    ${group('details', 'Detalhes', folded, details(card, context))}
-    ${group('structure', 'Estrutura do espaço', folded, structure(card, context, squad))}
-    ${group('integrations', 'Integrações', folded, integrations())}
+    ${group('details', 'Detalhes', parts.folded, details(card, context))}
+    ${group('structure', 'Estrutura do espaço', parts.folded, structure(card, context, parts.squad))}
+    ${group('development', 'Desenvolvimento', parts.folded, parts.development)}
     ${meta(card)}
   </aside>
 `
+
+/** What the side column draws that the card detail owns: the squad picker, the development, what is folded. */
+export type SideParts = { squad: Html; development: Html; folded: ReadonlySet<SideGroup> }
 
 /** Folding a group is remembered across redraws. */
 export const bindSide = (root: HTMLElement, fold: (group: SideGroup, folded: boolean) => void): void => {

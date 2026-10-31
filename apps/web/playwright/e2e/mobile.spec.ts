@@ -55,7 +55,7 @@ const SCREENS = [
   '/notificacoes',
   '/grupos',
   '/pessoas',
-  '/configuracoes',
+  '/notificacoes/preferencias',
   '/draw'
 ]
 

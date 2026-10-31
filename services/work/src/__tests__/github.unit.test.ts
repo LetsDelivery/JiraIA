@@ -44,6 +44,11 @@ describe('the keys a branch or pull request names', () => {
     expect(keysOf('feat/req-12-frete', 'REQ-12 e TEC-3: frete')).toEqual(['REQ-12', 'TEC-3'])
   })
 
+  it('reads the key a conventional commit scopes its type by', () => {
+    expect(keysOf('feat/PRD-3-cobranca-de-frete', 'feat(PRD-3): Cobrança automática de frete')).toEqual(['PRD-3'])
+    expect(keysOf('fix/TEC-9-login', 'fix(tec-9): Erro no login')).toEqual(['TEC-9'])
+  })
+
   it('reads none from a branch without one', () => {
     expect(keysOf('master', 'Atualiza dependências')).toEqual([])
   })

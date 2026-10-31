@@ -3,8 +3,8 @@ import { crc32, deflateSync } from 'node:zlib'
 import { expect, type Page, test } from '@playwright/test'
 
 /**
- * Etapa 5e through the screens (ADR-0018): the account menu at the right of the header, the account
- * settings, and connecting Slack. The E2E stack runs the local Slack stand-in, so the consent screen is
+ * Etapa 5e through the screens (ADR-0018): the account menu at the right of the header, the notification
+ * preferences, and connecting Slack. The E2E stack runs the local Slack stand-in, so the consent screen is
  * the only step that would leave the machine: the test answers it as Slack would.
  */
 const signIn = async (page: Page, email: string) => {
@@ -16,7 +16,9 @@ const signIn = async (page: Page, email: string) => {
 
 const openAccount = async (page: Page) => await page.getByRole('button', { name: /^Sua conta/ }).click()
 
-test('the account menu shows who is signed in, changes the theme and opens the settings', async ({ page }) => {
+test('the account menu shows who is signed in, changes the theme and opens the notification preferences', async ({
+  page
+}) => {
   await signIn(page, 'ana@uselets.com')
   await openAccount(page)
   const menu = page.getByRole('menu', { name: 'Sua conta' })
@@ -25,13 +27,24 @@ test('the account menu shows who is signed in, changes the theme and opens the s
   await menu.getByRole('menuitemradio', { name: 'Escuro' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.screenshot({ path: test.info().outputPath('dark.png') })
+  await openAccount(page)
+  await menu.getByRole('menuitemradio', { name: 'Seguir o sistema' }).click()
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./)
 
   await openAccount(page)
-  await page.getByRole('menuitem', { name: 'Configurações da conta' }).click()
-  await expect(page.getByRole('heading', { name: 'Configurações da conta' })).toBeVisible()
-  await page.getByRole('radio', { name: 'Seguir o sistema' }).click()
-  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./)
+  await page.getByRole('menuitem', { name: 'Notificações' }).click()
+  await expect(page).toHaveURL(/\/notificacoes\/preferencias$/)
+  await expect(page.getByRole('heading', { name: 'Preferências de notificação' })).toBeVisible()
   await expect(page.getByText('O Slack ainda não está conectado à organização.')).toBeVisible()
+})
+
+test('the old addresses of the settings open the notification preferences', async ({ page }) => {
+  await signIn(page, 'ana@uselets.com')
+  for (const old of ['/configuracoes', '/notificacoes?aba=preferencias']) {
+    await page.goto(old)
+    await expect(page).toHaveURL(/\/notificacoes\/preferencias$/)
+    await expect(page.getByRole('combobox', { name: 'Como avisar: Atribuições' })).toBeVisible()
+  }
 })
 
 test('an admin connects Slack; a person is found there and routes a notice to it', async ({ page }) => {
@@ -54,7 +67,7 @@ test('an admin connects Slack; a person is found there and routes a notice to it
   await expect(page.getByText('Achamos você no Slack pelo seu e-mail.')).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('slack-after.png'), fullPage: true })
 
-  await page.goto('/configuracoes')
+  await page.goto('/notificacoes/preferencias')
   await page.getByRole('combobox', { name: 'Como avisar: Atribuições' }).click()
   await page.getByRole('option', { name: 'JiraIA e Slack' }).click()
   await expect(page.locator('.toast', { hasText: 'Preferência salva.' })).toBeVisible()

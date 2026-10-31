@@ -31,7 +31,7 @@ export const accountMenu = (me: Me, theme: ThemeChoice): Html => html`
     <div><strong>${me.name}</strong><span class="muted">${me.email ?? ''}</span></div>
   </div>
   <a role="menuitem" href="/perfil">${icon('user', 16)}Perfil</a>
-  <a role="menuitem" href="/configuracoes">${icon('settings', 16)}Configurações da conta</a>
+  <a role="menuitem" href="/notificacoes/preferencias">${icon('bell', 16)}Notificações</a>
   <div class="account-group" role="group" aria-label="Tema">
     <span class="account-group-label">${icon(theme === 'dark' ? 'moon' : 'sun', 16)}Tema</span>
     ${THEMES.map(

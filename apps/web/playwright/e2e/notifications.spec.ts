@@ -50,7 +50,16 @@ test('a mention reaches the bell, opens the card, and is archived', async ({ pag
 
 test('a person chooses what reaches them by e-mail', async ({ page }) => {
   await signIn(page, 'ana@uselets.com')
-  await page.goto('/notificacoes?aba=preferencias')
+  await page.goto('/notificacoes')
+  await expect(page.getByRole('heading', { name: 'Central de Notificações' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Notificações' }).getByRole('link')).toHaveText([
+    'Caixa de entrada',
+    'Adiadas',
+    'Arquivadas'
+  ])
+  await page.getByRole('link', { name: 'Preferências' }).click()
+  await expect(page.getByRole('heading', { name: 'Preferências de notificação' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Notificações' })).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Como avisar: Comentários' })).toContainText('JiraIA e e-mail')
   await page.getByRole('combobox', { name: 'Como avisar: Comentários' }).click()
   await page.getByRole('option', { name: 'Só no JiraIA' }).click()

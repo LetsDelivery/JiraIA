@@ -69,6 +69,7 @@ import folderOpen from '@tabler/icons/outline/folder-open.svg?raw'
 import forms from '@tabler/icons/outline/forms.svg?raw'
 import frame from '@tabler/icons/outline/frame.svg?raw'
 import gitBranch from '@tabler/icons/outline/git-branch.svg?raw'
+import gitCommit from '@tabler/icons/outline/git-commit.svg?raw'
 import gitMerge from '@tabler/icons/outline/git-merge.svg?raw'
 import gitPullRequest from '@tabler/icons/outline/git-pull-request.svg?raw'
 import gitPullRequestClosed from '@tabler/icons/outline/git-pull-request-closed.svg?raw'
@@ -173,6 +174,7 @@ const ICONS = {
   slack,
   github,
   gitBranch,
+  gitCommit,
   gitMerge,
   gitPullRequestClosed,
   gitPullRequestDraft,

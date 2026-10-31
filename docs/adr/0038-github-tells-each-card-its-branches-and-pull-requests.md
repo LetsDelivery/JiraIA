@@ -55,6 +55,12 @@ on the team's behalf: **when the pull request is merged, the card moves to revie
 - **The card shows a "Desenvolvimento" section** — pull requests with state, review and checks, then
   branches — and a **Copiar nome da branch** button: `feat/` (`fix/` for a type that looks like a bug,
   ADR-0031), the key, the title in lower case.
+- **Amended 2026-10-31: "Desenvolvimento" moved to the card's side column, as Jira has it.** Two rows
+  open to commands to copy: **Criar branch** (`git checkout -b feat/TEC-1343-titulo`, unchanged) and
+  **Criar commit**, a conventional commit scoped by the key — `feat(TEC-1343): Título`, `fix(…)` for a
+  bug. Commits are still not followed; the same prefix in the pull request's title is what links it,
+  and the key's pattern already reads it inside the parentheses. Below them, how many pull requests and
+  branches name the card, each opening to its list, and their checks.
 
 ## Consequences
 

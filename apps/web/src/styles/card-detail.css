@@ -187,7 +187,7 @@
   gap: var(--space-2);
 }
 
-/* A writer's description is one box: the bar always on top — held there while the text scrolls — then the text. */
+/* A writer's description is one box: the bar on top while it is being edited — held there while the text scrolls — then the text. */
 .description-box {
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
@@ -208,6 +208,11 @@
   border-bottom: 1px solid var(--border);
   border-radius: calc(var(--radius-surface) - 1px) calc(var(--radius-surface) - 1px) 0 0;
   background: var(--surface);
+}
+
+/* The bar only while the text is being edited: the box has focus, or holds text not saved yet. */
+[data-description-block]:not(.is-dirty) .description-box:not(:focus-within) .description-toolbar {
+  display: none;
 }
 
 .description-toolbar .format-toolbar {
@@ -232,8 +237,9 @@
   box-shadow: none;
 }
 
-[data-description-block]:focus-within .description-actions,
-[data-description-block].is-dirty .description-actions {
+/* Save and Cancel while the text is being edited, or reached with the keyboard; never left behind by a click on them. */
+[data-description-block]:is(.is-dirty, :has(.description-box:focus-within), :has(.description-actions :focus-visible))
+  .description-actions {
   display: flex;
 }
 

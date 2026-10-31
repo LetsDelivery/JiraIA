@@ -162,6 +162,143 @@
 }
 
 /* ---------- Development: branches and pull requests from GitHub (ADR-0038) ---------- */
+/* In the side column, as Jira: rows that read as links, each count opening to its list. */
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dev-row::-webkit-details-marker {
+  display: none;
+}
+
+.dev-row > .icon:first-child {
+  flex: none;
+  color: var(--muted);
+}
+
+.dev-row:hover {
+  background: var(--surface-hover);
+}
+
+.dev-row > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-row > .icon:last-child:not(:first-child) {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.dev-how[open] > .dev-row > .icon:last-child {
+  transform: rotate(180deg);
+}
+
+.dev-how-body {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.dev-how-title {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dev-how-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.dev-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.dev-copy-label {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.dev-copy-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.detail-props .dev-copy-row .input {
+  border-color: var(--border);
+  background: var(--bg);
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.dev-copy-row .button {
+  flex: none;
+}
+
+.dev-row-static {
+  cursor: default;
+}
+
+.dev-row-static:hover {
+  background: transparent;
+}
+
+.dev-row .dev-state {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dev-state-merged {
+  border-color: var(--state-progress);
+  color: var(--state-progress);
+}
+
+.dev-state-open {
+  border-color: var(--state-done);
+  color: var(--state-done);
+}
+
+.dev-more > .dev-links {
+  padding: var(--space-2) var(--space-2) var(--space-3) calc(var(--space-2) + 16px + var(--space-2));
+}
+
+.dev-row-static.dev-checks-success > .icon {
+  color: var(--state-done);
+}
+
+.dev-row-static.dev-checks-failure > .icon {
+  color: var(--accent);
+}
+
 .dev-links {
   display: grid;
   gap: var(--space-3);

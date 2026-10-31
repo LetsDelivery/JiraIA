@@ -7,28 +7,24 @@ import { navigate } from '@/lib/router'
 import { avatar } from '@/ui/avatar'
 import { toggleFloatingMenu } from '@/ui/floating-menu'
 import { icon } from '@/ui/icons'
-import { bindPreferences, preferencesPanel } from '@/ui/notification-preferences'
 import { toast } from '@/ui/toast'
 
 import type { View } from './view'
 
-type Tab = Box | 'preferencias'
-
-const TABS: { tab: Tab; label: string }[] = [
+const TABS: { tab: Box; label: string }[] = [
   { tab: 'inbox', label: 'Caixa de entrada' },
   { tab: 'snoozed', label: 'Adiadas' },
-  { tab: 'archived', label: 'Arquivadas' },
-  { tab: 'preferencias', label: 'Preferências' }
+  { tab: 'archived', label: 'Arquivadas' }
 ]
 
 const WHEN = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
 
-const currentTab = (): Tab => {
+const currentTab = (): Box => {
   const tab = new URLSearchParams(location.search).get('aba')
   return TABS.find((each) => each.tab === tab)?.tab ?? 'inbox'
 }
 
-const tabs = (current: Tab, unread: number) => html`
+const tabs = (current: Box, unread: number) => html`
   <nav class="tabs" aria-label="Notificações">
     ${TABS.map(
       ({ tab, label }) =>
@@ -69,29 +65,38 @@ const EMPTY: Record<Box, string> = {
   archived: 'Nenhuma notificação arquivada.'
 }
 
-/** The inbox (escopo-mvp 4.6): what happened that concerns you, with read, snooze and archive. */
+/** The address the preferences had while they were a tab here, kept for links already saved. */
+const _isOldPreferences = (): boolean => new URLSearchParams(location.search).get('aba') === 'preferencias'
+
+/**
+ * The Central de Notificações (escopo-mvp 4.6): what happened that concerns you, with read, snooze and
+ * archive. Which notices come and where is a page of its own, linked from the header.
+ */
 export const notificationsView: View = {
   path: '/notificacoes',
-  title: 'Notificações',
+  title: 'Central de Notificações',
   render: async () => {
+    if (_isOldPreferences()) {
+      return html``
+    }
     const tab = currentTab()
-    const inbox = await noticesRead.list(tab === 'preferencias' ? 'inbox' : tab)
-    const body =
-      tab === 'preferencias'
-        ? await preferencesPanel()
-        : inbox.items.length
-          ? html`<ul class="notice-list">${inbox.items.map((notice) => noticeItem(notice, tab))}</ul>`
-          : html`<div class="empty"><p class="empty-title">${EMPTY[tab]}</p></div>`
+    const inbox = await noticesRead.list(tab)
+    const body = inbox.items.length
+      ? html`<ul class="notice-list">${inbox.items.map((notice) => noticeItem(notice, tab))}</ul>`
+      : html`<div class="empty"><p class="empty-title">${EMPTY[tab]}</p></div>`
     return html`
       <header class="page-header row">
-        <h1>Notificações</h1>
-        ${tab === 'inbox' && inbox.unread ? html`<button type="button" class="button button-secondary" data-read-all>Marcar todas como lidas</button>` : ''}
+        <h1>Central de Notificações</h1>
+        <div class="row">
+          ${tab === 'inbox' && inbox.unread ? html`<button type="button" class="button button-secondary" data-read-all>Marcar todas como lidas</button>` : ''}
+          <a class="button button-ghost" href="/notificacoes/preferencias">${icon('settings', 16)}Preferências</a>
+        </div>
       </header>
       ${tabs(tab, inbox.unread)}
       <section class="section notice-section">${body}</section>
     `
   },
-  bind: (root) => bindNotifications(root)
+  bind: (root) => (_isOldPreferences() ? navigate('/notificacoes/preferencias', true) : bindNotifications(root))
 }
 
 const SNOOZE_MENU = html`
@@ -145,7 +150,6 @@ const bindNotifications = (root: HTMLElement): void => {
       void noticesWrite.update(id, { read: true }).finally(() => navigate(link.getAttribute('href') ?? '/'))
     }
   })
-  bindPreferences(root)
 }
 
 /**

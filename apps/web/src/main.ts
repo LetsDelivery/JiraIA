@@ -70,7 +70,7 @@ import { peopleView } from '@/views/people'
 import { profileView } from '@/views/profile'
 import { proposalsView } from '@/views/proposals'
 import { searchView } from '@/views/search'
-import { settingsView } from '@/views/settings'
+import { notificationPreferencesView, settingsView } from '@/views/settings'
 import { applyTheme, appsMenu, collapsed, isDark, shell, spacesOpen, theme, toggleSection } from '@/views/shell'
 import { bindSignIn, signInPage } from '@/views/sign-in'
 import { slackConnectView, slackView } from '@/views/slack'
@@ -104,6 +104,7 @@ const ROUTES: readonly View[] = [
   accessReportView,
   integrationsView,
   notificationsView,
+  notificationPreferencesView,
   proposalsView,
   oauthConsentView,
   settingsView,
