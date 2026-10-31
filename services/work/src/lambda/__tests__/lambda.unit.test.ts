@@ -273,6 +273,16 @@ describe('publishPanel', () => {
     )
   })
 
+  it('serves a module script as JavaScript, so a worker loads under nosniff', async () => {
+    const dir = await _built()
+    await writeFile(join(dir, 'assets', 'pdf.worker.min-abc123.mjs'), 'export {}')
+    const bucket = new InMemoryPanelBucket()
+    await publishPanel(dir, bucket, { cognitoDomain: '', cognitoClientId: '', allowedEmailDomains: ['x'] })
+    expect(bucket.objects.get('assets/pdf.worker.min-abc123.mjs')).toMatchObject({
+      contentType: 'text/javascript; charset=utf-8'
+    })
+  })
+
   it('refuses a panel that was never built, naming where it looked', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'panel-'))
     await expect(
