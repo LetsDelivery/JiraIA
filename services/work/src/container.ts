@@ -16,6 +16,8 @@ import { CardTypeService } from './cards/card-type.service.js'
 import { CommentRepository } from './cards/comment.repository.js'
 import { CommentService } from './cards/comment.service.js'
 import { attachmentRoutes, conversationRoutes, worklogRoutes } from './cards/conversation.routes.js'
+import { cardDetailRoutes } from './cards/detail.routes.js'
+import { CardDetailService } from './cards/detail.service.js'
 import { FieldRepository } from './cards/field.repository.js'
 import { FieldService } from './cards/field.service.js'
 import { LinkRepository } from './cards/link.repository.js'
@@ -296,6 +298,7 @@ export const buildService = (config: Config, overrides: Overrides = {}) => {
     ...cardRoutes(services.cards),
     ...linkRoutes(services.links),
     ...conversationRoutes(services.comments, services.watchers),
+    ...cardDetailRoutes(new CardDetailService({ ...services, proposals, github: github.githubConnect })),
     ...myCardRoutes(services.myCards),
     ...attachmentRoutes(services.attachments),
     ...worklogRoutes(services.worklogs),

@@ -1,5 +1,4 @@
 import { defineRoute, type Route } from '@jiraia/http'
-import { z } from 'zod'
 import {
   attachmentListSchema,
   attachmentPathSchema,
@@ -8,11 +7,16 @@ import {
 } from './attachment.schemas.js'
 import type { AttachmentService } from './attachment.service.js'
 import type { CommentService } from './comment.service.js'
-import { cardPathSchema, commentListSchema, commentPathSchema, createCommentSchema, reactSchema } from './schemas.js'
+import {
+  cardPathSchema,
+  commentListSchema,
+  commentPathSchema,
+  createCommentSchema,
+  reactSchema,
+  watcherListSchema
+} from './schemas.js'
 import type { WatcherService } from './watcher.service.js'
 import { type WorklogService, worklogListSchema } from './worklog.js'
-
-const watcherListSchema = z.object({ items: z.array(z.object({ id: z.uuid(), name: z.string() })) })
 
 /** What people do around a card: talk on it (2.8), follow it (2.11) and attach files to it (2.9). */
 export const conversationRoutes = (comments: CommentService, watchers: WatcherService): Route[] => [

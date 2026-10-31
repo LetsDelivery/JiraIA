@@ -1,7 +1,7 @@
 import { type Html, html } from '@/lib/html'
 
 /** The shape a screen has while it loads; a screen that declares none gets `list`. */
-export type SkeletonKind = 'list' | 'board' | 'table' | 'document'
+export type SkeletonKind = 'list' | 'board' | 'table' | 'document' | 'card' | 'fields'
 
 /** Widths that vary from row to row, so the placeholder reads as text rather than as a grid. */
 const WIDTHS = [72, 56, 84, 48, 64, 76, 52]
@@ -40,7 +40,18 @@ const document = (): Html => html`
   </div>
 `
 
-const SHAPES: Record<SkeletonKind, () => Html> = { list, board, table, document }
+/** An opened card's text and conversation, under its title, while its page loads. */
+const card = (): Html => html`
+  <div class="sk-header">${times(3, (index) => bar('sk-line', WIDTHS[index]))}</div>
+  ${bar('sk-card')}${bar('sk-card')}
+`
+
+/** An opened card's side panel: one label and one value per row. */
+const fields = (): Html => html`
+  <div class="sk-table">${times(7, (index) => html`<div class="sk-table-row">${bar('sk-line', 30)}${bar('sk-line', (WIDTHS[index] ?? 60) / 2)}</div>`)}</div>
+`
+
+const SHAPES: Record<SkeletonKind, () => Html> = { list, board, table, document, card, fields }
 
 /** A screen's place while it loads: its shape in grey, and "Carregando…" for whoever cannot see it. */
 export const skeleton = (kind: SkeletonKind = 'list'): Html => html`

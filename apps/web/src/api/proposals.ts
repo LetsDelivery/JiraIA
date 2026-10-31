@@ -35,10 +35,6 @@ export const proposalsRead = {
   list: (status: 'pending' | 'decided') =>
     cached(`proposals:${status}`, () => unwrap(api.GET('/work/proposals', { params: { query: { status } } }))),
   pendingCount: () => cached('proposals:count', () => unwrap(api.GET('/work/proposals/pending-count'))),
-  forCard: (cardId: string) =>
-    cached(`proposals:card:${cardId}`, () =>
-      unwrap(api.GET('/work/cards/{cardId}/proposals', { params: { path: { cardId } } }))
-    ),
   policy: (spaceId: string) =>
     cached(`proposals:policy:${spaceId}`, () =>
       unwrap(api.GET('/work/spaces/{spaceId}/proposal-policy', { params: { path: { spaceId } } }))

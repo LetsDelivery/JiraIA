@@ -99,19 +99,72 @@ export const bindComments = (root: HTMLElement, comments: readonly Comment[], co
   bindPaste(textarea, context)
   form.addEventListener('submit', (event) => {
     event.preventDefault()
-    void busy(submitButton(form), () =>
-      run(write.comment(context.cardId, toTokens(textarea.value.trim(), context.members)), context)
-    )
+    void busy(submitButton(form), () => send(section, textarea, context))
   })
   section.addEventListener('click', (event) => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('[data-react], [data-edit-comment]')
     if (target?.dataset.react) {
-      const pressed = target.getAttribute('aria-pressed') === 'true'
-      void run(write.react(context.cardId, target.dataset.react, target.dataset.emoji ?? '', !pressed), context)
+      const on = target.getAttribute('aria-pressed') !== 'true'
+      guessReaction(target, on)
+      write
+        .react(context.cardId, target.dataset.react, target.dataset.emoji ?? '', on)
+        .then((answered) => context.refresh(answered))
+        .catch((refusal: unknown) => {
+          toast(refusalSentence(refusal), 'error')
+          context.refresh()
+        })
     } else if (target?.dataset.editComment) {
       startEdit(section, comments, target.dataset.editComment, context)
     }
   })
+}
+
+/**
+ * The comment shows under the composer at once, faint, and the composer empties; the API's answer
+ * then draws it for real. A refusal takes it back out and gives the text back to the composer.
+ */
+const send = async (section: HTMLElement, textarea: HTMLTextAreaElement, context: CommentsContext) => {
+  const text = textarea.value.trim()
+  if (!text) {
+    return
+  }
+  const pending = showPending(section, text, context)
+  textarea.value = ''
+  try {
+    context.refresh(await write.comment(context.cardId, toTokens(text, context.members)))
+  } catch (refusal: unknown) {
+    pending.remove()
+    textarea.value ||= text
+    toast(refusalSentence(refusal), 'error')
+  }
+}
+
+const showPending = (section: HTMLElement, text: string, context: CommentsContext): HTMLElement => {
+  const list = section.querySelector('.comments') ?? section.appendChild(document.createElement('ul'))
+  list.classList.add('comments')
+  const me = context.members.find((member) => member.id === context.meId)
+  const pending = document.createElement('li')
+  pending.className = 'comment-pending'
+  pending.setAttribute('aria-busy', 'true')
+  pending.innerHTML = html`
+    ${avatar({ id: context.meId, name: me?.name ?? '' })}
+    <div class="comment-content">
+      <p><strong>${me?.name ?? ''}</strong> <span class="muted">· enviando…</span></p>
+      <p class="comment-body">${text}</p>
+    </div>
+  `.value
+  list.prepend(pending)
+  return pending
+}
+
+/** A reaction already on the comment turns at the click; one from the picker waits for the API. */
+const guessReaction = (button: HTMLElement, on: boolean): void => {
+  const count = button.querySelector('span')
+  if (!count || button.closest('.reaction-picker')) {
+    return
+  }
+  button.setAttribute('aria-pressed', String(on))
+  count.textContent = String(Number(count.textContent) + (on ? 1 : -1))
 }
 
 /** The comment's text becomes an editor in place: Salvar sends it, Cancelar draws the card again. */

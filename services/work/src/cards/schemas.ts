@@ -194,6 +194,9 @@ export const commentViewSchema = z.object({
 })
 export type CommentView = z.infer<typeof commentViewSchema>
 export const commentListSchema = z.object({ items: z.array(commentViewSchema) })
+
+/** Who follows a card (2.11). */
+export const watcherListSchema = z.object({ items: z.array(z.object({ id: z.uuid(), name: z.string() })) })
 export const createCommentSchema = z.object({ body: z.string().trim().min(1).max(20_000) })
 export const commentPathSchema = z.object({ cardId: z.uuid(), commentId: z.uuid() })
 /** One emoji, as typed: a short string, not a closed list — the screen offers the usual few. */
