@@ -142,7 +142,7 @@ describe('who gets a notice', () => {
   })
 
   it('leaves nothing for a kind the person turned off', async () => {
-    await ok(gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'mentioned', channel: 'none' } }))
+    await ok(gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'mentioned', channels: [] } }))
     const card = await newCard('Cotação')
     await ok(
       ana({
@@ -191,5 +191,32 @@ describe('the inbox', () => {
   it('keeps each inbox its owner’s', async () => {
     const id = await mentionGil()
     expect((await ana({ method: 'PATCH', path: `/me/notifications/${id}`, body: { read: true } })).status).toBe(404)
+  })
+})
+
+describe('how a person wants each kind', () => {
+  const choose = async (kind: string, channels: string[]) =>
+    await gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind, channels } })
+  const chosen = (body: unknown, kind: string) =>
+    (body as { items: { kind: string; channels: string[] }[] }).items.find((each) => each.kind === kind)?.channels
+
+  it('starts in the panel and by e-mail, and a summary by e-mail only', async () => {
+    const body = await ok(gil({ method: 'GET', path: '/me/notification-preferences' }))
+    expect(chosen(body, 'mentioned')).toEqual(['in_app', 'email'])
+    expect(chosen(body, 'weekly_summary')).toEqual(['email'])
+  })
+
+  it('keeps several channels at once, with the panel always among them', async () => {
+    expect(chosen(await ok(choose('assigned', ['slack', 'email'])), 'assigned')).toEqual(['in_app', 'email', 'slack'])
+    expect(chosen(await ok(choose('assigned', ['slack'])), 'assigned')).toEqual(['in_app', 'slack'])
+    expect(chosen(await ok(choose('assigned', [])), 'assigned')).toEqual([])
+  })
+
+  it('refuses a channel the kind cannot go by, naming it', async () => {
+    const refused = await choose('weekly_summary', ['slack'])
+    expect(refused).toMatchObject({ status: 400, body: { error: { code: 'VALIDATION_FAILED' } } })
+    expect((refused.body as { error: { message: string } }).error.message).toBe(
+      'Notices of kind "weekly_summary" do not go by "slack"'
+    )
   })
 })

@@ -18,7 +18,13 @@ import { cardChanges, trackedFields } from './card-changes.js'
 import { DRAW_EVENTS } from './draw-notices.js'
 import { excerpt } from './excerpt.js'
 import type { NotificationRepository, NotificationWithActor } from './notification.repository.js'
-import type { CardChange, Channel, NotificationData, NotificationKind } from './schemas.js'
+import {
+  type CardChange,
+  type Channel,
+  chosenChannels,
+  type NotificationData,
+  type NotificationKind
+} from './schemas.js'
 
 type Deps = {
   clock: Clock
@@ -272,7 +278,7 @@ export class NotificationFanout implements Consumer {
     const channels = await this._channels(first.map((notice) => notice.memberId))
     const now = this.deps.clock.now()
     const rows = first
-      .filter((notice) => channels.get(`${notice.memberId}:${notice.kind}`) !== 'none')
+      .filter((notice) => _goes(channels, notice, 'in_app'))
       .map((notice) => ({
         id: this.deps.ids.next(),
         organizationId: event.organizationId,
@@ -287,19 +293,27 @@ export class NotificationFanout implements Consumer {
       }))
     await this.deps.notifications.insert(rows)
     const actorName = members.find((member) => member.id === event.actorId)?.name ?? ''
-    const toSlack = rows.filter((row) => channels.get(`${row.memberId}:${row.kind}`) === 'slack')
+    const toSlack = rows.filter((row) => _goes(channels, row, 'slack'))
     await this.deps.slack?.deliver(
       event.organizationId,
       toSlack.map((row) => ({ ...row, actorName }))
     )
   }
 
-  /** Each person's channel for each kind they set; a kind left unset is in the panel only. */
-  private async _channels(memberIds: readonly string[]): Promise<Map<string, Channel>> {
+  /** Each person's channels for each kind they set; a kind left unset goes by its default. */
+  private async _channels(memberIds: readonly string[]): Promise<Map<string, unknown>> {
     const preferences = await this.deps.notifications.preferences(memberIds)
-    return new Map(preferences.map((each) => [`${each.memberId}:${each.kind}`, each.channel as Channel]))
+    return new Map(preferences.map((each) => [`${each.memberId}:${each.kind}`, each.channels]))
   }
 }
+
+/** Whether a person's notice of this kind goes by this channel: their choice, or the kind's default. */
+const _goes = (
+  channels: ReadonlyMap<string, unknown>,
+  notice: { memberId: string; kind: string },
+  channel: Channel
+): boolean =>
+  chosenChannels(notice.kind as NotificationKind, channels.get(`${notice.memberId}:${notice.kind}`)).includes(channel)
 
 /**
  * Watchers hear about the fields that changed: a move as `state_changed` — its own preference, as

@@ -44960,19 +44960,21 @@
                               "weekly_summary"
                             ]
                           },
-                          "channel": {
-                            "type": "string",
-                            "enum": [
-                              "in_app",
-                              "email",
-                              "slack",
-                              "none"
-                            ]
+                          "channels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "in_app",
+                                "email",
+                                "slack"
+                              ]
+                            }
                           }
                         },
                         "required": [
                           "kind",
-                          "channel"
+                          "channels"
                         ],
                         "additionalProperties": false
                       }
@@ -45034,19 +45036,21 @@
                       "weekly_summary"
                     ]
                   },
-                  "channel": {
-                    "type": "string",
-                    "enum": [
-                      "in_app",
-                      "email",
-                      "slack",
-                      "none"
-                    ]
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "in_app",
+                        "email",
+                        "slack"
+                      ]
+                    }
                   }
                 },
                 "required": [
                   "kind",
-                  "channel"
+                  "channels"
                 ]
               }
             }
@@ -45086,19 +45090,21 @@
                               "weekly_summary"
                             ]
                           },
-                          "channel": {
-                            "type": "string",
-                            "enum": [
-                              "in_app",
-                              "email",
-                              "slack",
-                              "none"
-                            ]
+                          "channels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "in_app",
+                                "email",
+                                "slack"
+                              ]
+                            }
                           }
                         },
                         "required": [
                           "kind",
-                          "channel"
+                          "channels"
                         ],
                         "additionalProperties": false
                       }

@@ -20,7 +20,7 @@ const features = (): Html => html`
   <div class="integration-features">
     <article class="integration-feature">
       <h2>${icon('gitBranch', 18)}A chave do card no nome da branch</h2>
-      <p class="muted">Crie a branch com a chave, como <code>feat/REQ-123-frete-por-regiao</code>. O botão “Copiar nome da branch” do card já monta esse nome. A chave no título do pull request também vale.</p>
+      <p class="muted">Crie a branch com a chave, como <code>feat/REQ-123-frete-por-regiao</code>, e comece commits e o título do pull request com o tipo e a chave, como <code>feat(REQ-123): Frete por região</code>. O card monta os dois em Desenvolvimento.</p>
     </article>
     <article class="integration-feature">
       <h2>${icon('gitPullRequest', 18)}O desenvolvimento dentro do card</h2>

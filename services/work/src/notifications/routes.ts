@@ -63,7 +63,7 @@ export const notificationRoutes = (notifications: NotificationService): Route[] 
     responds: preferencesSchema,
     handler: async ({ caller, body }) => ({
       statusCode: 200,
-      body: await notifications.setPreference(caller, body.kind, body.channel)
+      body: await notifications.setPreference(caller, body.kind, body.channels)
     })
   })
 ]

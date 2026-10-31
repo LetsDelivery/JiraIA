@@ -120,13 +120,50 @@ export const SUMMARY_KINDS: ReadonlySet<NoticeKind> = new Set(['weekly_summary']
 
 /** The channels a kind may choose: a summary has no panel or Slack version. */
 export const channelsOf = (kind: NoticeKind): Channel[] =>
-  SUMMARY_KINDS.has(kind) ? ['email', 'none'] : ['in_app', 'email', 'slack', 'none']
+  SUMMARY_KINDS.has(kind) ? ['email'] : ['in_app', 'email', 'slack']
 
 export const CHANNEL_LABEL: Record<Channel, string> = {
-  in_app: 'Só no JiraIA',
-  email: 'JiraIA e e-mail',
-  slack: 'JiraIA e Slack',
-  none: 'Não avisar'
+  in_app: 'JiraIA',
+  email: 'E-mail',
+  slack: 'Slack'
+}
+
+/**
+ * A choice after one box is ticked or cleared, as the API keeps it: the panel comes with any other
+ * channel, and clearing the panel clears them all — JiraIA is always on unless nothing is.
+ *
+ * @example toggleChannel('mentioned', ['in_app'], 'slack', true)   // ['in_app', 'slack']
+ */
+export const toggleChannel = (
+  kind: NoticeKind,
+  channels: readonly Channel[],
+  channel: Channel,
+  on: boolean
+): Channel[] => {
+  if (!on && channel === 'in_app') {
+    return []
+  }
+  const wanted = new Set(on ? [...channels, channel] : channels.filter((each) => each !== channel))
+  const allowed = channelsOf(kind)
+  if (wanted.size > 0 && allowed.includes('in_app')) {
+    wanted.add('in_app')
+  }
+  return allowed.filter((each) => wanted.has(each))
+}
+
+/** The choice in a few words: "JiraIA, E-mail e Slack", "Só no JiraIA", "Não avisar"; a summary, received or not. */
+export const channelsLabel = (kind: NoticeKind, channels: readonly Channel[]): string => {
+  if (SUMMARY_KINDS.has(kind)) {
+    return channels.includes('email') ? 'Receber por e-mail' : 'Não receber'
+  }
+  if (channels.length === 0) {
+    return 'Não avisar'
+  }
+  if (channels.length === 1) {
+    return 'Só no JiraIA'
+  }
+  const names = channels.map((channel) => CHANNEL_LABEL[channel])
+  return `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`
 }
 
 /** 08:00 in São Paulo is 11:00 UTC — Brazil keeps no daylight saving time. */

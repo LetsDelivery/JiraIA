@@ -105,8 +105,11 @@ const _wire = (block: HTMLElement, editor: Editor, module: Module, mount: Mount,
   editor.on('update', () => state.mark(true))
   const save = () => {
     state.mark(false)
+    editor.commands.blur()
     void mount.save(module.descriptionMarkdown(editor)).then((saved) => state.mark(!saved))
   }
+  // A click on Save or Cancel leaves the focus in the text, so the buttons go the moment it leaves.
+  block.querySelector('.description-actions')?.addEventListener('mousedown', (event) => event.preventDefault())
   block.querySelector('[data-save-description]')?.addEventListener('click', save)
   block.querySelector('[data-cancel-description]')?.addEventListener('click', () => {
     editor.commands.setContent(mount.markdown, { contentType: 'markdown' })

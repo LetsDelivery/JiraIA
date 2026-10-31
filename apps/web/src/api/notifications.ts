@@ -1,4 +1,4 @@
-import { cached, invalidate } from '@/lib/cache'
+import { cached, forget, invalidate } from '@/lib/cache'
 
 import { api } from './client'
 import { unwrap } from './requests'
@@ -15,7 +15,7 @@ export type Box = 'inbox' | 'snoozed' | 'archived'
 export type Notice = Json<'/work/me/notifications', 'get'>['items'][number]
 export type NoticeKind = Notice['kind']
 export type Preference = Json<'/work/me/notification-preferences', 'get'>['items'][number]
-export type Channel = Preference['channel']
+export type Channel = Preference['channels'][number]
 
 const notice = (notificationId: string) => ({ params: { path: { notificationId } } })
 
@@ -38,8 +38,9 @@ export const noticesWrite = {
     await unwrap(api.POST('/work/me/notifications/read-all'))
     invalidate('notifications:')
   },
-  setPreference: async (kind: NoticeKind, channel: Channel) => {
-    await unwrap(api.PUT('/work/me/notification-preferences', { body: { kind, channel } }))
-    invalidate('notifications:preferences')
+  setPreference: async (kind: NoticeKind, channels: Channel[]) => {
+    await unwrap(api.PUT('/work/me/notification-preferences', { body: { kind, channels } }))
+    // The page already shows the choice; a redraw would close the boxes while someone ticks the next one.
+    forget('notifications:preferences')
   }
 }

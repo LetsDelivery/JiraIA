@@ -42,7 +42,7 @@ const connected = (status: SlackStatus & { workspace: NonNullable<SlackStatus['w
     <p><strong>Conectado ao workspace ${status.workspace.teamName}</strong><span class="muted"> · por ${status.workspace.installedBy} em ${WHEN.format(new Date(status.workspace.installedAt))}</span></p>
     ${
       status.me?.found
-        ? html`<p class="muted">Achamos você no Slack pelo seu e-mail. Escolha o que chega lá em <a href="/configuracoes">Configurações da conta</a>, opção “JiraIA e Slack”.</p>`
+        ? html`<p class="muted">Achamos você no Slack pelo seu e-mail. Marque “Slack” no que quer receber lá, em <a href="/notificacoes/preferencias">Preferências de notificação</a>.</p>`
         : html`<p class="muted">Não achamos ninguém com o seu e-mail nesse workspace do Slack, então os avisos não chegam lá. Confira o e-mail do seu perfil no Slack.</p>`
     }
     ${status.canManage ? html`<button type="button" class="button button-ghost" data-slack-disconnect>Desconectar</button>` : ''}

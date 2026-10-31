@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { channelsOf, sentence, snoozeUntil, target } from './notifications'
+import { channelsLabel, channelsOf, sentence, snoozeUntil, target, toggleChannel } from './notifications'
 
 const actor = { id: 'a', name: 'Ana' }
 
@@ -67,7 +67,28 @@ describe('LET’S Draw AI notices', () => {
 
 describe('the weekly summary preference', () => {
   it('comes by e-mail or not at all', () => {
-    expect(channelsOf('weekly_summary')).toEqual(['email', 'none'])
-    expect(channelsOf('mentioned')).toContain('slack')
+    expect(channelsOf('weekly_summary')).toEqual(['email'])
+    expect(toggleChannel('weekly_summary', ['email'], 'email', false)).toEqual([])
+    expect(channelsLabel('weekly_summary', [])).toBe('Não receber')
+    expect(channelsLabel('weekly_summary', ['email'])).toBe('Receber por e-mail')
+  })
+})
+
+describe('choosing the channels of a kind', () => {
+  it('brings JiraIA along with any other channel, and keeps a fixed order', () => {
+    expect(toggleChannel('mentioned', [], 'slack', true)).toEqual(['in_app', 'slack'])
+    expect(toggleChannel('mentioned', ['in_app', 'slack'], 'email', true)).toEqual(['in_app', 'email', 'slack'])
+    expect(toggleChannel('mentioned', ['in_app', 'email', 'slack'], 'email', false)).toEqual(['in_app', 'slack'])
+  })
+
+  it('turns everything off when JiraIA is cleared', () => {
+    expect(toggleChannel('mentioned', ['in_app', 'email', 'slack'], 'in_app', false)).toEqual([])
+  })
+
+  it('names the choice in a few words', () => {
+    expect(channelsLabel('mentioned', [])).toBe('Não avisar')
+    expect(channelsLabel('mentioned', ['in_app'])).toBe('Só no JiraIA')
+    expect(channelsLabel('mentioned', ['in_app', 'email'])).toBe('JiraIA e E-mail')
+    expect(channelsLabel('mentioned', ['in_app', 'email', 'slack'])).toBe('JiraIA, E-mail e Slack')
   })
 })

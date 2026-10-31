@@ -6,11 +6,11 @@ import type { NotificationRepository } from './notification.repository.js'
 import {
   type Box,
   type Channel,
-  channelSchema,
-  DEFAULT_CHANNEL,
+  chosenChannels,
   type NotificationKind,
   type NotificationRow,
   notificationKindValues,
+  settleChannels,
   toNotificationView,
   type UpdateNotification
 } from './schemas.js'
@@ -58,19 +58,16 @@ export class NotificationService {
   async preferences(caller: Caller) {
     const actor = await this.deps.access.actor(caller)
     const chosen = new Map(
-      (await this.deps.notifications.preferences([actor.id])).map((each) => [each.kind, each.channel])
+      (await this.deps.notifications.preferences([actor.id])).map((each) => [each.kind, each.channels])
     )
-    return {
-      items: notificationKindValues.map((kind) => ({
-        kind,
-        channel: channelSchema.catch(DEFAULT_CHANNEL[kind]).parse(chosen.get(kind) ?? DEFAULT_CHANNEL[kind])
-      }))
-    }
+    return { items: notificationKindValues.map((kind) => ({ kind, channels: chosenChannels(kind, chosen.get(kind)) })) }
   }
 
-  async setPreference(caller: Caller, kind: NotificationKind, channel: Channel) {
+  /** The channels chosen for a kind; the panel comes with any other, and none is nowhere. */
+  async setPreference(caller: Caller, kind: NotificationKind, channels: readonly Channel[]) {
     const actor = await this.deps.access.actor(caller)
-    await this.deps.notifications.putPreference(actor.id, kind, channel, this.deps.clock.now())
+    const settled = settleChannels(kind, channels)
+    await this.deps.notifications.putPreference(actor.id, kind, settled, this.deps.clock.now())
     return await this.preferences(caller)
   }
 }
