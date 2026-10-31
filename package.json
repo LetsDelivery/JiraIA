@@ -56,18 +56,18 @@
     "web:test": "bun run --filter @jiraia/web test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8",
-    "@commitlint/cli": "20.5.3",
-    "@commitlint/config-conventional": "20.5.3",
-    "@types/aws-lambda": "8.10.162",
-    "@types/bun": "1.4.3",
-    "@types/node": "24.10.1",
+    "@biomejs/biome": "2.6.3",
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@types/aws-lambda": "8.10.164",
+    "@types/bun": "1.4.4",
+    "@types/node": "26.6.5",
     "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11",
     "husky": "9.1.7",
-    "msw": "2.15.0",
-    "typescript": "5.9.3",
-    "yaml": "2.9.0",
+    "msw": "3.0.3",
+    "typescript": "7.0.2",
+    "yaml": "2.9.1",
     "zod": "4.6.7"
   }
 }
