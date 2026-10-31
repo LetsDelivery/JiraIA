@@ -118,7 +118,9 @@ const _bindDrop = (zone: HTMLElement, context: AttachmentsContext): void => {
     }
   })
   zone.addEventListener('drop', (event) => {
-    if (!files(event)) {
+    zone.classList.remove('is-dropping')
+    // A drop the comment's editor already took is the comment's: it sent the file itself.
+    if (!files(event) || event.defaultPrevented) {
       return
     }
     event.preventDefault()

@@ -1,0 +1,211 @@
+/*
+ * Comments as rich text (ui/card-comments.ts): the composer is one line until a comment is started,
+ * then the description's box — bar on top, text under it — and a saved comment reads as its Markdown.
+ */
+.composer-closed {
+  width: 100%;
+  min-height: 40px;
+  color: var(--faint);
+  text-align: left;
+  cursor: text;
+}
+
+.composer-closed:hover {
+  border-color: var(--border-strong);
+}
+
+.card-detail .comment-editor-box .tiptap,
+.card-detail .comment-editor-box .tiptap:focus,
+.card-detail .comment-editor-box .tiptap[contenteditable='true']:hover {
+  min-height: 80px;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+.comment-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.comment-attach {
+  margin-left: auto;
+}
+
+/* A file in the comment being written: the picture it will show, selectable as one piece. */
+.comment-editor .file-citation {
+  width: fit-content;
+  max-width: 100%;
+  margin-block: var(--space-2);
+  line-height: 1.4;
+}
+
+.comment-editor .file-citation.ProseMirror-selectednode {
+  outline: none;
+}
+
+.comment-editor .file-citation.ProseMirror-selectednode .comment-file {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.comment-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A saved comment: its Markdown drawn, spaced like the description but tighter. */
+.comment-rich {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.comment-rich > * {
+  margin: 0;
+}
+
+.comment-rich > * + * {
+  margin-top: 0.5em;
+}
+
+.comment-rich :is(ul, ol) {
+  padding-left: 1.4em;
+}
+
+.comment-rich ul {
+  list-style: disc;
+}
+
+.comment-rich ol {
+  list-style: decimal;
+}
+
+/* A comment is itself an item of the comment list, whose items lay out as rows. */
+.card-detail .comment-rich li {
+  display: list-item;
+}
+
+.comment-rich ul[data-type='taskList'] {
+  padding-left: 0;
+  list-style: none;
+}
+
+.card-detail .comment-rich ul[data-type='taskList'] li {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.comment-rich a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.comment-rich :not(pre) > code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-hover);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.comment-rich :is(h1, h2, h3) {
+  font-size: var(--text-md);
+}
+
+.comment-rich pre {
+  overflow-x: auto;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+}
+
+.comment-rich blockquote {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-strong);
+  color: var(--fg-secondary);
+}
+
+/* A file a comment cites: a chip inside a sentence, the picture itself when alone on its line. */
+.comment-file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: 2px var(--space-2) 2px 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  vertical-align: middle;
+  cursor: zoom-in;
+}
+
+.comment-file:hover {
+  border-color: var(--border-strong);
+}
+
+.comment-file .attachment-thumb {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  aspect-ratio: auto;
+  border-radius: 4px;
+}
+
+.comment-file .attachment-glyph .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.comment-file .attachment-ext {
+  display: none;
+}
+
+.comment-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-file.is-block {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: min(200px, 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+.comment-file.is-block .attachment-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  border-radius: 0;
+}
+
+.comment-file.is-block .attachment-glyph .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.comment-file.is-block .attachment-ext {
+  display: block;
+}
+
+.comment-file.is-block .comment-file-name {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}

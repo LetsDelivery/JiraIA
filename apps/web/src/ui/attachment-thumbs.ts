@@ -69,12 +69,14 @@ const _render = (attachment: Attachment): Promise<Html | undefined> => {
  */
 export const fillThumbs = async (root: HTMLElement, attachments: readonly Attachment[]): Promise<void> => {
   for (const attachment of attachments) {
-    const slot = () => root.querySelector<HTMLElement>(`[data-thumb="${attachment.id}"]`)
-    const markup = slot() ? await _render(attachment) : undefined
+    // The same file can sit in the Anexos panel and in a comment that cites it.
+    const slots = () => root.querySelectorAll<HTMLElement>(`[data-thumb="${attachment.id}"]`)
+    const markup = slots().length ? await _render(attachment) : undefined
     if (markup) {
       drawn.set(attachment.id, markup)
-      slot()?.insertAdjacentHTML('afterend', markup.value)
-      slot()?.remove()
+      for (const slot of slots()) {
+        slot.outerHTML = markup.value
+      }
     }
   }
 }

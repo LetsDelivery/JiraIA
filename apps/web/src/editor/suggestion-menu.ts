@@ -40,6 +40,7 @@ export const suggestionMenu = <T extends MenuItem>(label: string) => {
     const anchor = { getBoundingClientRect: () => rect }
     const { x, y } = await computePosition(anchor, menu, {
       placement: 'bottom-start',
+      strategy: 'fixed',
       middleware: [offset(6), flip(), shift({ padding: 8 })]
     })
     Object.assign(menu.style, { left: `${x}px`, top: `${y}px` })
@@ -78,7 +79,9 @@ export const suggestionMenu = <T extends MenuItem>(label: string) => {
         const item = (event.target as HTMLElement).closest<HTMLElement>('[data-index]')
         choose(Number(item?.dataset.index ?? -1))
       })
-      document.body.append(menu)
+      // Inside an open modal dialog — a card's comment — the body is under the dialog's top layer.
+      const host = next.editor.view.dom.closest('dialog') ?? document.body
+      host.append(menu)
       draw()
     },
     onUpdate: (next: SuggestionProps<T>) => {

@@ -437,6 +437,8 @@
   z-index: 60;
   width: 260px;
   min-width: 0;
+  /* It can open inside a dialog, whose text may be centred. */
+  text-align: left;
 }
 
 .suggestion-item {

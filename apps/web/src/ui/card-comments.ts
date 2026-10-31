@@ -1,10 +1,14 @@
-import { type Comment, type Member, write } from '@/api/requests'
+import { type Attachment, type Comment, type Member, write } from '@/api/requests'
+import { pastedName } from '@/lib/comment-files'
 import { type Html, html } from '@/lib/html'
 import { refusalSentence } from '@/lib/refusal'
-import { fromTokens, mentionParts, mentionQuery, toTokens } from '@/lib/relations'
-import { busy, submitButton } from '@/ui/busy'
+import { mentionParts } from '@/lib/relations'
 
+import { fillThumbs } from './attachment-thumbs'
+import { openAttachmentViewer } from './attachment-viewer'
 import { avatar } from './avatar'
+import { type ComposerHandle, mountComposer } from './comment-composer'
+import { fileLook, linkFiles } from './comment-files'
 import { icon } from './icons'
 import { toast } from './toast'
 
@@ -19,12 +23,25 @@ export type CommentsContext = {
   members: readonly Member[]
   /** Re-renders the card after a change, with the comments the API answered. */
   refresh: (comments?: { items: Comment[] }) => void
-  /** A pasted image goes to the card's attachments (escopo-mvp 2.9). */
+  /** A pasted file goes to the card's attachments (escopo-mvp 2.9) and is cited in the comment. */
   attach: (file: File) => void
+  /** The card's attachments, as the Anexos panel lists them: what a comment's `📎 name` points at. */
+  attachments: readonly Attachment[]
+  /** The comment being written when the card was last drawn; nothing when none was. */
+  draft?: { markdown: string; focused: boolean } | undefined
 }
 
+/** The composer of a new comment, as the card keeps it across a redraw. */
+export type CommentsHandle = {
+  draft: () => { markdown: string; focused: boolean } | undefined
+  destroy: () => void
+}
+
+const PLACEHOLDER = 'Adicionar comentário… @ menciona alguém; cole uma imagem para anexar'
+
+/** The comment as plain text until the editor has drawn its Markdown (`bindComments`). */
 const body = (comment: Comment, names: ReadonlyMap<string, string>): Html => html`
-  <p class="comment-body">${mentionParts(comment.body).map((part) =>
+  <p class="comment-body" data-comment-body="${comment.id}">${mentionParts(comment.body).map((part) =>
     'text' in part ? part.text : html`<span class="mention">@${names.get(part.memberId) ?? 'alguém'}</span>`
   )}</p>
 `
@@ -59,6 +76,9 @@ const item = (comment: Comment, context: CommentsContext, names: ReadonlyMap<str
   </li>
 `
 
+const closedComposer = (): Html =>
+  html`<button type="button" class="input composer-closed" data-open-composer>${PLACEHOLDER}</button>`
+
 /**
  * Comments with mentions, edits and reactions (escopo-mvp 2.8): the composer on top, the newest
  * comment right under it.
@@ -68,16 +88,10 @@ export const commentsSection = (comments: readonly Comment[], context: CommentsC
   const newestFirst = [...comments].reverse()
   return html`
     <section class="comments-block" data-comments>
-      <form class="composer" data-comment>
+      <div class="composer" data-comment>
         ${avatar({ id: context.meId, name: context.members.find((member) => member.id === context.meId)?.name ?? '' })}
-        <div class="composer-box">
-          <label class="sr-only" for="card-comment">Novo comentário</label>
-          <textarea id="card-comment" class="input textarea" name="body" rows="2" required
-            placeholder="Adicionar comentário… @ menciona alguém; cole uma imagem para anexar"></textarea>
-          <ul class="select-menu glass mention-menu" role="listbox" hidden></ul>
-          <button type="submit" class="button button-primary button-small align-start">Comentar</button>
-        </div>
-      </form>
+        <div class="composer-box" data-composer-host>${closedComposer()}</div>
+      </div>
       ${newestFirst.length ? html`<ul class="comments">${newestFirst.map((comment) => item(comment, context, names))}</ul>` : ''}
     </section>
   `
@@ -88,53 +102,137 @@ const run = (change: Promise<{ items: Comment[] }>, context: CommentsContext) =>
     .then((comments) => context.refresh(comments))
     .catch((refusal: unknown) => toast(refusalSentence(refusal), 'error'))
 
-export const bindComments = (root: HTMLElement, comments: readonly Comment[], context: CommentsContext): void => {
+export const bindComments = (
+  root: HTMLElement,
+  comments: readonly Comment[],
+  context: CommentsContext
+): CommentsHandle | undefined => {
   const section = root.querySelector<HTMLElement>('[data-comments]')
   if (!section) {
-    return
+    return undefined
   }
-  const form = section.querySelector<HTMLFormElement>('[data-comment]') as HTMLFormElement
-  const textarea = form.querySelector('textarea') as HTMLTextAreaElement
-  bindMentionMenu(form, textarea, context.members)
-  bindPaste(textarea, context)
-  form.addEventListener('submit', (event) => {
-    event.preventDefault()
-    void busy(submitButton(form), () => send(section, textarea, context))
-  })
-  section.addEventListener('click', (event) => {
-    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-react], [data-edit-comment]')
-    if (target?.dataset.react) {
-      const on = target.getAttribute('aria-pressed') !== 'true'
-      guessReaction(target, on)
-      write
-        .react(context.cardId, target.dataset.react, target.dataset.emoji ?? '', on)
-        .then((answered) => context.refresh(answered))
-        .catch((refusal: unknown) => {
-          toast(refusalSentence(refusal), 'error')
-          context.refresh()
-        })
-    } else if (target?.dataset.editComment) {
-      startEdit(section, comments, target.dataset.editComment, context)
-    }
-  })
+  void drawBodies(section, comments, context)
+  const composer = composerOf(section, context)
+  section.addEventListener('click', (event) => _onClick(event, section, comments, context, composer.open))
+  return composer.handle
+}
+
+const _onClick = (
+  event: MouseEvent,
+  section: HTMLElement,
+  comments: readonly Comment[],
+  context: CommentsContext,
+  open: () => void
+): void => {
+  const target = (event.target as HTMLElement).closest<HTMLElement>(
+    '[data-react], [data-edit-comment], [data-open-file], [data-open-composer]'
+  )
+  if (target?.dataset.react) {
+    react(target, target.dataset.react, context)
+  } else if (target?.dataset.editComment) {
+    startEdit(section, comments, target.dataset.editComment, context)
+  } else if (target?.dataset.openFile) {
+    openAttachmentViewer(context.attachments, Number(target.dataset.openFile))
+  } else if (target?.hasAttribute('data-open-composer')) {
+    open()
+  }
+}
+
+const react = (button: HTMLElement, commentId: string, context: CommentsContext): void => {
+  const on = button.getAttribute('aria-pressed') !== 'true'
+  guessReaction(button, on)
+  write
+    .react(context.cardId, commentId, button.dataset.emoji ?? '', on)
+    .then((answered) => context.refresh(answered))
+    .catch((refusal: unknown) => {
+      toast(refusalSentence(refusal), 'error')
+      context.refresh()
+    })
 }
 
 /**
- * The comment shows under the composer at once, faint, and the composer empties; the API's answer
- * then draws it for real. A refusal takes it back out and gives the text back to the composer.
+ * Each comment's Markdown drawn through the editor's schema, and each `📎 name` it cites turned into
+ * the card's attachment of that name. The editor's code is already loaded when a card is open.
  */
-const send = async (section: HTMLElement, textarea: HTMLTextAreaElement, context: CommentsContext) => {
-  const text = textarea.value.trim()
-  if (!text) {
-    return
+const drawBodies = async (section: HTMLElement, comments: readonly Comment[], context: CommentsContext) => {
+  const { commentHtml } = await import('@/editor/comment')
+  for (const comment of comments) {
+    const holder = section.querySelector<HTMLElement>(`[data-comment-body="${comment.id}"]`)
+    if (holder) {
+      holder.outerHTML = `<div class="comment-body comment-rich" data-comment-body="${comment.id}">${commentHtml(comment.body, context.members)}</div>`
+      const drawn = section.querySelector<HTMLElement>(`[data-comment-body="${comment.id}"]`)
+      drawn && linkFiles(drawn, context.attachments, comment.createdAt)
+    }
   }
+  await fillThumbs(section, context.attachments)
+}
+
+/** The names already on the card or given to a file pasted since it was drawn. */
+const citeFiles = (context: CommentsContext) => {
+  const taken = new Set(context.attachments.map((attachment) => attachment.name))
+  return (files: File[]): string[] =>
+    files.map((file) => {
+      const name = pastedName(file, new Date(), taken)
+      taken.add(name)
+      context.attach(new File([file], name, { type: file.type }))
+      return name
+    })
+}
+
+/** The new comment's composer: a line to click until a person starts one, then the editor and its bar. */
+const composerOf = (section: HTMLElement, context: CommentsContext) => {
+  const host = section.querySelector('[data-composer-host]') as HTMLElement
+  const attach = citeFiles(context)
+  let composer: ComposerHandle | undefined
+  const close = () => {
+    composer?.destroy()
+    composer = undefined
+    host.innerHTML = closedComposer().value
+  }
+  const open = (markdown = '', focus = true) => {
+    composer?.destroy()
+    composer = mountComposer(host, {
+      members: context.members,
+      markdown,
+      placeholder: PLACEHOLDER,
+      submit: 'Comentar',
+      focus,
+      attach,
+      look: fileLook(context.attachments),
+      save: (written, text) => {
+        close()
+        void send(section, written, text, context, open)
+      },
+      cancel: close
+    })
+  }
+  if (context.draft) {
+    open(context.draft.markdown, context.draft.focused)
+  }
+  const handle: CommentsHandle = {
+    draft: () => (composer ? { markdown: composer.draft(), focused: composer.focused() } : undefined),
+    destroy: () => composer?.destroy()
+  }
+  return { open: () => open(), handle }
+}
+
+/**
+ * The comment shows under the composer at once, faint, and the composer closes; the API's answer
+ * then draws it for real. A refusal takes it back out and opens the composer with the text again.
+ */
+const send = async (
+  section: HTMLElement,
+  markdown: string,
+  text: string,
+  context: CommentsContext,
+  reopen: (markdown: string) => void
+) => {
   const pending = showPending(section, text, context)
-  textarea.value = ''
   try {
-    context.refresh(await write.comment(context.cardId, toTokens(text, context.members)))
+    context.refresh(await write.comment(context.cardId, markdown))
   } catch (refusal: unknown) {
     pending.remove()
-    textarea.value ||= text
+    reopen(markdown)
     toast(refusalSentence(refusal), 'error')
   }
 }
@@ -167,70 +265,25 @@ const guessReaction = (button: HTMLElement, on: boolean): void => {
   count.textContent = String(Number(count.textContent) + (on ? 1 : -1))
 }
 
-/** The comment's text becomes an editor in place: Salvar sends it, Cancelar draws the card again. */
+/** The comment becomes the editor in place: Salvar sends it, Cancelar draws the card again. */
 const startEdit = (section: HTMLElement, comments: readonly Comment[], commentId: string, context: CommentsContext) => {
   const comment = comments.find((each) => each.id === commentId)
   const holder = section.querySelector(`[data-comment-id="${commentId}"] .comment-body`)
   if (!comment || !holder) {
     return
   }
-  const names = new Map(context.members.map((member) => [member.id, member.name]))
-  const editor = document.createElement('form')
-  editor.className = 'stack-tight'
-  editor.innerHTML = html`
-    <label class="sr-only" for="edit-${commentId}">Editar comentário</label>
-    <textarea id="edit-${commentId}" class="input textarea" rows="3" required>${fromTokens(comment.body, names)}</textarea>
-    <div class="row"><button type="submit" class="button button-primary">Salvar</button>
-    <button type="button" class="button button-ghost" data-cancel>Cancelar</button></div>
-  `.value
-  holder.replaceWith(editor)
-  const textarea = editor.querySelector('textarea') as HTMLTextAreaElement
-  textarea.focus()
-  editor.querySelector('[data-cancel]')?.addEventListener('click', () => context.refresh())
-  editor.addEventListener('submit', (event) => {
-    event.preventDefault()
-    void busy(submitButton(editor), () =>
-      run(write.editComment(context.cardId, commentId, toTokens(textarea.value.trim(), context.members)), context)
-    )
-  })
-}
-
-/** Typing `@` and some letters offers the members whose name matches; choosing one writes `@Name `. */
-const bindMentionMenu = (form: HTMLFormElement, textarea: HTMLTextAreaElement, members: readonly Member[]) => {
-  const menu = form.querySelector('.mention-menu') as HTMLElement
-  const active = members.filter((member) => member.status === 'active' && member.kind === 'person')
-  const choose = (name: string) => {
-    const found = mentionQuery(textarea.value, textarea.selectionStart)
-    if (found) {
-      const after = textarea.value.slice(textarea.selectionStart)
-      textarea.value = `${textarea.value.slice(0, found.start)}@${name} ${after}`
-      textarea.focus()
-    }
-    menu.hidden = true
-  }
-  textarea.addEventListener('input', () => {
-    const found = mentionQuery(textarea.value, textarea.selectionStart)
-    const query = found?.query.toLowerCase() ?? ''
-    const matches = found ? active.filter((member) => member.name.toLowerCase().includes(query)).slice(0, 6) : []
-    menu.innerHTML =
-      html`${matches.map((member) => html`<li role="option" tabindex="-1" data-name="${member.name}"><span>${member.name}</span>${member.kind === 'agent' ? html`<small>Agente</small>` : ''}</li>`)}`.value
-    menu.hidden = matches.length === 0
-  })
-  menu.addEventListener('mousedown', (event) => {
-    event.preventDefault()
-    const option = (event.target as HTMLElement).closest<HTMLElement>('[data-name]')
-    if (option) {
-      choose(option.dataset.name ?? '')
-    }
-  })
-}
-
-const bindPaste = (textarea: HTMLTextAreaElement, context: CommentsContext) => {
-  textarea.addEventListener('paste', (event) => {
-    const files = [...(event.clipboardData?.files ?? [])].filter((file) => file.type.startsWith('image/'))
-    if (files.length) {
-      event.preventDefault()
-      files.forEach(context.attach)
-    }
+  const host = document.createElement('div')
+  host.className = 'comment-edit'
+  holder.replaceWith(host)
+  mountComposer(host, {
+    members: context.members,
+    markdown: comment.body,
+    placeholder: '',
+    submit: 'Salvar',
+    focus: true,
+    attach: citeFiles(context),
+    look: fileLook(context.attachments),
+    save: (markdown) => void run(write.editComment(context.cardId, commentId, markdown), context),
+    cancel: () => context.refresh()
   })
 }

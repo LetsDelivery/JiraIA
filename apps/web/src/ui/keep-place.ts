@@ -18,11 +18,38 @@ export const keepPlace = (dialog: HTMLDialogElement, redraw: () => void): void =
     const column = dialog.querySelector(selector)
     if (column) {
       column.scrollTop = before[index] ?? 0
+      settle(column, before[index] ?? 0)
     }
   })
   for (const { id, value, focused, at } of typing) {
     restore(dialog.querySelector(`#${CSS.escape(id)}`), value, focused, at)
   }
+}
+
+/**
+ * The description's editor and the comments' Markdown are drawn just after the redraw, so the column
+ * is still short when its scroll is put back and the browser cuts it. The place is put back again as
+ * the column grows — until it is reached, the reader scrolls, or two seconds pass.
+ */
+const settle = (column: Element, top: number): void => {
+  if (column.scrollTop >= top) {
+    return
+  }
+  const observer = new ResizeObserver(() => {
+    column.scrollTop = top
+    column.scrollTop >= top && stop()
+  })
+  const stop = () => {
+    observer.disconnect()
+    column.removeEventListener('wheel', stop)
+    column.removeEventListener('touchstart', stop)
+  }
+  for (const child of column.children) {
+    observer.observe(child)
+  }
+  column.addEventListener('wheel', stop, { passive: true })
+  column.addEventListener('touchstart', stop, { passive: true })
+  setTimeout(stop, 2000)
 }
 
 /** Only free text keeps a cursor: a date or a number field has none to put back. */
