@@ -20,6 +20,7 @@ import { cardKey } from '@/lib/search'
 import { BoardEmbed } from './board-embed'
 import { editLink } from './format-toolbar'
 import { Callout, CardEmbed, CardRef, CommentMark, PageFile, PageImage } from './nodes'
+import { people } from './people'
 import type { ContentProvider } from './provider'
 import { SlashCommand, type SlashContext } from './slash'
 import { type MenuItem, suggestionMenu } from './suggestion-menu'
@@ -35,25 +36,7 @@ export type PageEditorOptions = SlashContext & {
   members: readonly Member[]
 }
 
-type Person = MenuItem & { id: string }
 type CardItem = MenuItem & { key: string; title: string }
-
-/** `@` offers the organization's active members — people and agents (escopo-mvp 5.5). */
-const people = (members: readonly Member[]) => ({
-  char: '@',
-  pluginKey: new PluginKey('peopleSuggestion'),
-  items: ({ query }: { query: string }): Person[] =>
-    members
-      .filter(
-        (member) =>
-          member.status === 'active' &&
-          member.kind === 'person' &&
-          member.name.toLowerCase().includes(query.toLowerCase())
-      )
-      .slice(0, 8)
-      .map((member) => ({ id: member.id, label: member.name, ...(member.kind === 'agent' ? { hint: 'Agente' } : {}) })),
-  render: () => suggestionMenu<Person>('Pessoas')
-})
 
 /** `#` searches cards by key or title and puts the one chosen in the sentence. */
 const CardSuggestion = Extension.create({

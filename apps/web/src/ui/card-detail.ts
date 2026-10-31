@@ -10,7 +10,7 @@ import type { BoardContext } from '@/views/board'
 
 import { type ActivityTab, activitySection, bindActivity } from './card-activity'
 import { attachButton, attachmentsSection, bindAttachments, uploadFile } from './card-attachments'
-import { bindComments, commentsSection } from './card-comments'
+import { bindComments, type CommentsHandle, commentsSection } from './card-comments'
 import { type DescriptionHandle, descriptionSection, mountDescription } from './card-description'
 import { bindDevelopment, developmentGroup } from './card-development'
 import { pickLabels } from './card-pickers'
@@ -32,6 +32,8 @@ import { typeIcon } from './type-look'
 
 /** Each open card's description editor, destroyed before a redraw replaces it and when the card closes. */
 const descriptions = new WeakMap<HTMLDialogElement, DescriptionHandle>()
+/** Each open card's comment being written, kept across a redraw as the description's draft is. */
+const composers = new WeakMap<HTMLDialogElement, CommentsHandle>()
 
 /**
  * Each open card's page as last drawn, and how many times it was drawn: a reload that started before
@@ -127,6 +129,7 @@ export const openCardDetail = (card: Card, context: BoardContext): void => {
 
   const close = () => {
     descriptions.get(dialog)?.destroy()
+    composers.get(dialog)?.destroy()
     dialog.close()
     dialog.remove()
     const back = new URL(location.href)
@@ -236,7 +239,9 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
     members: context.members,
     refresh: (comments?: { items: CardDetail['comments'] }) =>
       comments ? changes.patch({ comments: comments.items }) : changes.show({}),
-    attach: (file: File) => uploadFile(attachContext, file)
+    attach: (file: File) => uploadFile(attachContext, file),
+    attachments: loaded.attachments,
+    draft: composers.get(dialog)?.draft()
   }
   const relationContext = relationsOf(dialog, card, context, close, changes)
   const squadContext = squadOf(card, context, loaded, changes)
@@ -293,7 +298,9 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
   bindSquadField(dialog.querySelector('[data-detail-root]') as HTMLElement, squadContext)
   bindAttachments(dialog, loaded.attachments, attachContext)
   bindDevelopment(dialog)
-  bindComments(dialog, loaded.comments, commentContext)
+  composers.get(dialog)?.destroy()
+  const composer = bindComments(dialog, loaded.comments, commentContext)
+  composer ? composers.set(dialog, composer) : composers.delete(dialog)
   bindWatch(dialog, card, changes)
   bindStar(dialog, card, changes)
   bindSide(dialog.querySelector('[data-detail-root]') as HTMLElement, (group, closed) => {
