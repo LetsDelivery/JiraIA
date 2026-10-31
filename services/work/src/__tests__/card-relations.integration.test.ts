@@ -326,9 +326,11 @@ describe('attachments', () => {
       ((await ok(admin({ method: 'GET', path: `/cards/${card.id}/attachments` }))) as { items: [] }).items
     ).toEqual([])
     await files.put(started.upload.url.replace('https://files.counterparty.test/', ''), 120)
-    const listed = (await ok(complete())) as { items: { name: string; url: string }[] }
+    const listed = (await ok(complete())) as { items: { name: string; url: string; previewUrl: string }[] }
 
-    expect(listed.items).toMatchObject([{ name: 'fluxo.png', url: expect.stringContaining('download') }])
+    expect(listed.items).toMatchObject([
+      { name: 'fluxo.png', url: expect.stringContaining('download'), previewUrl: expect.stringContaining('inline') }
+    ])
     expect((await history(card)).at(-1)).toMatchObject({ action: 'attached' })
   })
 

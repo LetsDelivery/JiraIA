@@ -291,7 +291,7 @@ const draw = (dialog: HTMLDialogElement, loaded: Loaded, context: BoardContext, 
   )
   bindRelations(dialog, loaded.relations, relationContext)
   bindSquadField(dialog.querySelector('[data-detail-root]') as HTMLElement, squadContext)
-  bindAttachments(dialog, attachContext)
+  bindAttachments(dialog, loaded.attachments, attachContext)
   bindDevelopment(dialog)
   bindComments(dialog, loaded.comments, commentContext)
   bindWatch(dialog, card, changes)

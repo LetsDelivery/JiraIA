@@ -15,7 +15,9 @@ export const attachmentViewSchema = z.object({
   uploadedBy: z.object({ id: z.uuid(), name: z.string() }),
   createdAt: z.iso.datetime(),
   /** Downloads the file for the next few minutes; read the list again for a fresh one. */
-  url: z.string()
+  url: z.string(),
+  /** Shows the file in the browser instead of saving it — the panel's preview; as short-lived as `url`. */
+  previewUrl: z.string()
 })
 export type AttachmentView = z.infer<typeof attachmentViewSchema>
 export const attachmentListSchema = z.object({ items: z.array(attachmentViewSchema) })

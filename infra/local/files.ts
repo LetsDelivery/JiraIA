@@ -15,8 +15,9 @@ export class LocalFileStore implements FileStore {
     return { url: `/api/files/${input.key}`, headers: { 'content-type': input.contentType } }
   }
 
-  async downloadUrl(input: { key: string; name: string; contentType: string }): Promise<string> {
-    const query = new URLSearchParams({ name: input.name, type: input.contentType })
+  async downloadUrl(input: { key: string; name: string; contentType: string; inline?: boolean }): Promise<string> {
+    const disposition = input.inline ? 'inline' : 'attachment'
+    const query = new URLSearchParams({ name: input.name, type: input.contentType, disposition })
     return `/api/files/${input.key}?${query}`
   }
 
@@ -48,7 +49,7 @@ export class LocalFileStore implements FileStore {
     return new Response(Bun.file(path), {
       headers: {
         'content-type': search.get('type') ?? 'application/octet-stream',
-        'content-disposition': `inline; filename*=UTF-8''${name}`
+        'content-disposition': `${search.get('disposition') ?? 'inline'}; filename*=UTF-8''${name}`
       }
     })
   }

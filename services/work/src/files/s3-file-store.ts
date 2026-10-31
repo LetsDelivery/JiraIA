@@ -39,12 +39,13 @@ export class S3FileStore implements FileStore {
     return { url, headers: { 'content-type': input.contentType } }
   }
 
-  async downloadUrl(input: { key: string; name: string; contentType: string }): Promise<string> {
+  async downloadUrl(input: { key: string; name: string; contentType: string; inline?: boolean }): Promise<string> {
+    const disposition = input.inline ? 'inline' : 'attachment'
     const command = new GetObjectCommand({
       Bucket: this.config.bucket,
       Key: input.key,
       ResponseContentType: input.contentType,
-      ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(input.name)}`
+      ResponseContentDisposition: `${disposition}; filename*=UTF-8''${encodeURIComponent(input.name)}`
     })
     return await getSignedUrl(this.s3, command, { expiresIn: DOWNLOAD_SECONDS })
   }

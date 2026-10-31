@@ -9908,6 +9908,9 @@
                           },
                           "url": {
                             "type": "string"
+                          },
+                          "previewUrl": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -9917,7 +9920,8 @@
                           "size",
                           "uploadedBy",
                           "createdAt",
-                          "url"
+                          "url",
+                          "previewUrl"
                         ],
                         "additionalProperties": false
                       }
@@ -10136,6 +10140,9 @@
                           },
                           "url": {
                             "type": "string"
+                          },
+                          "previewUrl": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -10145,7 +10152,8 @@
                           "size",
                           "uploadedBy",
                           "createdAt",
-                          "url"
+                          "url",
+                          "previewUrl"
                         ],
                         "additionalProperties": false
                       }
@@ -10256,6 +10264,9 @@
                           },
                           "url": {
                             "type": "string"
+                          },
+                          "previewUrl": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -10265,7 +10276,8 @@
                           "size",
                           "uploadedBy",
                           "createdAt",
-                          "url"
+                          "url",
+                          "previewUrl"
                         ],
                         "additionalProperties": false
                       }
@@ -12984,6 +12996,9 @@
                           },
                           "url": {
                             "type": "string"
+                          },
+                          "previewUrl": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -12993,7 +13008,8 @@
                           "size",
                           "uploadedBy",
                           "createdAt",
-                          "url"
+                          "url",
+                          "previewUrl"
                         ],
                         "additionalProperties": false
                       }
