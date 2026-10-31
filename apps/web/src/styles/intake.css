@@ -412,6 +412,39 @@
   width: 100%;
 }
 
+/* The channels of one kind: boxes to tick, each saved at once. */
+.channel-menu {
+  width: 280px;
+}
+
+.channel-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.channel-option:hover {
+  background: var(--surface-hover);
+}
+
+.channel-option input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.channel-option span {
+  display: grid;
+  gap: 2px;
+}
+
+.channel-option small {
+  font-size: var(--text-xs);
+}
+
 /* ---------- Tokens and webhooks (5c): secrets shown once ---------- */
 .secret-box {
   display: flex;

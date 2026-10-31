@@ -122,14 +122,18 @@ describe('the e-mails that go as it happens', () => {
 
   it('settles what a person keeps to the panel, so turning e-mail on later does not mail the past', async () => {
     await ok(
-      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'mentioned', channel: 'in_app' } })
+      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'mentioned', channels: ['in_app'] } })
     )
     const card = await newCard('Cotação')
     await comment(ana, card.id, `<@${people['gil@uselets.com']}> olha`)
     expect(await service.mail.sendDue()).toEqual({ sent: 0, failed: 0 })
 
     await ok(
-      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'mentioned', channel: 'email' } })
+      gil({
+        method: 'PUT',
+        path: '/me/notification-preferences',
+        body: { kind: 'mentioned', channels: ['in_app', 'email'] }
+      })
     )
     expect(await service.mail.sendDue()).toEqual({ sent: 0, failed: 0 })
     expect(mailer.sent).toEqual([])
@@ -273,7 +277,7 @@ describe('Monday’s summary', () => {
 
   it('sends nothing to whoever turned it off', async () => {
     await ok(
-      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'weekly_summary', channel: 'none' } })
+      gil({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'weekly_summary', channels: [] } })
     )
     await newCard('Ninguém pegou')
     await comment(gil, (await newCard('Outro')).id, 'Trabalho aqui')

@@ -159,7 +159,10 @@ export const notifications = work.table(
   ]
 )
 
-/** Where a member wants each kind of notice: only in the panel, also by e-mail, or nowhere. */
+/**
+ * Where a member wants each kind of notice: a JSON list of `in_app`, `email`, `slack`. The panel comes
+ * with any other; an empty list is nowhere.
+ */
 export const notificationPreferences = work.table(
   'notification_preferences',
   {
@@ -167,7 +170,7 @@ export const notificationPreferences = work.table(
       .notNull()
       .references(() => members.id),
     kind: text('kind').notNull(),
-    channel: text('channel').notNull(),
+    channels: jsonb('channels').notNull().default(sql`'[]'::jsonb`),
     updatedAt: updatedAt()
   },
   (table) => [primaryKey({ columns: [table.memberId, table.kind] })]

@@ -17,7 +17,7 @@ import { drawDailyEmail, weeklyEmail } from './email/summary-emails.js'
 import { cardRef, changedOf, commentOf, drawMentionOf, openOf, reviewOf, updatesOf, waitingOf } from './mail-views.js'
 import type { Mailer } from './mailer.js'
 import type { NotificationRepository, NotificationWithActor } from './notification.repository.js'
-import { DEFAULT_CHANNEL, type NotificationKind } from './schemas.js'
+import { chosenChannels, type NotificationKind } from './schemas.js'
 import type { WeeklyRepository } from './weekly.repository.js'
 
 type Deps = {
@@ -210,7 +210,7 @@ export class MailService {
     const fresh = this.deps.clock.now().getTime() - STALE_MS
     const wants = (row: NotificationWithActor) =>
       row.createdAt.getTime() >= fresh &&
-      (chosen.get(`${row.memberId}:${row.kind}`) ?? DEFAULT_CHANNEL[row.kind as NotificationKind]) === 'email'
+      chosenChannels(row.kind as NotificationKind, chosen.get(`${row.memberId}:${row.kind}`)).includes('email')
     const unwanted = rows.filter((row) => !wants(row))
     await this.deps.notifications.markEmailed(
       unwanted.map((row) => row.id),
@@ -222,13 +222,13 @@ export class MailService {
   private async _wantsWeekly(memberIds: readonly string[]): Promise<Set<string>> {
     const chosen = await this._channels(memberIds)
     return new Set(
-      memberIds.filter((id) => (chosen.get(`${id}:weekly_summary`) ?? DEFAULT_CHANNEL.weekly_summary) === 'email')
+      memberIds.filter((id) => chosenChannels('weekly_summary', chosen.get(`${id}:weekly_summary`)).includes('email'))
     )
   }
 
-  private async _channels(memberIds: readonly string[]): Promise<Map<string, string>> {
+  private async _channels(memberIds: readonly string[]): Promise<Map<string, unknown>> {
     const preferences = await this.deps.notifications.preferences([...new Set(memberIds)])
-    return new Map(preferences.map((each) => [`${each.memberId}:${each.kind}`, each.channel]))
+    return new Map(preferences.map((each) => [`${each.memberId}:${each.kind}`, each.channels]))
   }
 
   /**

@@ -1,0 +1,1 @@
+ALTER TABLE "work"."notification_preferences" DROP COLUMN "channel";

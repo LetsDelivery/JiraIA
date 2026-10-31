@@ -43,7 +43,7 @@ test('the old addresses of the settings open the notification preferences', asyn
   for (const old of ['/configuracoes', '/notificacoes?aba=preferencias']) {
     await page.goto(old)
     await expect(page).toHaveURL(/\/notificacoes\/preferencias$/)
-    await expect(page.getByRole('combobox', { name: 'Como avisar: Atribuições' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Como avisar: Atribuições' })).toBeVisible()
   }
 })
 
@@ -68,8 +68,11 @@ test('an admin connects Slack; a person is found there and routes a notice to it
   await page.screenshot({ path: test.info().outputPath('slack-after.png'), fullPage: true })
 
   await page.goto('/notificacoes/preferencias')
-  await page.getByRole('combobox', { name: 'Como avisar: Atribuições' }).click()
-  await page.getByRole('option', { name: 'JiraIA e Slack' }).click()
+  await page.getByRole('button', { name: 'Como avisar: Atribuições' }).click()
+  await page
+    .getByRole('group', { name: 'Como avisar: Atribuições' })
+    .getByRole('checkbox', { name: /^Slack/ })
+    .check()
   await expect(page.locator('.toast', { hasText: 'Preferência salva.' })).toBeVisible()
 
   await page.goto('/slack')

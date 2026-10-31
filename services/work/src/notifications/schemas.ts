@@ -1,4 +1,4 @@
-import { toIso } from '@jiraia/core'
+import { toIso, ValidationException } from '@jiraia/core'
 import { z } from 'zod'
 
 import type { notifications } from '../schema-intake.js'
@@ -26,31 +26,48 @@ export const notificationKindValues = [
 export const notificationKindSchema = z.enum(notificationKindValues)
 export type NotificationKind = z.infer<typeof notificationKindSchema>
 
-/** Where a kind of notice goes: the panel only, plus an e-mail (Etapa 5f), plus a Slack message (Etapa 5e), or nowhere. */
-export const channelSchema = z.enum(['in_app', 'email', 'slack', 'none'])
+/** Where a notice goes: the panel (Etapa 5b), an e-mail (Etapa 5f), a Slack message (Etapa 5e). */
+export const channelSchema = z.enum(['in_app', 'email', 'slack'])
 export type Channel = z.infer<typeof channelSchema>
+
+/** A person's choice for a kind: any of the channels. The panel comes with the others; none is nowhere. */
+export const channelsSchema = z.array(channelSchema)
+
+/** Kinds that are a summary sent by e-mail, never a notice in the panel. */
+const SUMMARY_KINDS: ReadonlySet<NotificationKind> = new Set(['weekly_summary'])
+
+/** What a kind can go by: a summary only by e-mail. */
+export const channelsOf = (kind: NotificationKind): Channel[] =>
+  SUMMARY_KINDS.has(kind) ? ['email'] : channelSchema.options.slice()
 
 /**
  * What a person gets before choosing: everything by e-mail too (Etapa 5f). An e-mail about a card
  * groups a few minutes of changes, and the Draw ones come in one morning summary, so it stays few.
  */
-export const DEFAULT_CHANNEL: Record<NotificationKind, Channel> = {
-  mentioned: 'email',
-  assigned: 'email',
-  commented: 'email',
-  state_changed: 'email',
-  access_requested: 'email',
-  access_decided: 'email',
-  proposal_received: 'email',
-  entitlement_waiting: 'email',
-  entitlement_decided: 'email',
-  entitlement_overdue: 'email',
-  access_review_opened: 'email',
-  card_updated: 'email',
-  draw_mentioned: 'email',
-  content_changed: 'email',
-  sprint_overdue: 'email',
-  weekly_summary: 'email'
+export const defaultChannels = (kind: NotificationKind): Channel[] =>
+  SUMMARY_KINDS.has(kind) ? ['email'] : ['in_app', 'email']
+
+/** The channels stored for a kind, or the default when none were chosen or what is kept is unreadable. */
+export const chosenChannels = (kind: NotificationKind, stored: unknown): Channel[] =>
+  stored === undefined ? defaultChannels(kind) : channelsSchema.catch(defaultChannels(kind)).parse(stored)
+
+/**
+ * A choice as it is kept: each channel once, in a fixed order, the panel added to any other. A channel
+ * the kind cannot go by is refused, naming it.
+ *
+ * @example settleChannels('mentioned', ['slack'])   // ['in_app', 'slack']
+ */
+export const settleChannels = (kind: NotificationKind, channels: readonly Channel[]): Channel[] => {
+  const allowed = channelsOf(kind)
+  const refused = channels.find((channel) => !allowed.includes(channel))
+  if (refused) {
+    throw new ValidationException(`Notices of kind "${kind}" do not go by "${refused}"`)
+  }
+  const wanted = new Set(channels)
+  if (wanted.size > 0 && allowed.includes('in_app')) {
+    wanted.add('in_app')
+  }
+  return allowed.filter((channel) => wanted.has(channel))
 }
 
 /** A card field that changed, in the words the e-mail shows: "Estado", "Não iniciado" → "Feito". */
@@ -127,9 +144,9 @@ export const updateNotificationSchema = z
 export type UpdateNotification = z.infer<typeof updateNotificationSchema>
 
 export const preferencesSchema = z.object({
-  items: z.array(z.object({ kind: notificationKindSchema, channel: channelSchema }))
+  items: z.array(z.object({ kind: notificationKindSchema, channels: channelsSchema }))
 })
-export const preferenceInputSchema = z.object({ kind: notificationKindSchema, channel: channelSchema })
+export const preferenceInputSchema = z.object({ kind: notificationKindSchema, channels: channelsSchema })
 
 export type NotificationRow = typeof notifications.$inferSelect
 

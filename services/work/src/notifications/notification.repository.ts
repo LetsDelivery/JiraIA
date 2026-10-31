@@ -70,7 +70,7 @@ export class NotificationRepository {
       .where(and(eq(notifications.memberId, memberId), isNull(notifications.readAt), _box('inbox', now)))
   }
 
-  async preferences(memberIds: readonly string[]): Promise<{ memberId: string; kind: string; channel: string }[]> {
+  async preferences(memberIds: readonly string[]): Promise<{ memberId: string; kind: string; channels: unknown }[]> {
     if (memberIds.length === 0) {
       return []
     }
@@ -78,19 +78,19 @@ export class NotificationRepository {
       .select({
         memberId: notificationPreferences.memberId,
         kind: notificationPreferences.kind,
-        channel: notificationPreferences.channel
+        channels: notificationPreferences.channels
       })
       .from(notificationPreferences)
       .where(inArray(notificationPreferences.memberId, [...memberIds]))
   }
 
-  async putPreference(memberId: string, kind: string, channel: Channel, at: Date): Promise<void> {
+  async putPreference(memberId: string, kind: string, channels: readonly Channel[], at: Date): Promise<void> {
     await this.db
       .insert(notificationPreferences)
-      .values({ memberId, kind, channel, updatedAt: at })
+      .values({ memberId, kind, channels, updatedAt: at })
       .onConflictDoUpdate({
         target: [notificationPreferences.memberId, notificationPreferences.kind],
-        set: { channel, updatedAt: at }
+        set: { channels, updatedAt: at }
       })
   }
 

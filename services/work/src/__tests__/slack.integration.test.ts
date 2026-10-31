@@ -180,7 +180,13 @@ describe('notices in Slack', () => {
     )
     const anaId = ((await ok(ana({ method: 'GET', path: '/me' }))) as { id: string }).id
     await ok(admin({ method: 'PUT', path: `/spaces/${space.id}/members/${anaId}`, body: { role: 'member' } }))
-    await ok(ana({ method: 'PUT', path: '/me/notification-preferences', body: { kind: 'assigned', channel: 'slack' } }))
+    await ok(
+      ana({
+        method: 'PUT',
+        path: '/me/notification-preferences',
+        body: { kind: 'assigned', channels: ['email', 'slack'] }
+      })
+    )
 
     await ok(
       admin({ method: 'POST', path: `/spaces/${space.id}/cards`, body: { title: 'Rastreio', assigneeId: anaId } }),
