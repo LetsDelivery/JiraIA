@@ -379,7 +379,7 @@
 
 .attachments {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -387,46 +387,114 @@
 }
 
 .attachment {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2);
+  position: relative;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
+  overflow: hidden;
+  transition: border-color var(--fast) var(--ease);
+}
+
+.attachment:hover,
+.attachment:focus-within {
+  border-color: var(--border-strong);
+}
+
+.attachment-open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: zoom-in;
 }
 
 .attachment-thumb {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   background: var(--surface-hover);
 }
 
-.attachment-icon {
+.attachment-glyph {
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-1);
   color: var(--muted);
+}
+
+/* A PDF's first page: its top is what tells one document from another. */
+.attachment-page {
+  object-position: top;
+  background: #fff;
+}
+
+/* A text's first lines, small, as a glimpse of the file rather than something to read. */
+.attachment-snippet {
+  overflow: hidden;
+  padding: var(--space-2);
+  color: var(--fg-secondary);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  line-height: 1.45;
+  white-space: pre;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
+}
+
+.attachment-ext {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .attachment-text {
   display: flex;
-  flex: 1;
   flex-direction: column;
   min-width: 0;
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
   font-size: var(--text-sm);
 }
 
-.attachment-text a {
+.attachment-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .attachment-text .muted {
   font-size: var(--text-xs);
+}
+
+/* Download and remove sit on the picture's corner, shown on hover; a touch screen always shows them. */
+.attachment-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.attachment:hover .attachment-actions,
+.attachment:focus-within .attachment-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .attachment-actions {
+    opacity: 1;
+  }
 }
 
 /* ---------- Comments ---------- */

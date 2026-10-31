@@ -10,8 +10,11 @@ export type UploadTarget = { url: string; headers: Record<string, string> }
 export type FileStore = {
   /** A URL the browser `PUT`s the file to, with these headers, for the next few minutes. */
   uploadUrl: (input: { key: string; contentType: string; size: number }) => Promise<UploadTarget>
-  /** A URL that downloads the file under its original name, for the next few minutes. */
-  downloadUrl: (input: { key: string; name: string; contentType: string }) => Promise<string>
+  /**
+   * A URL that downloads the file under its original name, for the next few minutes. `inline` asks
+   * the browser to show it in place — the panel's preview — instead of saving it.
+   */
+  downloadUrl: (input: { key: string; name: string; contentType: string; inline?: boolean }) => Promise<string>
   /** A URL an `<img>` shows the file from, valid for hours: a person's photo outlives a screen. */
   viewUrl: (input: { key: string; contentType: string }) => Promise<string>
   /** The size of the stored file, or `undefined` when nothing was uploaded under the key. */
@@ -31,8 +34,8 @@ export class InMemoryFileStore implements FileStore {
     return { url: `https://files.counterparty.test/${input.key}`, headers: { 'content-type': input.contentType } }
   }
 
-  async downloadUrl(input: { key: string }): Promise<string> {
-    return `https://files.counterparty.test/${input.key}?download`
+  async downloadUrl(input: { key: string; inline?: boolean }): Promise<string> {
+    return `https://files.counterparty.test/${input.key}?${input.inline ? 'inline' : 'download'}`
   }
 
   async viewUrl(input: { key: string }): Promise<string> {

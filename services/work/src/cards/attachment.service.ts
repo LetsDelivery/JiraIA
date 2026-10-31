@@ -98,11 +98,7 @@ export class AttachmentService {
 
   private async _list(cardId: string): Promise<{ items: AttachmentView[] }> {
     const rows = await this.deps.attachments.ready(cardId)
-    const urls = await Promise.all(
-      rows.map((row) =>
-        this.deps.files.downloadUrl({ key: row.objectKey, name: row.name, contentType: row.contentType })
-      )
-    )
+    const urls = await Promise.all(rows.map((row) => this._urls(row)))
     return {
       items: rows.map((row, index) => ({
         id: row.id,
@@ -111,9 +107,20 @@ export class AttachmentService {
         size: row.size,
         uploadedBy: { id: row.uploadedBy, name: row.uploaderName },
         createdAt: row.createdAt.toISOString(),
-        url: urls[index] ?? ''
+        url: urls[index]?.url ?? '',
+        previewUrl: urls[index]?.previewUrl ?? ''
       }))
     }
+  }
+
+  /** One URL saves the file, the other shows it in the browser. */
+  private async _urls(row: AttachmentRow): Promise<{ url: string; previewUrl: string }> {
+    const file = { key: row.objectKey, name: row.name, contentType: row.contentType }
+    const [url, previewUrl] = await Promise.all([
+      this.deps.files.downloadUrl(file),
+      this.deps.files.downloadUrl({ ...file, inline: true })
+    ])
+    return { url, previewUrl }
   }
 
   private async _audit(tx: Database, { gate, card }: CardAccess, action: string, changes: Changes) {

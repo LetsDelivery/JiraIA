@@ -58,8 +58,12 @@ import externalLink from '@tabler/icons/outline/external-link.svg?raw'
 import eye from '@tabler/icons/outline/eye.svg?raw'
 import eyeOff from '@tabler/icons/outline/eye-off.svg?raw'
 import file from '@tabler/icons/outline/file.svg?raw'
+import fileCode from '@tabler/icons/outline/file-code.svg?raw'
+import fileSpreadsheet from '@tabler/icons/outline/file-spreadsheet.svg?raw'
 import fileText from '@tabler/icons/outline/file-text.svg?raw'
+import fileTypePdf from '@tabler/icons/outline/file-type-pdf.svg?raw'
 import fileUpload from '@tabler/icons/outline/file-upload.svg?raw'
+import fileZip from '@tabler/icons/outline/file-zip.svg?raw'
 import filter from '@tabler/icons/outline/filter.svg?raw'
 import flag from '@tabler/icons/outline/flag.svg?raw'
 import flask from '@tabler/icons/outline/flask.svg?raw'
@@ -108,6 +112,7 @@ import maximize from '@tabler/icons/outline/maximize.svg?raw'
 import message from '@tabler/icons/outline/message.svg?raw'
 import moodSmile from '@tabler/icons/outline/mood-smile.svg?raw'
 import moon from '@tabler/icons/outline/moon.svg?raw'
+import music from '@tabler/icons/outline/music.svg?raw'
 import notebook from '@tabler/icons/outline/notebook.svg?raw'
 import palette from '@tabler/icons/outline/palette.svg?raw'
 import paperclip from '@tabler/icons/outline/paperclip.svg?raw'
@@ -144,6 +149,7 @@ import user from '@tabler/icons/outline/user.svg?raw'
 import userPlus from '@tabler/icons/outline/user-plus.svg?raw'
 import users from '@tabler/icons/outline/users.svg?raw'
 import usersGroup from '@tabler/icons/outline/users-group.svg?raw'
+import video from '@tabler/icons/outline/video.svg?raw'
 import world from '@tabler/icons/outline/world.svg?raw'
 import x from '@tabler/icons/outline/x.svg?raw'
 import zoomIn from '@tabler/icons/outline/zoom-in.svg?raw'
@@ -155,6 +161,12 @@ import { type Html, raw } from '@/lib/html'
  * Outline for interface, filled for state (the original identity guidance).
  */
 const ICONS = {
+  fileCode,
+  fileSpreadsheet,
+  fileTypePdf,
+  fileZip,
+  music,
+  video,
   camera,
   bold,
   italic,

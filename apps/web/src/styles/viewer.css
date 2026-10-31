@@ -1,0 +1,179 @@
+/*
+ * The attachment viewer (ui/attachment-viewer.ts): one file of the card over everything, on a dark
+ * backdrop so a picture or a page reads as itself. Only the head floats, so only the head is glass.
+ */
+.viewer {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+}
+
+.viewer[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer::backdrop {
+  background: rgb(10 6 6 / 0.82);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.viewer-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-surface);
+}
+
+.viewer-glyph {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--muted);
+}
+
+.viewer-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.viewer-title strong,
+.viewer-title .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-title .muted {
+  font-size: var(--text-xs);
+}
+
+.viewer-stage {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.viewer-image,
+.viewer-media {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-control);
+  object-fit: contain;
+}
+
+.viewer-frame {
+  width: min(1000px, 100%);
+  height: 100%;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.viewer-audio {
+  width: min(480px, 100%);
+}
+
+.viewer-text {
+  width: min(1100px, 100%);
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.viewer-lines {
+  margin: 0;
+  padding: var(--space-3) 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  counter-reset: line;
+  list-style: none;
+}
+
+.viewer-lines li {
+  display: grid;
+  grid-template-columns: 4ch 1fr;
+  column-gap: var(--space-3);
+  padding: 0 var(--space-4) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  counter-increment: line;
+}
+
+.viewer-lines li::before {
+  content: counter(line);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.viewer-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 360px;
+  padding: var(--space-6);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+.viewer-empty p {
+  margin: 0;
+  color: var(--fg-secondary);
+}
+
+.viewer-step {
+  position: fixed;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  background: var(--glass-dense);
+  color: var(--fg);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.viewer-step-back {
+  left: var(--space-4);
+}
+
+.viewer-step-next {
+  right: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .viewer-stage {
+    padding: 0 var(--space-2) var(--space-2);
+  }
+
+  .viewer-step {
+    top: auto;
+    bottom: var(--space-4);
+    transform: none;
+  }
+}
